@@ -42,6 +42,16 @@ public:
      */
     int numHALModels(Node *node = NULL, Node *dad = NULL);
     
+    /*
+     * obtain the user input model parameters
+     */
+    void getUserInputModelParams(vector<string> &modelparams, Node *node = NULL, Node *dad = NULL);
+
+    /**
+        @return true as this is a HAL model (i.e. heterogeneity across sites model)
+     */
+    virtual bool isHAL() { return true; }
+
     /**
      models
      */

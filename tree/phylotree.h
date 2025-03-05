@@ -556,6 +556,11 @@ public:
     virtual bool isHMM() { return false; }
 
     /**
+        @return true if this is a HAL model (i.e. heterogeneity across sites model)
+     */
+    virtual bool isHAL() { return false; }
+
+    /**
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() { return 1; }

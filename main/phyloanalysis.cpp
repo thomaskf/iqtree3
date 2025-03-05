@@ -626,15 +626,21 @@ void reportModel(ostream &out, PhyloTree &tree) {
             }
         }
         // if (!tree.isHMM()) {
-            // show the tree weights
-            out << "Tree weights: ";
-            for (i=0; i<treemix->size(); i++) {
-                if (i>0)
-                    out << ", ";
-                out << treemix->weights[i];
-            }
-            out << endl << endl;
+        // show the tree weights
+        out << "Tree weights: ";
+        for (i=0; i<treemix->size(); i++) {
+            if (i>0)
+                out << ", ";
+            out << treemix->weights[i];
+        }
+        out << endl << endl;
         // }
+    } else if (tree.isHAL()) {
+        PhyloTreeHal* treeHAL = (PhyloTreeHal*) &tree;
+        for (i=0; i<treeHAL->numHALModels(); i++) {
+            out << "HAL Model " << i << ":" << endl << endl;
+            reportModel(out, treeHAL->aln, treeHAL->getModel(i));
+        }
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;

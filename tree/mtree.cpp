@@ -504,7 +504,7 @@ void MTree::printHALinfo(ostream &out, Neighbor *length_nei) {
 
     bool first = true;
     for (auto attr : length_nei->attributes) {
-        if (attr.first == "branch" || attr.first == "clade") {
+        if (attr.first == "branch" || attr.first == "clade" || attr.first == "branch_model" || attr.first == "clade_model") {
             if (!first)
                 ss << ",";
             ss << attr.first << "=\"" << attr.second << '"';
@@ -1083,11 +1083,9 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             // convert key to lowercase
             std::string key_lower = key;
             transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
-            
-            bool ignorekey = false;
-            // detect HAL-ID information
-            if (key_lower == "branch" || key_lower == "clade") {
-                // remove the double-quotes if exists in front and at the end
+
+            // remove the double-quotes if exists in front and at the end
+            if (key_lower == "branch" || key_lower == "clade" || key_lower == "branch_model" || key_lower == "clade_model") {
                 if (value.length() > 1) {
                     if (value[0] == '\"' && value[value.length()-1] == '\"') {
                         if (value.length() == 2)
@@ -1096,6 +1094,11 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
                             value = value.substr(1,value.length()-2);
                     }
                 }
+            }
+
+            bool ignorekey = false;
+            // detect HAL-ID information
+            if (key_lower == "branch" || key_lower == "clade") {
                 int halID = atoi(value.c_str());
                 if (key_lower == "branch") {
                     node1->updateHALid(node2,halID);
