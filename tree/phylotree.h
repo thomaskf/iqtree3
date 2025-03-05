@@ -2068,6 +2068,11 @@ public:
 #endif
     virtual void setLikelihoodKernelSSE();
     
+    /**
+     *      return the associated substitution model
+     */
+    virtual ModelSubst* getModel(int hal_id) {return model;}
+
     /****************************************************************************
             Public variables
      ****************************************************************************/

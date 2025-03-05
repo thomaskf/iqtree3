@@ -499,6 +499,23 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     }
 }
 
+void MTree::printHALinfo(ostream &out, Neighbor *length_nei) {
+    stringstream ss;
+
+    bool first = true;
+    for (auto attr : length_nei->attributes) {
+        if (attr.first == "branch" || attr.first == "clade") {
+            if (!first)
+                ss << ",";
+            ss << attr.first << "=\"" << attr.second << '"';
+            first = false;
+        }
+    }
+    string s = ss.str();
+    if (s.length() > 0)
+        out << "[&" << s << "]";
+}
+
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 {
     int smallest_taxid = leafNum;
@@ -523,6 +540,8 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 //            else
 //                out << ":" << len;
         }
+        if (!(brtype & WT_BR_ATTR))
+            printHALinfo(out, node->neighbors[0]); // print out the HAL ID information
     } else {
         // internal node
         out << "(";
@@ -574,7 +593,10 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         else if (!node->name.empty() && (brtype & WT_BR_ATTR) == 0)
             out << node->name;
         if (dad != NULL || length_nei) {
-        	printBranchLength(out, brtype, !node->name.empty(), length_nei);
+            printBranchLength(out, brtype, !node->name.empty(), length_nei);
+        }
+        if (length_nei && !(brtype & WT_BR_ATTR)) {
+            printHALinfo(out, length_nei); // print out the HAL ID if exists
         }
     }
     
@@ -1008,7 +1030,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
     }
     // handle the case of multiple-length branches but lack of the average branch length
     // e.g A[0.1/0.2/0.3/0.4] instead of A[0.1/0.2/0.3/0.4]:0.25
-    else if (in_comment.length() > 0)
+    else if (in_comment.length() > 0 && in_comment.find_first_of("/") != in_comment.npos)
     {
         // set default average branch length at 0
         string default_avg_length = "0";
@@ -1058,11 +1080,39 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             string key = key_value_pair.substr(0, pos_equal);
             string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
             
-            // detect key = mutations (to include pre-defined mutations for AliSim
             // convert key to lowercase
             std::string key_lower = key;
             transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
-            if (key_lower == ANTT_MUT)
+            
+            bool ignorekey = false;
+            // detect HAL-ID information
+            if (key_lower == "branch" || key_lower == "clade") {
+                // remove the double-quotes if exists in front and at the end
+                if (value.length() > 1) {
+                    if (value[0] == '\"' && value[value.length()-1] == '\"') {
+                        if (value.length() == 2)
+                            value = "";
+                        else
+                            value = value.substr(1,value.length()-2);
+                    }
+                }
+                int halID = atoi(value.c_str());
+                if (key_lower == "branch") {
+                    node1->updateHALid(node2,halID);
+                    node2->updateHALid(node1,halID);
+                } else { // key_lower == "clade"
+                    if (node2->isLeaf()) {
+                        cout << "Note: 'clade' is not applicable on leaf node, thus it is ignored." << endl;
+                        ignorekey = true;
+                    } else {
+                        int halID = atoi(value.c_str());
+                        assignHALid(node2,node1,halID);
+                    }
+                }
+            }
+
+            // detect key = mutations (to include pre-defined mutations for AliSim
+            else if (key_lower == ANTT_MUT)
             {
                 // Make sure we store key "mutations" in the lowercase
                 key = key_lower;
@@ -1073,8 +1123,10 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             }
             
             // add key/value to attributes
-            node1->findNeighbor(node2)->putAttr(key, value);
-            node2->findNeighbor(node1)->putAttr(key, value);
+            if (!ignorekey) {
+                node1->findNeighbor(node2)->putAttr(key, value);
+                node2->findNeighbor(node1)->putAttr(key, value);
+            }
         }
         else
             outError("Error in reading the newick tree. Please use `[&<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&model=GTR]`)");
@@ -3080,4 +3132,16 @@ void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
             getPreOrderBranches(nodes, nodes2, (*i1)->node, node);
 //    FOR_NEIGHBOR_IT(node, dad, it) 
 //        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
+}
+
+void MTree::assignHALid(Node *node, Node *dad, int halID) {
+    if (node == NULL) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        Node *node2 = (*it)->node;
+        if ((*it)->hal_id == -1) {
+            node->updateHALid(node2,halID);
+            node2->updateHALid(node,halID);
+        }
+        assignHALid(node2,node,halID);
+    }
 }

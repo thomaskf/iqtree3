@@ -14,6 +14,7 @@
 #include <numeric>
 #include "tree/phylotree.h"
 #include "tree/iqtree.h"
+#include "tree/phylotreehal.h"
 #include "tree/phylotreemixlen.h"
 #include "phylotesting.h"
 
@@ -716,6 +717,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
         }
     } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
         iqtree = new PhyloTreeMixlen(aln, 0);
+    } else if (params.isHAL) {
+        iqtree = new PhyloTreeHal(aln);
     } else {
         iqtree = new IQTree(aln);
     }
@@ -1860,6 +1863,8 @@ string CandidateModel::evaluate(Params &params,
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
     } else if (posRateHeterotachy(getName()) != string::npos)
         iqtree = new PhyloTreeMixlen(in_aln, 0);
+    else if (params.isHAL)
+        iqtree = new PhyloTreeHal(in_aln);
     else
         iqtree = new IQTree(in_aln);
     iqtree->setParams(&params);
@@ -6661,6 +6666,8 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
         new_iqtree = new PhyloTreeMixlen(iqtree->aln, params.num_mixlen);
     } else if (pos != string::npos) {
         new_iqtree = new PhyloTreeMixlen(iqtree->aln, 0);
+    } else if (params.isHAL) {
+        new_iqtree = new PhyloTreeHal(iqtree->aln);
     } else {
         new_iqtree = new IQTree(iqtree->aln);
     }

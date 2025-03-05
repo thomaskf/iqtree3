@@ -36,6 +36,7 @@
 #include "tree/iqtree.h"
 #include "tree/iqtreemix.h"
 #include "tree/iqtreemixhmm.h"
+#include "tree/phylotreehal.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -3978,6 +3979,8 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
             } else if (pos != string::npos) {
                 iqtree = new PhyloTreeMixlen(alignment, 0);
+            } else if (params.isHAL) {
+                iqtree = new PhyloTreeHal(alignment);
             } else
                 iqtree = new IQTree(alignment);
         }
@@ -4710,6 +4713,8 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, 0);
         } else if (isTreeMix) {
             tree = new IQTreeMixHmm(params, alignment);
+        } else if (params.isHAL) {
+            tree = new PhyloTreeHal(alignment);
         } else
             tree = new IQTree(alignment);
     }

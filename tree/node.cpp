@@ -251,6 +251,14 @@ double Node::updateNeighbor(Node* node, Node *newnode) {
     return -1;
 }
 
+void Node::updateHALid(Node* node, int newHALid) {
+    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
+        if ((*it)->node == node) {
+            (*it)->hal_id = newHALid;
+            break;
+        }
+}
+
 void Node::deleteNode() {
     NeighborVec::reverse_iterator it;
     for (it = neighbors.rbegin(); it != neighbors.rend(); it++)

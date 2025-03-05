@@ -2819,6 +2819,11 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+    
+    /**
+     * whether it is HAL model
+     */
+    bool isHAL;
 };
 
 /**
