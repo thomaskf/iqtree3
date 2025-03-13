@@ -93,11 +93,11 @@ int median_int_vec(int* myvec, int length) {
 	/* we don't want to modify the original vector, so work on a copy that is going
 	   to be sorted: */
 	int i;
-    int* mycopy = new int[length];
+    int* mycopy = (int*) malloc(sizeof(int)*length);
 	for(i=0;i<length;i++) mycopy[i] = myvec[i];
 	divide_and_conquer_int_vec(mycopy, length);
     int ans = mycopy[(int)(floor(length/2))];
-    delete[] mycopy;
+    free(mycopy);
     return ans;
 }
 
@@ -106,11 +106,11 @@ double median_double_vec(double* myvec, int length) {
 	/* we don't want to modify the original vector, so work on a copy that is going
 	   to be sorted: */
 	int i;
-    int* mycopy = new int[length];
+    int* mycopy = (int*) malloc(sizeof(int)*length);
 	for(i=0;i<length;i++) mycopy[i] = myvec[i];
 	divide_and_conquer_double_vec(mycopy, length);
     int ans = mycopy[(int)(floor(length/2))];
-    delete[] mycopy;
+    free(mycopy);
     return ans;
 }
 
@@ -125,7 +125,7 @@ void summary_double_vec(double* myvec, int length, double* result) {
 	   5) maximum */
 
 	int i;
-    int* mycopy = new int[length];
+    int* mycopy = (int*) malloc(sizeof(int)*length);
 	for(i=0;i<length;i++) mycopy[i] = myvec[i];
 	divide_and_conquer_double_vec(mycopy, length);
 	result[0] = mycopy[0];				/* min */
@@ -134,7 +134,7 @@ void summary_double_vec(double* myvec, int length, double* result) {
 	result[3] = mean_double_vec(mycopy, length);	/* mean */ 
 	result[4] = mycopy[(int)(floor(3*length/4))];	/* 3rd quart. */
 	result[5] = mycopy[length-1];			/* max */
-    delete[] mycopy;
+    free(mycopy);
 } /* end summary_double_vec */
 
 
@@ -197,7 +197,7 @@ void merge_sorted_int_vecs(int* myvec, int length1, int length2) {
 	   and myvec[length1..(length1+length2-1)] that are two sorted vectors.
 	   It merges the two in place, reusing the initial space. */
 	int i, index1=0, index2=0, index_res=0, total_length = length1 + length2;
-    int* temp = new int[total_length];
+    int* temp = (int*) malloc(sizeof(int)*total_length);
 	int* vec1 = myvec, *vec2 = myvec+length1; /* pointer arithmetic */
 	/* index1 and index2 indicate the next elements of the two subvectors to be processed */
 	while(index1 < length1 && index2 < length2) {
@@ -211,12 +211,12 @@ void merge_sorted_int_vecs(int* myvec, int length1, int length2) {
 	/* sanity check */
 	if (index_res != total_length) {
 	  fprintf(stderr,"fatal error : input lengths do not sum up to output length. Aborting.\n");
-      delete[] temp;
+      free(temp);
 	  Generic_Exit(__FILE__,__LINE__,__FUNCTION__,EXIT_FAILURE);
 	}
 	/* now we copy the result back into the original vector, to do the thing in place */
 	for(i=0;i<total_length;i++) myvec[i] = temp[i];
-    delete[] temp;
+    free(temp);
 } /* end of merge_sorted_int_vecs */
 
 
@@ -248,8 +248,7 @@ void merge_sorted_double_vecs(double* myvec, int length1, int length2) {
 	   and myvec[length1..(length1+length2-1)] that are two sorted vectors.
 	   It merges the two in place, reusing the initial space. */
 	int i, index1=0, index2=0, index_res=0, total_length = length1 + length2;
-	double temp[total_length];
-    double* temp = new double[total_length];
+    double* temp = (double*) malloc(sizeof(double)*total_length);
 	double* vec1 = myvec, *vec2 = myvec+length1; /* pointer arithmetic */
 	/* index1 and index2 indicate the next elements of the two subvectors to be processed */
 	while(index1 < length1 && index2 < length2) {
@@ -263,12 +262,12 @@ void merge_sorted_double_vecs(double* myvec, int length1, int length2) {
 	/* sanity check */
 	if (index_res != total_length) {
 	  fprintf(stderr,"fatal error : input lengths do not sum up to output length. Aborting.\n");
-      delete[] temp;
+      free(temp);
 	  Generic_Exit(__FILE__,__LINE__,__FUNCTION__,EXIT_FAILURE);
 	}
 	/* now we copy the result back into the original vector, to do the thing in place */
 	for(i=0;i<total_length;i++) myvec[i] = temp[i];
-    delete[] temp;
+    free(temp);
 } /* end of merge_sorted_double_vecs */
 
 
