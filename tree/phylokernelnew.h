@@ -3373,7 +3373,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     #ifdef _OPENMP
     #pragma omp parallel for num_threads(num_threads)
     #endif
-    for (size_t ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
+    for (int ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
         VectorClass lh_ptn(0.0);
         VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         if (SITE_MODEL) {

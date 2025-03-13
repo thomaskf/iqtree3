@@ -420,13 +420,13 @@ public:
         //neighbour-joining) to deal with accumulated
         //rounding error.  It might be.
         #pragma omp parallel for
-        for (size_t r=0; r<n; ++r) {
+        for (int r=0; r<n; ++r) {
             T total = 0;
             const T* rowData = rows[r];
-            for (size_t c=0; c<r; ++c) {
+            for (int c=0; c<r; ++c) {
                 total += rowData[c];
             }
-            for (size_t c=r+1; c<n; ++c) {
+            for (int c=r+1; c<n; ++c) {
                 total += rowData[c]; //U-R
             }
             rowTotals[r] = total;
