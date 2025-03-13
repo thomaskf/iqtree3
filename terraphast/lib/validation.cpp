@@ -1,5 +1,6 @@
 #include <numeric>
 #include <unordered_map>
+#include <vector>
 
 #include <algorithm>
 
