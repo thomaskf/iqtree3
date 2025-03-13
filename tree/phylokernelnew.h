@@ -2715,8 +2715,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     double *val = nullptr;
     double *buffer_partial_lh_ptr = buffer_partial_lh;
 
-    double cat_length[ncat];
-    double cat_prop[ncat];
+    // double cat_length[ncat];
+    // double cat_prop[ncat];
+    double* cat_length = new double[ncat];
+    double* cat_prop = new double[ncat];
     if (SITE_MODEL) {
         for (size_t c = 0; c < ncat; c++) {
             cat_length[c] = site_rate->getRate(c) * dad_branch->length;
@@ -3148,6 +3150,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             all_prob_const += all_prob[k];
         delete[] all_prob;
     }
+    
+    delete[] cat_length;
+    delete[] cat_prop;
 
     tree_lh += all_tree_lh;
     /*
@@ -3300,7 +3305,8 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
     bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
 
-    size_t mix_addr_nstates_malign[ncat_mix], mix_addr_malign[ncat_mix];
+    size_t* mix_addr_nstates_malign = new size_t[ncat_mix];
+    size_t* mix_addr_malign = new size_t[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (size_t c = 0; c < ncat_mix; ++c) {
         size_t m = c/denom;
@@ -3351,6 +3357,8 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             }
         }
     }
+    delete[] mix_addr_nstates_malign;
+    delete[] mix_addr_malign;
 
     double all_tree_lh(0.0), all_prob_const(0.0);
     int nsize = nptn / VectorClass::size() + 1;
