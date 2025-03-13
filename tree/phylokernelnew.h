@@ -2706,8 +2706,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         ASSERT(!ASC_Lewis);
     }
 
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
-    size_t mix_addr_nstates_malign[ncat_mix], mix_addr_malign[ncat_mix];
+    // size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
+    // size_t mix_addr_nstates_malign[ncat_mix], mix_addr_malign[ncat_mix];
+    size_t* mix_addr_nstates = new size_t[ncat_mix];
+    size_t* mix_addr = new size_t[ncat_mix];
+    size_t* mix_addr_nstates_malign = new size_t[ncat_mix];
+    size_t* mix_addr_malign = new size_t[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     double *eval = model->getEigenvalues();
     ASSERT(eval);
@@ -2824,6 +2828,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
             }
         }
+        
         
         auto stateRow = this->getConvertedSequenceByNumber(dad->id);
         auto unknown  = aln->STATE_UNKNOWN;
@@ -3153,6 +3158,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     
     delete[] cat_length;
     delete[] cat_prop;
+    delete[] mix_addr_nstates;
+    delete[] mix_addr;
+    delete[] mix_addr_nstates_malign;
+    delete[] mix_addr_malign;
 
     tree_lh += all_tree_lh;
     /*

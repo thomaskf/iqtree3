@@ -345,7 +345,7 @@ public:
                 rowTotals[r] = 0.0;
             }
             #pragma omp parallel for
-            for (size_t r=0; r<n; ++r) {
+            for (int r=0; r<n; ++r) {
                 zeroRow(r);
             }
         }
