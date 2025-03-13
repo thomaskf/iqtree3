@@ -183,20 +183,6 @@ if(USE_NN OR USE_OLD_NN)
     endif()
 endif()
 
-##################################################################
-# Include the Terraphast library
-##################################################################
-option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" ON)
-
-if (USE_TERRAPHAST)
-   add_definitions(-DIQTREE_TERRAPHAST)
-
-   option(TERRAPHAST_USE_GMP "" OFF)
-   option(TERRAPHAST_BUILD_CLIB "" OFF)
-   option(TERRAPHAST_BUILD_APPS "" OFF)
-   option(TERRAPHAST_BUILD_TESTS "" OFF)
-endif()
-
 # Check if __ARM_NEON is defined
 #include(cmake_utls/check_neon_exists.cmake)
 set (__ARM_NEON "FALSE")
@@ -369,6 +355,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_COMPILER_ID MATCHES "V
     set(VCC "TRUE")
     set(CLANG_UNDER_VS "TRUE")
     set(USE_LSD2 "FALSE")
+    set(USE_TERRAPHAST "FALSE")
     message("Compiler      : MS Visual C++ Compiler")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     message("Compiler      : Intel C++ Compiler (icc)")
@@ -442,6 +429,20 @@ option(USE_LSD2 "Use least square dating (lsd2)" ON)
 
 if (USE_LSD2)
     add_definitions(-DUSE_LSD2)
+endif()
+
+##################################################################
+# Include the Terraphast library
+##################################################################
+option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" ON)
+
+if (USE_TERRAPHAST)
+   add_definitions(-DIQTREE_TERRAPHAST)
+
+   option(TERRAPHAST_USE_GMP "" OFF)
+   option(TERRAPHAST_BUILD_CLIB "" OFF)
+   option(TERRAPHAST_BUILD_APPS "" OFF)
+   option(TERRAPHAST_BUILD_TESTS "" OFF)
 endif()
 
 ##################################################################
