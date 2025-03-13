@@ -516,8 +516,16 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
 {
 	int i, step;
     int N_2 = N*N;
-	double df[N_2], dx[N], dxold[N], f[N+1], space[N];
-	double temp, xh[N], xl[N], rts[N], rts_old[N];
+    double temp;
+    double* df = new double[N_2];
+    double* dx = new double[N];
+    double* dxold = new double[N];
+    double* f = new double[N+1];
+    double* space = new double[N];
+    double* xh = new double[N];
+    double* xl = new double[N];
+    double* rts = new double[N];
+    double* rts_old = new double[N];
 
     for (i = 0; i < N; i++) {
         rts[i] = xguess[i];
@@ -548,6 +556,18 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
 
     if (stop) {
         memcpy(xguess, rts, sizeof(double)*N);
+
+        // release the memories
+        delete[] df;
+        delete[] dx;
+        delete[] dxold;
+        delete[] f;
+        delete[] space;
+        delete[] xh;
+        delete[] xl;
+        delete[] rts;
+        delete[] rts_old;
+
         return score;
     }
 
@@ -623,6 +643,17 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
 
     // copy returned x-value
     memcpy(xguess, rts, sizeof(double)*N);
+    
+    // release the memories
+    delete[] df;
+    delete[] dx;
+    delete[] dxold;
+    delete[] f;
+    delete[] space;
+    delete[] xh;
+    delete[] xl;
+    delete[] rts;
+    delete[] rts_old;
 
     if (stop)
         return score;
