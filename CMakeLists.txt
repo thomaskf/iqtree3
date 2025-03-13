@@ -197,15 +197,6 @@ if (USE_TERRAPHAST)
    option(TERRAPHAST_BUILD_TESTS "" OFF)
 endif()
 
-##################################################################
-# Include the LSD2 library
-##################################################################
-option(USE_LSD2 "Use least square dating (lsd2)" ON)
-
-if (USE_LSD2)
-    add_definitions(-DUSE_LSD2)
-endif()
-
 # Check if __ARM_NEON is defined
 #include(cmake_utls/check_neon_exists.cmake)
 set (__ARM_NEON "FALSE")
@@ -377,6 +368,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC" OR CMAKE_CXX_COMPILER_ID MATCHES "VISUAL C")
     set(VCC "TRUE")
     set(CLANG_UNDER_VS "TRUE")
+    set(USE_LSD2 "FALSE")
     message("Compiler      : MS Visual C++ Compiler")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     message("Compiler      : Intel C++ Compiler (icc)")
@@ -441,6 +433,15 @@ else()
     if (WIN32)
         add_definitions(-DWIN64)
     endif()
+endif()
+
+##################################################################
+# Include the LSD2 library
+##################################################################
+option(USE_LSD2 "Use least square dating (lsd2)" ON)
+
+if (USE_LSD2)
+    add_definitions(-DUSE_LSD2)
 endif()
 
 ##################################################################
