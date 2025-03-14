@@ -2898,7 +2898,7 @@ double PhyloTree::computeFundiLikelihood() {
         int ndim = getNDim();
         ASSERT(ndim == 2);
 
-        cout << "Optimizing FunDi model parameters..." << endl;
+        cout << "Optimizing FunDi model parameters (epsilson=" << params->fundiEps << ")..." << endl;
         //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
         double *variables = new double[ndim+1]; // used for BFGS numerical recipes
@@ -2918,7 +2918,7 @@ double PhyloTree::computeFundiLikelihood() {
         upper_bound[2] = params->max_branch_length;
         bound_check[1] = true;
         bound_check[2] = true;
-        minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, TOL_RATE);
+        minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, params->fundiEps);
 
         best_length = variables[2];
         best_score = -targetFunk(variables);

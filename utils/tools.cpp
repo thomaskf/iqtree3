@@ -1412,6 +1412,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pll = false;
 #endif
     params.modelEps = 0.01;
+    params.fundiEps = 0.000001;
     params.modelfinder_eps = 0.1;
     params.treemix_eps = 0.001;
     params.treemixhmm_eps = 0.01;
@@ -4757,6 +4758,18 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.treemixhmm_eps = params.modelEps;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-fundi-epsilon") == 0 || strcmp(argv[cnt], "--fundi-epsilon") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --fundi-epsilon <fundi_epsilon>";
+                params.fundiEps = convert_double(argv[cnt]);
+                if (params.fundiEps <= 0.0)
+                    throw "Fundi epsilon must be positive";
+                if (params.fundiEps > 1.0)
+                    throw "Fundi epsilon must not be larger than 1.0";
+                continue;
+            }
 
             if (strcmp(argv[cnt], "--mf-epsilon") == 0) {
                 cnt++;

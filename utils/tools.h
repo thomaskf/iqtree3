@@ -766,6 +766,11 @@ public:
 	double modelEps;
     
     /**
+     * logl epsilon for fundi model parameter optimization
+     */
+    double fundiEps;
+
+    /**
      logl epsilon for ModelFinder
      */
     double modelfinder_eps;
