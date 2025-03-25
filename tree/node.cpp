@@ -251,10 +251,10 @@ double Node::updateNeighbor(Node* node, Node *newnode) {
     return -1;
 }
 
-void Node::updateHALid(Node* node, int newHALid) {
+void Node::updateBranchModelid(Node* node, int newBranchModelid) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
         if ((*it)->node == node) {
-            (*it)->hal_id = newHALid;
+            (*it)->branchmodel_id = newBranchModelid;
             break;
         }
 }

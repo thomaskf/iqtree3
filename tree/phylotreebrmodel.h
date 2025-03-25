@@ -1,34 +1,34 @@
 //
-//  phylotreehal.h
+//  phylotreebrmodel.h
 //  tree
 //
 //  Created by Thomas Wong on 28/01/25.
 //
 
-#ifndef phylotreehal_h
-#define phylotreehal_h
+#ifndef phylotreebrmodel_h
+#define phylotreebrmodel_h
 
 #include "iqtree.h"
 
-class PhyloTreeHal : public IQTree
+class PhyloTreeBranchModel : public IQTree
 {
 public:
     
     /**
      * default constructor
      */
-    PhyloTreeHal() : IQTree() {}
+    PhyloTreeBranchModel() : IQTree() {}
 
     /**
      * Constructor with given alignment
      * @param alignment
      */
-    PhyloTreeHal(Alignment *aln) : IQTree(aln) {}
+    PhyloTreeBranchModel(Alignment *aln) : IQTree(aln) {}
     
     /**
      * default destructor
      */
-    ~PhyloTreeHal();
+    ~PhyloTreeBranchModel();
 
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
@@ -37,10 +37,12 @@ public:
      */
     virtual ModelSubst* getModel(int hal_id);
 
+    virtual ModelFactory* getModelFactory(int hal_id);
+
     /*
-     * check how many different HAL models
+     * check how many different branch models
      */
-    int numHALModels(Node *node = NULL, Node *dad = NULL);
+    int numBranchModels(Node *node = NULL, Node *dad = NULL);
     
     /*
      * obtain the user input model parameters
@@ -48,9 +50,9 @@ public:
     void getUserInputModelParams(vector<string> &modelparams, Node *node = NULL, Node *dad = NULL);
 
     /**
-        @return true as this is a HAL model (i.e. heterogeneity across sites model)
+        @return true as this is a branch model (i.e. each branch has different substitution model)
      */
-    virtual bool isHAL() { return true; }
+    virtual bool isBranchModel() { return true; }
 
     /**
      models
@@ -61,4 +63,4 @@ public:
 
 };
 
-#endif /* phylotreehal_h */
+#endif /* phylotreebrmodel_h */

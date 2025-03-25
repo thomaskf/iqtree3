@@ -1609,7 +1609,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.include_pre_mutations = false;
     params.mutation_file = "";
     params.site_starting_index = 0;
-    params.isHAL = false;
+    params.isBranchModel = false;
 
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5860,8 +5860,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.make_consistent = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--hal") == 0 || strcmp(argv[cnt], "-hal") == 0) {
-                params.isHAL = true;
+            if (strcmp(argv[cnt], "--branchmodel") == 0 || strcmp(argv[cnt], "-branchmodel") == 0) {
+                params.isBranchModel = true;
                 continue;
             }
 

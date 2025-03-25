@@ -2826,9 +2826,9 @@ public:
     int site_starting_index;
     
     /**
-     * whether it is HAL model
+     * whether it is branch model
      */
-    bool isHAL;
+    bool isBranchModel;
 };
 
 /**

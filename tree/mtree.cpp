@@ -499,7 +499,7 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     }
 }
 
-void MTree::printHALinfo(ostream &out, Neighbor *length_nei) {
+void MTree::printBranchModelinfo(ostream &out, Neighbor *length_nei) {
     stringstream ss;
 
     bool first = true;
@@ -541,7 +541,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 //                out << ":" << len;
         }
         if (!(brtype & WT_BR_ATTR))
-            printHALinfo(out, node->neighbors[0]); // print out the HAL ID information
+            printBranchModelinfo(out, node->neighbors[0]); // print out the branch model ID information
     } else {
         // internal node
         out << "(";
@@ -596,7 +596,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
             printBranchLength(out, brtype, !node->name.empty(), length_nei);
         }
         if (length_nei && !(brtype & WT_BR_ATTR)) {
-            printHALinfo(out, length_nei); // print out the HAL ID if exists
+            printBranchModelinfo(out, length_nei); // print out the branch model ID if exists
         }
     }
     
@@ -1097,19 +1097,19 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             }
 
             bool ignorekey = false;
-            // detect HAL-ID information
+            // detect branch-model information
             if (key_lower == "branch" || key_lower == "clade") {
-                int halID = atoi(value.c_str());
+                int branchModelID = atoi(value.c_str());
                 if (key_lower == "branch") {
-                    node1->updateHALid(node2,halID);
-                    node2->updateHALid(node1,halID);
+                    node1->updateBranchModelid(node2,branchModelID);
+                    node2->updateBranchModelid(node1,branchModelID);
                 } else { // key_lower == "clade"
                     if (node2->isLeaf()) {
                         cout << "Note: 'clade' is not applicable on leaf node, thus it is ignored." << endl;
                         ignorekey = true;
                     } else {
-                        int halID = atoi(value.c_str());
-                        assignHALid(node2,node1,halID);
+                        int branchModelID = atoi(value.c_str());
+                        assignBranchModelid(node2,node1,branchModelID);
                     }
                 }
             }
@@ -3137,14 +3137,14 @@ void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 //        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
 }
 
-void MTree::assignHALid(Node *node, Node *dad, int halID) {
+void MTree::assignBranchModelid(Node *node, Node *dad, int branchModelID) {
     if (node == NULL) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
         Node *node2 = (*it)->node;
-        if ((*it)->hal_id == -1) {
-            node->updateHALid(node2,halID);
-            node2->updateHALid(node,halID);
+        if ((*it)->branchmodel_id == -1) {
+            node->updateBranchModelid(node2,branchModelID);
+            node2->updateBranchModelid(node,branchModelID);
         }
-        assignHALid(node2,node,halID);
+        assignBranchModelid(node2,node,branchModelID);
     }
 }

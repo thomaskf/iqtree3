@@ -1,16 +1,16 @@
 //
-//  phylotreehal.cpp
+//  phylotreebrmodel.cpp
 //  tree
 //
 //  Created by Thomas Wong on 29/1/25.
 //
 
-#include "phylotreehal.h"
+#include "phylotreebrmodel.h"
 
 /**
  * default destructor
  */
-PhyloTreeHal::~PhyloTreeHal() {
+PhyloTreeBranchModel::~PhyloTreeBranchModel() {
     models.clear();
     for (int i = 0; i < modelFacts.size(); i++) {
         delete(modelFacts[i]);
@@ -18,20 +18,20 @@ PhyloTreeHal::~PhyloTreeHal() {
     modelFacts.clear();
 }
 
-void PhyloTreeHal::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
+void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     IQTree::initializeModel(params, model_name, models_block);
-    cout << "[PhyloTreeHal::initializeModel] model_name = " << model_name << endl;
+    cout << "[PhyloTreeBranchModel::initializeModel] model_name = " << model_name << endl;
     
-    int numHALs = numHALModels();
-    if (numHALs > 0) {
-        cout << "  Number of HAL models: " << numHALs << endl;
+    int nBranchModels = numBranchModels();
+    if (nBranchModels > 0) {
+        cout << "  Number of Branch models: " << nBranchModels << endl;
         
         // obtain the user input model parameters if exists
         vector<string> modelparams;
         getUserInputModelParams(modelparams);
         
-        models.push_back(getModelFactory()->model);
-        for (int i = 1; i < numHALs; i++) {
+        models.push_back(IQTree::getModelFactory()->model);
+        for (int i = 1; i < nBranchModels; i++) {
             string curr_model = model_name;
             if (modelparams.size() > i && modelparams[i] != "") {
                 // model with user input parameters
@@ -48,26 +48,33 @@ void PhyloTreeHal::initializeModel(Params &params, string model_name, ModelsBloc
 /**
  *      return the associated substitution model
  */
-ModelSubst* PhyloTreeHal::getModel(int hal_id) {
-    if (hal_id == -1 || hal_id >= models.size())
+ModelSubst* PhyloTreeBranchModel::getModel(int branchmodel_id) {
+    if (branchmodel_id == -1 || branchmodel_id >= models.size())
         return model;
     
-    return models[hal_id];
+    return models[branchmodel_id];
+}
+
+ModelFactory* PhyloTreeBranchModel::getModelFactory(int branchmodel_id) {
+    if (branchmodel_id == -1 || branchmodel_id >= modelFacts.size())
+        return model_factory;
+    
+    return modelFacts[branchmodel_id];
 }
 
 /*
- * check how many different HAL models
+ * check how many different branch models
  */
-int PhyloTreeHal::numHALModels(Node *node, Node *dad) {
+int PhyloTreeBranchModel::numBranchModels(Node *node, Node *dad) {
     
     int max = 0;
     if (node == NULL)
         node = root;
     
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if ((*it)->hal_id+1 > max)
-            max = (*it)->hal_id+1;
-        int c = numHALModels((*it)->node, node);
+        if ((*it)->branchmodel_id+1 > max)
+            max = (*it)->branchmodel_id+1;
+        int c = numBranchModels((*it)->node, node);
         if (c > max)
             max = c;
     }
@@ -78,7 +85,7 @@ int PhyloTreeHal::numHALModels(Node *node, Node *dad) {
 /*
  * obtain the user input model parameters
  */
-void PhyloTreeHal::getUserInputModelParams(vector<string> &modelparams, Node *node, Node *dad) {
+void PhyloTreeBranchModel::getUserInputModelParams(vector<string> &modelparams, Node *node, Node *dad) {
     
     if (node == NULL)
         node = root;
@@ -86,7 +93,7 @@ void PhyloTreeHal::getUserInputModelParams(vector<string> &modelparams, Node *no
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->attributes.empty()) {
             // get the input branch_id or clade_id
-            int branch_id = (*it)->hal_id;
+            int branch_id = (*it)->branchmodel_id;
             int clade_id = -1;
             for (auto attr : (*it)->attributes) {
                 if (attr.first == "clade") {

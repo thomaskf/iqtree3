@@ -556,9 +556,9 @@ public:
     virtual bool isHMM() { return false; }
 
     /**
-        @return true if this is a HAL model (i.e. heterogeneity across sites model)
+        @return true as this is a branch model (i.e. each branch has different substitution model)
      */
-    virtual bool isHAL() { return false; }
+    virtual bool isBranchModel() { return false; }
 
     /**
         @return number of mixture branch lengths, default: 1
@@ -2076,7 +2076,10 @@ public:
     /**
      *      return the associated substitution model
      */
-    virtual ModelSubst* getModel(int hal_id) {return model;}
+    virtual ModelSubst* getModel(int branchmodel_id) {return model;}
+    
+    virtual ModelFactory* getModelFactory(int branchmodel_id) {return model_factory;}
+
 
     /****************************************************************************
             Public variables

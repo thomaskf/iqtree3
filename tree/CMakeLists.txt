@@ -42,8 +42,8 @@ phylosupertreeunlinked.cpp
 phylosupertreeunlinked.h
 phylotree.cpp
 phylotree.h
-phylotreehal.cpp
-phylotreehal.h
+phylotreebrmodel.cpp
+phylotreebrmodel.h
 phylotreemixlen.cpp
 phylotreemixlen.h
 phylotreepars.cpp

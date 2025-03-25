@@ -207,11 +207,11 @@ public:
     void printNexus(string outfile, int brtype = WT_BR_LEN, string nexus_comment = "");
 
     /**
-     *  internal function called by printTree to print HAL information
+     *  internal function called by printTree to print branch model information
      *  @param out output stream
      *  @param length_nei target Neighbor to print
      */
-    void printHALinfo(ostream &out, Neighbor *length_nei);
+    void printBranchModelinfo(ostream &out, Neighbor *length_nei);
 
     /**
      *  internal function called by printTree to print branch length
@@ -856,12 +856,12 @@ public:
     void getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad = NULL);
 
     /**
-        @assign HAL ID to the cluster decented from the node
+        @assign Branch Model ID to the cluster decented from the node
         @param nodes the starting node, NULL to start from the root
         @param dad dad of the node, used to direct the search
-        @param halID the HAL ID
+        @param branchModelID the branch model ID
     */
-    void assignHALid(Node *node, Node *dad, int halID);
+    void assignBranchModelid(Node *node, Node *dad, int branchModelID);
     
 	/********************************************************
             PROPERTIES OF TREE

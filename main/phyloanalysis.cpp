@@ -36,7 +36,7 @@
 #include "tree/iqtree.h"
 #include "tree/iqtreemix.h"
 #include "tree/iqtreemixhmm.h"
-#include "tree/phylotreehal.h"
+#include "tree/phylotreebrmodel.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -635,11 +635,11 @@ void reportModel(ostream &out, PhyloTree &tree) {
         }
         out << endl << endl;
         // }
-    } else if (tree.isHAL()) {
-        PhyloTreeHal* treeHAL = (PhyloTreeHal*) &tree;
-        for (i=0; i<treeHAL->numHALModels(); i++) {
-            out << "HAL Model " << i << ":" << endl << endl;
-            reportModel(out, treeHAL->aln, treeHAL->getModel(i));
+    } else if (tree.isBranchModel()) {
+        PhyloTreeBranchModel* treeBrModel = (PhyloTreeBranchModel*) &tree;
+        for (i=0; i<treeBrModel->numBranchModels(); i++) {
+            out << "Branch Model " << i << ":" << endl << endl;
+            reportModel(out, treeBrModel->aln, treeBrModel->getModel(i));
         }
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
@@ -3985,8 +3985,8 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
             } else if (pos != string::npos) {
                 iqtree = new PhyloTreeMixlen(alignment, 0);
-            } else if (params.isHAL) {
-                iqtree = new PhyloTreeHal(alignment);
+            } else if (params.isBranchModel) {
+                iqtree = new PhyloTreeBranchModel(alignment);
             } else
                 iqtree = new IQTree(alignment);
         }
@@ -4719,8 +4719,8 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, 0);
         } else if (isTreeMix) {
             tree = new IQTreeMixHmm(params, alignment);
-        } else if (params.isHAL) {
-            tree = new PhyloTreeHal(alignment);
+        } else if (params.isBranchModel) {
+            tree = new PhyloTreeBranchModel(alignment);
         } else
             tree = new IQTree(alignment);
     }

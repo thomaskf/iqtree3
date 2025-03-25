@@ -83,9 +83,9 @@ public:
     map<string,string> attributes;
     
     /**
-            HAL group Id
+            Branch model Id
          */
-    int hal_id;
+    int branchmodel_id;
     
     /**
         construct class with a node and length
@@ -97,7 +97,7 @@ public:
         length = alength;
         id = -1;
         split = NULL;
-        hal_id = -1;
+        branchmodel_id = -1;
     }
 
     /**
@@ -111,7 +111,7 @@ public:
         length = alength;
         id = aid;
         split = NULL;
-        hal_id = -1;
+        branchmodel_id = -1;
     }
 
     /**
@@ -124,7 +124,7 @@ public:
         id = nei->id;
         split = NULL;
         attributes = nei->attributes;
-        hal_id = nei->hal_id;
+        branchmodel_id = nei->branchmodel_id;
     }
 
     /**
@@ -467,11 +467,11 @@ public:
     virtual void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
     /**
-        update the neighbor node with the new HAL ID
+        update the neighbor node with the new branch model ID
         @param node neighbor node
-        @param newHALid new HAL ID
+        @param newBranchModelid new branch model ID
     */
-    void updateHALid(Node* node, int newHALid);
+    void updateBranchModelid(Node* node, int newBranchModelid);
 };
 /*
 class Branch {
