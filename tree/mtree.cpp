@@ -3141,7 +3141,7 @@ void MTree::assignBranchModelid(Node *node, Node *dad, int branchModelID) {
     if (node == NULL) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
         Node *node2 = (*it)->node;
-        if ((*it)->branchmodel_id == -1) {
+        if ((*it)->branchmodel_id == 0) {
             node->updateBranchModelid(node2,branchModelID);
             node2->updateBranchModelid(node,branchModelID);
         }

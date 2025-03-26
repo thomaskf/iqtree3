@@ -35,7 +35,16 @@ public:
     /**
      *      return the associated substitution model
      */
+
+    virtual ModelSubst *getModel() {
+        return model;
+    }
+
     virtual ModelSubst* getModel(int hal_id);
+
+    virtual ModelFactory *getModelFactory() {
+        return model_factory;
+    }
 
     virtual ModelFactory* getModelFactory(int hal_id);
 
@@ -53,6 +62,13 @@ public:
         @return true as this is a branch model (i.e. each branch has different substitution model)
      */
     virtual bool isBranchModel() { return true; }
+
+    /**
+        @return number of branch models, default: 1
+    */
+    virtual int getNumBrModel();
+
+    virtual void computeTipPartialLikelihood();
 
     /**
      models

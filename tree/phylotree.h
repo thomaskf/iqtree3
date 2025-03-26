@@ -561,6 +561,11 @@ public:
     virtual bool isBranchModel() { return false; }
 
     /**
+        @return number of branch models, default: 1
+    */
+    virtual int getNumBrModel() { return 1; }
+
+    /**
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() { return 1; }
@@ -875,7 +880,15 @@ public:
     template<class VectorClass>
     void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
 
-    /** 
+    /**
+        precompute info for branch models
+    */
+    template<class VectorClass, const int nstates>
+    void computePartialInfoBrModel(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
+    template<class VectorClass>
+    void computePartialInfoBrModel(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
+
+    /**
         sort neighbor in descending order of subtree size (number of leaves within subree)
         @param node the starting node, NULL to start from the root
         @param dad dad of the node, used to direct the search
@@ -893,7 +906,7 @@ public:
   // STATE (IN). Use binomial sampling unless hyper is true, then use
   // hypergeometric sampling.
   void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
-    void computeTipPartialLikelihood();
+    virtual void computeTipPartialLikelihood();
     void computeTipPartialParsimony();
     void computePtnInvar();
     void computePtnFreq();
@@ -928,6 +941,12 @@ public:
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodBrModelSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -981,6 +1000,12 @@ public:
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>

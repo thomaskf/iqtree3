@@ -97,7 +97,7 @@ public:
         length = alength;
         id = -1;
         split = NULL;
-        branchmodel_id = -1;
+        branchmodel_id = 0;
     }
 
     /**
@@ -111,7 +111,7 @@ public:
         length = alength;
         id = aid;
         split = NULL;
-        branchmodel_id = -1;
+        branchmodel_id = 0;
     }
 
     /**

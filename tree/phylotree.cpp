@@ -990,6 +990,7 @@ void PhyloTree::deleteAllPartialLh() {
 }
  
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
+    cout << "Enter PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem)" << endl;
     // +num_states for ascertainment bias correction
     int64_t nptn = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
     if (model_factory)
@@ -1006,10 +1007,12 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 
     int64_t mem_size;
     // memory to tip_partial_lh
-    if (model)
-        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * sizeof(double);
-    else
+    if (model) {
+        cout << "getNumBrModel() = " << getNumBrModel() << endl;
+        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * getNumBrModel() * sizeof(double);
+    } else {
         mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);
+    }
 
     // memory for UFBoot
     if (params->gbo_replicates)
@@ -1056,6 +1059,7 @@ uint64_t PhyloTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
 }
 
 void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
+    cout << "Enter PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries)" << endl;
     // +num_states for ascertainment bias correction
     uint64_t block_size = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
     if (model_factory)

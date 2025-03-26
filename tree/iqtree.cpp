@@ -2121,6 +2121,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     if (logl_epsilon == -1)
         logl_epsilon = params->modelEps;
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
+    cout << "Root's name = " << root->name << endl;
     double stime = getRealTime();
     string newTree;
     if (params->pll) {
