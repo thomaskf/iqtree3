@@ -899,7 +899,6 @@ template<class VectorClass>
 #endif
 void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren, double *partial_lh_leaves) {
     
-    cout << "enter PhyloTree::computePartialInfo(...)" << endl;
     if (isBranchModel()) {
         return computePartialInfoBrModel(info, buffer, echildren, partial_lh_leaves);
     }
@@ -1304,8 +1303,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
                                                     , size_t ptn_lower, size_t ptn_upper, int packet_id)
 #endif
 {
-    cout << "enter PhyloTree::computePartialLikelihoodSIMD(...)" << endl;
-
     PhyloNeighbor *dad_branch = info.dad_branch;
     PhyloNode *dad = info.dad;
     // don't recompute the likelihood
@@ -2064,8 +2061,6 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
                                                    , size_t ptn_lower, size_t ptn_upper, int packet_id)
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodBufferSIMD(...)" << endl;
-    
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
 
@@ -2249,8 +2244,6 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf)
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodDervGenericSIMD(...)" << endl;
-
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -2668,7 +2661,6 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodBrachGenericSIMD(...)" << endl << flush;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -3294,7 +3286,6 @@ template <class VectorClass, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodFromBufferSIMD()" << endl;
 	ASSERT(theta_all && theta_computed);
 
 #ifndef KERNEL_FIX_STATES
@@ -3509,7 +3500,6 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodDervMixlenSIMD()" << endl;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -3699,8 +3689,6 @@ template<class VectorClass>
 #endif
 void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buffer, double *echildren, double *partial_lh_leaves) {
 
-    cout << "Enter PhyloTree::computePartialInfoBrModel(...)" << endl;
-    
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
 #endif
@@ -3731,15 +3719,6 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
     double *partial_lh_leaf = partial_lh_leaves;
     if (partial_lh_leaf == NULL) {
         partial_lh_leaf = info.partial_lh_leaves;
-        cout << "referring info.partial_lh_leaves" << endl;
-        cout << "info.partial_lh_leaves initial values:" << endl;
-        for (int i = 0; i < leafNum; i++) {
-            for (int j = 0; j < nstates; j++) {
-                cout << info.partial_lh_leaves[i*nstates + j] << " ";
-            }
-            cout << ";";
-        }
-        cout << endl;
     }
 
     //----------- Non-reversible model --------------
@@ -3831,7 +3810,6 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
             PhyloNeighbor *child = (PhyloNeighbor*)*it;
             VectorClass *echild_ptr = (VectorClass*)echild;
             ModelSubst* child_model = getModel(child->branchmodel_id);
-            cout << "child->branchmodel_id = " << child->branchmodel_id << endl;
             double *evec = child_model->getEigenvectors();
             double *eval = child_model->getEigenvalues();
             // precompute information buffer
@@ -3888,27 +3866,14 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
             // precompute information buffer
             double *echild_ptr = echild;
             ModelSubst* child_model = getModel(child->branchmodel_id);
-            cout << "*child->branchmodel_id = " << child->branchmodel_id << endl;
             double *evec = child_model->getEigenvectors();
             double *eval = child_model->getEigenvalues();
-            cout << "Eigenvectors: ";
-            for (int i = 0; i < nstates * nstates; i++)
-                cout << evec[i] << " ";
-            cout << endl;
-            cout << "Eigenvalues: ";
-            for (int i = 0; i < nstates; i++)
-                cout << eval[i] << " ";
-            cout << endl;
-
-            cout << "ncat_mix = " << ncat_mix << endl;
-            cout << "expchild: ";
             for (c = 0; c < ncat_mix; c++) {
                 double len_child = site_rate->getRate(cat_id[c]) * child->getLength(cat_id[c]);
                 double *eval_ptr = eval + mix_addr_nstates_malign[c];
                 double *evec_ptr = evec + mix_addr_malign[c];
                 for (i = 0; i < nstates; i++) {
                     expchild[i] = exp(eval_ptr[i]*len_child);
-                    cout << expchild[i] << " ";
                 }
                 for (x = 0; x < nstates; x++) {
                     for (i = 0; i < nstates; i++) {
@@ -3917,16 +3882,10 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
                     echild_ptr += nstates;
                 }
             }
-            cout << endl;
             // pre compute information for tip
             if (child->node->isLeaf()) {
                 //vector<int>::iterator it;
-                cout << "child->node->id = " << child->node->id << endl;
                 int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
-                cout << "child->branchmodel_id = " << child->branchmodel_id << endl;
-                cout << "ncat_mix = " << ncat_mix << endl;
-                cout << "block = " << block << endl;
-                cout << "tip_block = " << tip_block << endl;
                 for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     double *echild_ptr = echild;
@@ -3952,16 +3911,6 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
             echild += block*nstates;
         }
     }
-    // show the content of partial_lh_leaf
-    cout << "info.partial_lh_leaves: ";
-    for (int i = 0; i < leafNum; i++) {
-        for (int j = 0; j < nstates; j++) {
-            cout << info.partial_lh_leaves[i*nstates + j] << " ";
-        }
-        cout << ";";
-    }
-    cout << endl;
-    cout << "==============================" << endl;
 }
 
 /*******************************************************
@@ -3980,8 +3929,6 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
                                                     , size_t ptn_lower, size_t ptn_upper, int packet_id)
 #endif
 {
-    cout << "Enter PhyloTree::computePartialLikelihoodBrModelSIMD(...)" << endl;
-    
     PhyloNeighbor *dad_branch = info.dad_branch;
     PhyloNode *dad = info.dad;
     // don't recompute the likelihood
@@ -4089,22 +4036,20 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
         len_right = etmp;
     }
 
-    cout << endl;
-    cout << "left->node->name = " << left->node->name << " left->node->id = " << left->node->id << endl;
-    cout << "right->node->name = " << right->node->name << " right->node->id = " << right->node->id << endl;
-    cout << "left->branchmodel_id = " << left->branchmodel_id << endl;
-    cout << "right->branchmodel_id = " << right->branchmodel_id << endl;
-    // Meanwhile, this function only works for the left's branch model same as the right's
-    // ASSERT(left->branchmodel_id == right->branchmodel_id);
-    ModelSubst* branchmodel = getModel(left->branchmodel_id);
-    double *evec = branchmodel->getEigenvectors();
+    ModelSubst* branchmodel_l = getModel(left->branchmodel_id);
+    double *evec_l = branchmodel_l->getEigenvectors();
+    ModelSubst* branchmodel_r = getModel(right->branchmodel_id);
+    double *evec_r = branchmodel_r->getEigenvectors();
     ModelSubst* dad_brmodel = getModel(dad_branch->branchmodel_id);
     double *inv_evec = dad_brmodel->getInverseEigenvectors();
-    ASSERT(inv_evec && evec);
-    double *eval = branchmodel->getEigenvalues();
+    ASSERT(inv_evec && evec_l && evec_r);
+    double *eval_l = branchmodel_l->getEigenvalues();
+    double *eval_r = branchmodel_r->getEigenvalues();
 
+    // TODO: meanwhile, not support node->degree() > 3
+    ASSERT(node->degree() <= 3);
+    
     if (node->degree() > 3) {
-        cout << "[PhyloTree::computePartialLikelihoodBrModelSIMD] node->degree() > 3 : node->degree() = " << node->degree() << endl;
         /*--------------------- multifurcating node ------------------*/
 
         // now for-loop computing partial_lh over all site-patterns
@@ -4124,8 +4069,8 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
 
             // SITE_MODEL variables
             VectorClass *expchild = partial_lh_all + block;
-            VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
-            VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
+            VectorClass *eval_ptr = (VectorClass*) &eval_l[ptn*nstates];
+            VectorClass *evec_ptr = (VectorClass*) &evec_l[ptn*states_square];
             double *len_child = len_children;
             VectorClass vchild;
 
@@ -4355,22 +4300,24 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
                 VectorClass* expright = (VectorClass*) vec_right;
                 VectorClass *vleft = (VectorClass*) &partial_lh_left[ptn*nstates];
                 VectorClass *vright = (VectorClass*) &partial_lh_right[ptn*nstates];
-                VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
+                VectorClass *eval_ptr_l = (VectorClass*) &eval_l[ptn*nstates];
+                VectorClass *eval_ptr_r = (VectorClass*) &eval_r[ptn*nstates];
+                VectorClass *evec_ptr_l = (VectorClass*) &evec_l[ptn*states_square];
+                VectorClass *evec_ptr_r = (VectorClass*) &evec_r[ptn*states_square];
                 VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*states_square];
                 for (size_t c = 0; c < ncat; c++) {
                     for (size_t i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * vleft[i];
-                        expright[i] = exp(eval_ptr[i]*len_right[c]) * vright[i];
-
+                        expleft[i] = exp(eval_ptr_l[i]*len_left[c]) * vleft[i];
+                        expright[i] = exp(eval_ptr_r[i]*len_right[c]) * vright[i];
                     }
                     // compute real partial likelihood vector
                     for (size_t x = 0; x < nstates; x++) {
-                        VectorClass *this_evec = evec_ptr + x*nstates;
+                        VectorClass *this_evec_l = evec_ptr_l + x*nstates;
+                        VectorClass *this_evec_r = evec_ptr_r + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x]);
 #else
-                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x], nstates);
 #endif
                     }
                     // compute dot-product with inv_eigenvector
@@ -4473,21 +4420,24 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
                 VectorClass *expleft = (VectorClass*)vec_left;
                 VectorClass *expright = expleft+nstates;
                 VectorClass *vleft = (VectorClass*)&partial_lh_left[ptn*nstates];
-                VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
+                VectorClass *eval_ptr_l = (VectorClass*) &eval_l[ptn*nstates];
+                VectorClass *eval_ptr_r = (VectorClass*) &eval_r[ptn*nstates];
+                VectorClass *evec_ptr_l = (VectorClass*) &evec_l[ptn*states_square];
+                VectorClass *evec_ptr_r = (VectorClass*) &evec_r[ptn*states_square];
                 VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*states_square];
                 for (size_t c = 0; c < ncat; c++) {
                     for (size_t i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * vleft[i];
-                        expright[i] = exp(eval_ptr[i]*len_right[c]) * partial_lh_right[i];
+                        expleft[i] = exp(eval_ptr_l[i]*len_left[c]) * vleft[i];
+                        expright[i] = exp(eval_ptr_r[i]*len_right[c]) * partial_lh_right[i];
                     }
                     // compute real partial likelihood vector
                     for (size_t x = 0; x < nstates; x++) {
-                        VectorClass *this_evec = evec_ptr + x*nstates;
+                        VectorClass *this_evec_l = evec_ptr_l + x*nstates;
+                        VectorClass *this_evec_r = evec_ptr_r + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x]);
 #else
-                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x], nstates);
 #endif
                     }
                     // compute dot-product with inv_eigenvector
@@ -4633,12 +4583,14 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
 
             double *eleft_ptr = eleft;
             double *eright_ptr = eright;
-            VectorClass *expleft, *expright, *eval_ptr, *evec_ptr, *inv_evec_ptr;
+            VectorClass *expleft, *expright, *eval_ptr_l, *eval_ptr_r, *evec_ptr_l, *evec_ptr_r, *inv_evec_ptr;
             if (SITE_MODEL) {
                 expleft = partial_lh_tmp + nstates;
                 expright = expleft + nstates;
-                eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                evec_ptr = (VectorClass*) &evec[ptn*states_square];
+                eval_ptr_l = (VectorClass*) &eval_l[ptn*nstates];
+                eval_ptr_r = (VectorClass*) &eval_r[ptn*nstates];
+                evec_ptr_l = (VectorClass*) &evec_l[ptn*states_square];
+                evec_ptr_r = (VectorClass*) &evec_r[ptn*states_square];
                 inv_evec_ptr = (VectorClass*) &inv_evec[ptn*states_square];
             }
 
@@ -4652,15 +4604,16 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
                 if (SITE_MODEL) {
                     // site-specific model
                     for (size_t i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * partial_lh_left[i];
-                        expright[i] = exp(eval_ptr[i]*len_right[c]) * partial_lh_right[i];
+                        expleft[i] = exp(eval_ptr_l[i]*len_left[c]) * partial_lh_left[i];
+                        expright[i] = exp(eval_ptr_r[i]*len_right[c]) * partial_lh_right[i];
                     }
                     for (size_t x = 0; x < nstates; x++) {
-                        VectorClass *this_evec = evec_ptr + x*nstates;
+                        VectorClass *this_evec_l = evec_ptr_l + x*nstates;
+                        VectorClass *this_evec_r = evec_ptr_r + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x]);
 #else
-                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec_l, expleft, this_evec_r, expright, partial_lh_tmp[x], nstates);
 #endif
                     }
 #ifdef KERNEL_FIX_STATES
@@ -4746,7 +4699,6 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
 #endif
 {
-    cout << "Enter PhyloTree::computeLikelihoodBrachBrModelSIMD(...)" << endl << flush;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -4771,7 +4723,6 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
 #endif
     
     ModelSubst* dad_model = getModel(dad_branch->branchmodel_id);
-    cout << "dad_branch->branchmodel_id = " << dad_branch->branchmodel_id << endl;
     ModelFactory* dad_modelfactory = getModelFactory(dad_branch->branchmodel_id);
     
     size_t ncat = site_rate->getNRate();
@@ -4868,7 +4819,6 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
     if (dad->isLeaf()) {
-        cout << "PhyloTree::computeLikelihoodBrachBrModelGenericSIMD dad->isLeaf()" << endl << flush;
         // special treatment for TIP-INTERNAL NODE case
 //        double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
         double *partial_lh_node;
@@ -4878,10 +4828,6 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
             partial_lh_node = buffer_partial_lh_ptr;
             buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block);
         }
-        cout << "PhyloTree::computeLikelihoodBrachBrModelGenericSIMD partial_lh_node: ";
-        for (int i = 0; i < nstates; i++)
-            cout << partial_lh_node[i] << " ";
-        cout << endl;
 
         if (!SITE_MODEL) {
 //            IntVector states_dad = dad_model->seq_states[dad->id];
@@ -4919,10 +4865,6 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
                     }
                 }
             }
-            cout << "PhyloTree::computeLikelihoodBrachBrModelGenericSIMD partial_lh_node(2): ";
-            for (int i = 0; i < nstates; i++)
-                cout << partial_lh_node[i] << " ";
-            cout << endl;
         }
         
         auto stateRow = this->getConvertedSequenceByNumber(dad->id);
@@ -5368,7 +5310,6 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
         tree_lh -= aln->getNSite()*all_prob_const;
         ASSERT(std::isfinite(tree_lh));
     }
-    cout << "[PhyloTree::computeLikelihoodBranchBrModelSIMD] tree_lh = " << tree_lh << endl;
     return tree_lh;
 }
 

@@ -20,23 +20,24 @@ PhyloTreeBranchModel::~PhyloTreeBranchModel() {
 
 void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     IQTree::initializeModel(params, model_name, models_block);
-    cout << "[PhyloTreeBranchModel::initializeModel] model_name = " << model_name << endl;
     
     int nBranchModels = numBranchModels();
     if (nBranchModels > 0) {
-        cout << "  Number of Branch models: " << nBranchModels << endl;
+        cout << endl;
+        cout << "Number of branch models: " << nBranchModels << endl;
         
         // obtain the user input model parameters if exists
         vector<string> modelparams;
         getUserInputModelParams(modelparams);
         
         models.push_back(IQTree::getModelFactory()->model);
+        cout << "Base model: " << model_name << endl;
         for (int i = 1; i < nBranchModels; i++) {
             string curr_model = model_name;
             if (modelparams.size() > i && modelparams[i] != "") {
                 // model with user input parameters
                 curr_model = modelparams[i];
-                cout << "modelparams[" << i << "]=" << curr_model << endl;
+                cout << "Model " << i << "   : " << curr_model << endl;
             }
             ModelFactory* mf = new ModelFactory(params, curr_model, this, models_block);
             modelFacts.push_back(mf);
@@ -128,7 +129,6 @@ void PhyloTreeBranchModel::getUserInputModelParams(vector<string> &modelparams, 
 }
 
 void PhyloTreeBranchModel::computeTipPartialLikelihood() {
-    cout << "Enter PhyloTreeBranchModel::computeTipPartialLikelihood" << endl;
     if ((tip_partial_lh_computed & 1) != 0)
         return;
     tip_partial_lh_computed |= 1;
@@ -260,8 +260,6 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
     }
 
     // assign tip_partial_lh for all admissible states
-    cout << "PhyloTreeBranchModel::computeTipPartitalLikelihood -- here!" << endl;
-    cout << "aln->STATE_UNKNOWN = " << aln->STATE_UNKNOWN << endl;
     int nmodels = models.size();
     for (int modelid = 0; modelid < nmodels; modelid++) {
         int s = modelid * (aln->STATE_UNKNOWN+1) * nstates * nmixtures;
@@ -274,9 +272,13 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
             }
         }
     }
-    cout << "tip_partial_lh: ";
-    int total_dim = nmodels * (aln->STATE_UNKNOWN+1) * nstates * nmixtures;
-    for (int i = 0; i < total_dim; i++)
-        cout << tip_partial_lh[i] << " ";
-    cout << endl;
+}
+
+double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log_value) {
+    ASSERT(root->isLeaf());
+    if (!current_it) {
+        current_it = (PhyloNeighbor*)root->neighbors[0];
+        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
+    }
+    return PhyloTree::computeLikelihood(pattern_lh, save_log_value);
 }

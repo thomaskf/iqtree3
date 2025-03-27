@@ -990,7 +990,6 @@ void PhyloTree::deleteAllPartialLh() {
 }
  
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
-    cout << "Enter PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem)" << endl;
     // +num_states for ascertainment bias correction
     int64_t nptn = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
     if (model_factory)
@@ -1008,7 +1007,6 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     int64_t mem_size;
     // memory to tip_partial_lh
     if (model) {
-        cout << "getNumBrModel() = " << getNumBrModel() << endl;
         mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * getNumBrModel() * sizeof(double);
     } else {
         mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);

@@ -70,6 +70,8 @@ public:
 
     virtual void computeTipPartialLikelihood();
 
+    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
+
     /**
      models
      */
