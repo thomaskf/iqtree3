@@ -3252,6 +3252,8 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
 
+    params.startCPUTime = getCPUTime();
+    params.start_real_time = getRealTime();
     string best_subst_name, best_rate_name;
     map <string, vector<string> > nest_network;
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network);
