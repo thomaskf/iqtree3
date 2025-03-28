@@ -1009,7 +1009,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     if (model) {
         mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * getNumBrModel() * sizeof(double);
     } else {
-        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);
+        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * getNumBrModel() * sizeof(double);
     }
 
     // memory for UFBoot
@@ -1073,7 +1073,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
         scale_size *= model->getNMixtures();
     }
 
-    uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
+    uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * getNumBrModel();
     uint64_t tip_partial_pars_size = aln->num_states * (aln->STATE_UNKNOWN+1);
 
     // TODO mem save
@@ -1103,9 +1103,9 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         }
 
         if (!central_partial_lh) {
-            uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures());
+            uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * getNumBrModel());
             if (model->isSiteSpecificModel())
-                tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
+                tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum * getNumBrModel();
 
             if (max_lh_slots == 0)
                 getMemoryRequired();

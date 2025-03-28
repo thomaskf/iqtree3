@@ -1794,7 +1794,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     for (it = begin(), part = 0; it != end(); it++, part++) {
         (*it)->tip_partial_lh = lh_addr;
         (*it)->tip_partial_pars = pars_addr;
-        uint64_t tip_partial_lh_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1) * (*it)->model->getNMixtures();
+        uint64_t tip_partial_lh_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1) * (*it)->model->getNMixtures() * getNumBrModel();
         uint64_t tip_partial_pars_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1);
         //tip_partial_lh_size = ((tip_partial_lh_size+3)/4)*4;
         lh_addr += get_safe_upper_limit(tip_partial_lh_size);
