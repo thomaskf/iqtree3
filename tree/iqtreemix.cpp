@@ -1845,17 +1845,22 @@ void IQTreeMix::computeInitialTree(LikelihoodKernel kernel, istream* in) {
 
     if (size() == 0)
         outError("No tree is inputted for the tree-mixture model");
-    if (params->user_file == NULL) {
-        outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+    
+    if (!in) {
+        if (params->user_file == NULL) {
+            outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+        }
+        fin.open(params->user_file);
+        
+        for (i=0; i<size(); i++) {
+            at(i)->computeInitialTree(kernel, &fin);
+        }
+        fin.close();
+    } else {
+        for (i=0; i<size(); i++) {
+            at(i)->computeInitialTree(kernel, in);
+        }
     }
-    
-    fin.open(params->user_file);
-    
-    for (i=0; i<size(); i++) {
-        at(i)->computeInitialTree(kernel, &fin);
-    }
-    
-    fin.close();
     
     // show trees
     // showTree();

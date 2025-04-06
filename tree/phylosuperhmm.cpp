@@ -146,6 +146,16 @@ void PhyloSuperHmm::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         superTreeSet[i]->mapTrees();
     }
     fin.close();
+    // compute the initial tree individually.
+    int npart = size();
+    for (int i = 0; i < npart; i++) {
+        stringstream ss;
+        IQTreeMixHmm* tmixhmm = (IQTreeMixHmm*) at(i);
+        for (int j = 0; j < tmixhmm->size(); j++)
+            tmixhmm->at(j)->printTree(ss, WT_NEWLINE);
+        ss.seekg(ios_base::beg);
+        tmixhmm->computeInitialTree(kernel, &ss);
+    }
 }
 
 void PhyloSuperHmm::setRootNode(const char *my_root, bool multi_taxa) {
