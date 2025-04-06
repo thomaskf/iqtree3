@@ -3411,7 +3411,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (verbose_mode >= VB_MED) {
         cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
         int model_df;
-        if (iqtree->isTreeMix()) {
         if (iqtree->isTreeMix() && !iqtree->isSuperTree()) {
             model_df = ((IQTreeMix*) iqtree)->getNParameters();
         } else {
