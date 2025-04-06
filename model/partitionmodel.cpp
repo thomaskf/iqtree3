@@ -66,7 +66,17 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if (model_name == "") // if empty, take model name from command option
         	model_name = params.model_name;
         if ((*it)->isTreeMix()) {
-            ((IQTreeMixHmm*)(*it))->initializeModel(params, model_name, models_block);
+            IQTreeMixHmm* tmix = (IQTreeMixHmm*)(*it);
+            tmix->initializeModel(params, model_name, models_block);
+            // modify state_freq to account for empty sequences
+            if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && params.partition_type != TOPO_UNLINKED && (*it)->aln->seq_type != SEQ_CODON) {
+                for (int k = 0; k < tmix->size(); k++) {
+                    if (tmix->at(k)->getModel()->freq_type == FREQ_EMPIRICAL) {
+                        (*it)->aln->computeStateFreq(tmix->at(k)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
+                        tmix->at(k)->getModel()->decomposeRateMatrix();
+                    }
+                }
+            }
         } else {
             (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
             (*it)->setModel((*it)->getModelFactory()->model);
@@ -85,10 +95,6 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                 (*it)->getModel()->decomposeRateMatrix();
             }
         }
-        
-        //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
-        //(*it)->copyTree(tree, taxa_set);
-        //(*it)->drawTree(cout);
     }
     if (init_by_divmat) {
         ASSERT(0 && "init_by_div_mat not working");
@@ -188,11 +194,15 @@ void PartitionModel::saveCheckpoint() {
         checkpoint->endStruct();
     }
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    int part = 0;
-    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
-        checkpoint->startStruct((*it)->aln->name);
-        (*it)->getModelFactory()->saveCheckpoint();
-        checkpoint->endStruct();
+    if (tree->isTreeMix()) {
+        ((PhyloSuperHmm *) tree)->saveModelCheckpoint();
+    } else {
+        int part = 0;
+        for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
+            checkpoint->startStruct((*it)->aln->name);
+            (*it)->getModelFactory()->saveCheckpoint();
+            checkpoint->endStruct();
+        }
     }
     endCheckpoint();
 
@@ -205,11 +215,15 @@ void PartitionModel::restoreCheckpoint() {
     CKP_RESTORE(linked_alpha);
 
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    int part = 0;
-    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
-        checkpoint->startStruct((*it)->aln->name);
-        (*it)->getModelFactory()->restoreCheckpoint();
-        checkpoint->endStruct();
+    if (tree->isTreeMix()) {
+        ((PhyloSuperHmm *) tree)->restoreModelCheckpoint();
+    } else {
+        int part = 0;
+        for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
+            checkpoint->startStruct((*it)->aln->name);
+            (*it)->getModelFactory()->restoreCheckpoint();
+            checkpoint->endStruct();
+        }
     }
 
     // restore linked models
@@ -241,7 +255,12 @@ int PartitionModel::getNParameters(int brlen_type) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 	int df = 0;
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) {
-    	df += (*it)->getModelFactory()->getNParameters(brlen_type);
+        if ((*it)->isTreeMix() && (*it)->isHMM())
+            df += ((IQTreeMixHmm*)(*it))->getNParameters();
+        else if ((*it)->isTreeMix())
+            df += ((IQTreeMix*)(*it))->getNParameters();
+        else
+            df += (*it)->getModelFactory()->getNParameters(brlen_type);
     }
     if (linked_alpha > 0)
         df ++;

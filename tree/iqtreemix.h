@@ -147,11 +147,15 @@ public:
 
     virtual void startCheckpoint();
 
-    void saveCheckpoint();
+    virtual void saveCheckpoint();
     
-    void restoreCheckpoint();
-    
-    void setMinBranchLen(Params& params);
+    virtual void restoreCheckpoint();
+
+    virtual void saveModelCheckpoint();
+
+    virtual void restoreModelCheckpoint();
+
+    virtual void setMinBranchLen(Params& params);
 
     /** set pointer of params variable */
     virtual void setParams(Params* params);
