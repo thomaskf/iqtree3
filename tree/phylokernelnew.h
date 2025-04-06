@@ -2658,7 +2658,6 @@ template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool
 double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
 #endif
 {
-    // cout << "PhyloTree::computeLikelihoodBrachGenericSIMD enter" << endl << flush;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)

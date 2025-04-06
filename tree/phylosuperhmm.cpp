@@ -102,7 +102,6 @@ void PhyloSuperHmm::setMinBranchLen(Params& params) {
 }
 
 void PhyloSuperHmm::initSettings(Params &params) {
-    cout << "enter PhyloSuperHmm::initSettings" << endl;
     IQTree::initSettings(params);
     // setLikelihoodKernel(params.SSE);
     // setNumThreads(params.num_threads);
@@ -369,7 +368,6 @@ void PhyloSuperHmm::restoreModelCheckpoint() {
     compute the weighted average of branch lengths over the weighted tree of partitions
 */
 void PhyloSuperHmm::computeBranchLengths() {
-    cout << "Enter PhyloSuperHmm::computeBranchLengths()" << endl;
     if (verbose_mode >= VB_DEBUG)
         cout << "Assigning branch lengths for full tree with weighted average..." << endl;
     
