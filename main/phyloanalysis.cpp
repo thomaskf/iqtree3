@@ -176,7 +176,7 @@ void reportReferences(Params &params, ofstream &out) {
 
     if (params.symtest != SYMTEST_NONE) {
         out << "To cite tests of symmetry please use: " << endl << endl
-            << "Suha Naser-Khdour, Bui Quang Minh, Wenqi Zhang, Eric A Stone, Robert Lanfear (2024)" << endl
+            << "Suha Naser-Khdour, Bui Quang Minh, Wenqi Zhang, Eric A Stone, Robert Lanfear (2019)" << endl
             << "The Prevalence and Impact of Model Violations in Phylogenetic Analysis." << endl
             << "Genome Biology and Evolution, 11:3341-3352." << endl
             << "https://doi.org/10.1093/gbe/evz193" << endl << endl;
@@ -1825,7 +1825,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             
             cout<<"\n-------------------------------------------------------------------\n";
             cout<<"The --terrace option is currently not available. Please, perform terrace analysis in a separate run using the following command line:\n";
-            cout<<"iqtree2 --gentrius <tree_file> -s <aln_file> -p <part_info_file>\n";
+            cout<<"iqtree3 --gentrius <tree_file> -s <aln_file> -p <part_info_file>\n";
             cout<<"For more information refer to the manual.\n";
             cout<<"-------------------------------------------------------------------\n";
             
@@ -3351,6 +3351,33 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network);
     
     optimiseQMixModel(params, iqtree, model_info);
+    
+    // if users want to perform tree dating (with mcmc)
+    // and if ModelFinder was run, the traversal starting node was incidently deleted (after copyTree and restoreCheckpoint)
+    // we have to delete tree nodes to force IQ-TREE to re-read the tree from the treefile
+    if (params.dating_method == "mcmctree" && params.dating_mf)
+    {
+        // if it's a supertree, delete all tree members
+        if (iqtree->isSuperTree())
+        {
+            PhyloSuperTree* stree = (PhyloSuperTree*) iqtree;
+            // delete member trees one by one
+            for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
+            {
+                if ((*it)->root)
+                {
+                    (*it)->freeNode();
+                    (*it)->root = NULL;
+                }
+            }
+        }
+        // delete the tree itself
+        if (iqtree->root)
+        {
+            iqtree->freeNode();
+            iqtree->root = NULL;
+        }
+    }
 }
         
 /**
@@ -5205,11 +5232,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         alignment = NULL; // from now on use tree->aln instead
 
         startTreeReconstruction(params, tree, *model_info);
-        if (params.dating_method == "mcmctree" && params.dating_mf)
-        {
-            cout << "Initializing rooted tree again from input tree file for MCMCtree dating ..." << endl;
-            tree->computeInitialTree(params.SSE);
-        }
         // call main tree reconstruction
         if (params.num_runs == 1) {
             runTreeReconstruction(params, tree);
@@ -5257,6 +5279,15 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     bool runCMapleAlg = false;
+    // if users want to compute SPRTA, enforce using CMAPLE
+    if (params.compute_SPRTA)
+    {
+        if (params.inference_alg != ALG_CMAPLE)
+        {
+            params.inference_alg = ALG_CMAPLE;
+            outWarning("Enforce using CMAPLE tree search algorithm for computing SPRTA.");
+        }
+    }
     // check and run CMaple algorithm (if users want to do so)
     if (params.inference_alg != ALG_IQ_TREE)
         runCMapleAlg = runCMaple(params);
@@ -5292,6 +5323,7 @@ bool runCMaple(Params &params)
     {
         // record the start time
         auto start = getRealTime();
+        auto start_cpu = getCPUTime();
 
         // Dummy variables
         std::string aln_path(params.aln_file);
@@ -5368,6 +5400,15 @@ bool runCMaple(Params &params)
             // Initialize a Tree
             const std::string input_treefile(params.user_file ? params.user_file : "");
             cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), cmaple::ParamsBuilder().build());
+            
+            // transfer SPRTA options if any
+            if (params.compute_SPRTA)
+            {
+                tree.params->compute_SPRTA = params.compute_SPRTA;
+                tree.params->compute_SPRTA_zero_length_branches = params.SPRTA_zero_branches;
+                tree.params->print_SPRTA_less_info_seqs = params.SPRTA_zero_branches;
+                tree.params->output_alternative_spr = params.out_alter_spr;
+            }
 
             // Infer a phylogenetic tree
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
@@ -5383,6 +5424,10 @@ bool runCMaple(Params &params)
                 // if users input a tree -> depend on the setting in params (false ~ don't allow replacing (by default)
                 if (input_treefile.length())
                     allow_replacing_ML_tree = params.allow_replace_input_tree;
+                
+                // if SPRTA was computed, don't allow changing tree topology
+                if (params.compute_SPRTA)
+                    allow_replacing_ML_tree = false;
 
                 tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree, out_stream);
 
@@ -5404,6 +5449,22 @@ bool runCMaple(Params &params)
             ofstream out = ofstream(output_treefile);
             out << tree.exportNewick(tree_format);
             out.close();
+            
+            // Write tree file in NEXUS format (if computing SPRTA)
+            if (params.compute_SPRTA)
+            {
+                ofstream out = ofstream(output_treefile + ".nex");
+                out << tree.exportNexus(tree_format);
+                out.close();
+            }
+
+            // export a TSV file if SPRTA is computed and we output alternative SPRs
+            if (params.compute_SPRTA && params.out_alter_spr)
+            {
+                ofstream out = ofstream(output_treefile + ".tsv");
+                out << tree.exportTSV();
+                out.close();
+            }
 
             // Show model parameters
             if (cmaple::verbose_mode > cmaple::VB_QUIET)
@@ -5419,14 +5480,20 @@ bool runCMaple(Params &params)
             // Show information about output files
             std::cout << "Analysis results written to:" << std::endl;
             std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
-            /*if (params.aLRT_replicates)
-                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;*/
+            if (params.compute_SPRTA)
+                std::cout << "Tree in NEXUS format:      " << output_treefile + ".nex" << std::endl;
+            if (params.compute_SPRTA && params.out_alter_spr)
+                std::cout << "Meta data in TSV format:   " << output_treefile + ".tsv" << std::endl;
             std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
 
             // show runtime
             auto end = getRealTime();
-            if (cmaple::verbose_mode > cmaple::VB_QUIET)
-                cout << "CMAPLE Runtime: " << end - start << "s" << endl;
+            auto end_cpu = getCPUTime();
+            cout << "Total CPU time used: " << fixed << end_cpu - start_cpu << " sec (" <<
+                convert_time(end_cpu-start_cpu) << ")" << endl;
+            cout << "Total wall-clock time used: " << fixed << end - start << " sec (" <<
+                convert_time(end-start) << ")" << endl;
+            cout << endl;
         }
     }
     catch (std::invalid_argument e)

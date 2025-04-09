@@ -3,6 +3,8 @@ IQ-TREE
 
 [![Github IQ-TREE 1 Releases](https://img.shields.io/github/downloads/Cibiv/IQ-TREE/total.svg?style=social&logo=github&label=iqtree1%20download)](https://github.com/Cibiv/IQ-TREE/releases)
 [![Github IQ-TREE 2 Releases](https://img.shields.io/github/downloads/iqtree/iqtree2/total.svg?style=social&logo=github&label=iqtree2%20download)](https://github.com/iqtree/iqtree2/releases)
+[![Github IQ-TREE 3 Releases](https://img.shields.io/github/downloads/iqtree/iqtree3/total.svg?style=social&logo=github&label=iqtree3%20download)](https://github.com/iqtree/iqtree3/releases)
+
 [![BioConda downloads](https://img.shields.io/conda/dn/bioconda/iqtree.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/iqtree)
 [![BioConda platforms](https://img.shields.io/conda/pn/bioconda/iqtree?style=flag)](https://github.com/bioconda/bioconda-recipes/tree/master/recipes/iqtree)
 [![Build Status](https://github.com/iqtree/iqtree2/workflows/Build/badge.svg)](https://github.com/iqtree/iqtree2/actions)
