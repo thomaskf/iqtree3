@@ -25,9 +25,9 @@ jobs:
             cmake-version: 3.14.7
             upload: true
           # Latest supported gcc and cmake versions
-          - gcc-version: 12
-            cmake-version: latest
-            upload: false
+#           - gcc-version: 12
+#             cmake-version: latest
+#             upload: false
 
     steps:
     - name: Checkout
@@ -209,16 +209,16 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: Install LLVM v14
+      - name: Install LLVM v9
         shell: cmd
-        run: choco install llvm --version=14.0.6 --allow-downgrade
+        run: choco install llvm --version=9.0.1
               
       - name: Install Boost
         uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
         with:
-            boost_version: 1.84.0
-            platform_version: 2022
+            boost_version: 1.72.0
+            platform_version: 2019
             toolset: mingw
 
       - name: Install Eigen3
