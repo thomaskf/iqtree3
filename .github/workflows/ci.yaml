@@ -211,7 +211,7 @@ jobs:
 
       - name: Install LLVM v9
         shell: cmd
-        run: choco install llvm --version=9.0.1
+        run: choco install llvm --version=9.0.1 --allow-downgrade
               
       - name: Install Boost
         uses: MarkusJx/install-boost@v2.4.5
