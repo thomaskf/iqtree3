@@ -9,6 +9,7 @@
 #define phylotreebrmodel_h
 
 #include "iqtree.h"
+#include "model/modelbranch.h"
 
 class PhyloTreeBranchModel : public IQTree
 {
@@ -17,13 +18,13 @@ public:
     /**
      * default constructor
      */
-    PhyloTreeBranchModel() : IQTree() {}
+    PhyloTreeBranchModel();
 
     /**
      * Constructor with given alignment
      * @param alignment
      */
-    PhyloTreeBranchModel(Alignment *aln) : IQTree(aln) {}
+    PhyloTreeBranchModel(Alignment *aln);
     
     /**
      * default destructor
@@ -49,7 +50,7 @@ public:
     virtual ModelFactory* getModelFactory(int hal_id);
 
     /*
-     * check how many different branch models
+     * check how many different branch models from the tree
      */
     int numBranchModels(Node *node = NULL, Node *dad = NULL);
     
@@ -71,14 +72,27 @@ public:
     virtual void computeTipPartialLikelihood();
 
     virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
+    
+    virtual void computePtnInvar();
 
     /**
-     models
+     model factories
      */
-    vector<ModelSubst*> models;
-    vector<ModelFactory*> modelFacts;
-
-
+    vector<ModelFactory*> model_facts;
+    
+    /**
+     corresponding branch model
+     */
+    ModelBranch* br_models;
+    
+    // has the model been initialized
+    bool model_initialized;
+    
+private:
+    // original site rate model
+    vector<RateHeterogeneity*> orig_site_rate_models;
+    // original sub model
+    ModelSubst* orig_sub_model;
 };
 
 #endif /* phylotreebrmodel_h */

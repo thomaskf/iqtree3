@@ -8,41 +8,98 @@
 #include "phylotreebrmodel.h"
 
 /**
+ * default constructor
+ */
+PhyloTreeBranchModel::PhyloTreeBranchModel() : IQTree() {
+    model_initialized = false;
+    br_models = NULL;
+    orig_sub_model = NULL;
+}
+
+/**
+ * Constructor with given alignment
+ * @param alignment
+ */
+PhyloTreeBranchModel::PhyloTreeBranchModel(Alignment *aln) : IQTree(aln) {
+    model_initialized = false;
+    br_models = NULL;
+    orig_sub_model = NULL;
+}
+
+/**
  * default destructor
  */
 PhyloTreeBranchModel::~PhyloTreeBranchModel() {
-    models.clear();
-    for (int i = 0; i < modelFacts.size(); i++) {
-        delete(modelFacts[i]);
+    // return the original site rate model to each model factory
+    int i;
+    for (i = 0; i < model_facts.size(); i++) {
+        model_facts[i]->site_rate = orig_site_rate_models[i];
     }
-    modelFacts.clear();
+    getModelFactory()->model = orig_sub_model;
+    
+    // delete all model factories
+    for (i = 0; i < model_facts.size(); i++) {
+        delete(model_facts[i]);
+    }
+    model_facts.clear();
 }
 
 void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
-    IQTree::initializeModel(params, model_name, models_block);
     
+    // error if this function has been called more than one time
+    ASSERT(model_initialized == false);
+    model_initialized = true;
+    
+    if (aln->ordered_pattern.empty())
+        aln->orderPatternByNumChars(PAT_VARIANT);
+
+    ModelBranch* model_branch = new ModelBranch(this);
+    br_models = model_branch;
+
     int nBranchModels = numBranchModels();
-    if (nBranchModels > 0) {
-        cout << endl;
-        cout << "Number of branch models: " << nBranchModels << endl;
-        
-        // obtain the user input model parameters if exists
-        vector<string> modelparams;
-        getUserInputModelParams(modelparams);
-        
-        models.push_back(IQTree::getModelFactory()->model);
-        cout << "Base model: " << model_name << endl;
-        for (int i = 1; i < nBranchModels; i++) {
-            string curr_model = model_name;
-            if (modelparams.size() > i && modelparams[i] != "") {
-                // model with user input parameters
-                curr_model = modelparams[i];
-                cout << "Model " << i << "   : " << curr_model << endl;
-            }
-            ModelFactory* mf = new ModelFactory(params, curr_model, this, models_block);
-            modelFacts.push_back(mf);
-            models.push_back(mf->model);
+    ASSERT(nBranchModels > 0);
+    cout << endl;
+    cout << "Number of branch models: " << nBranchModels << endl;
+
+    ModelFactory *mf = new ModelFactory(params, model_name, this, models_block);
+    orig_sub_model = mf->model;
+    mf->model = model_branch;
+    setModelFactory(mf);
+    setModel(model_branch);
+    setRate(mf->site_rate);
+
+    // base model
+    mf = new ModelFactory(params, model_name, this, models_block);
+    model_facts.push_back(mf);
+    model_branch->push_back((ModelMarkov*)mf->model);
+    orig_site_rate_models.push_back(mf->site_rate);
+    // replace the site rate by the site rate which is shared among all the model factories
+    mf->site_rate = getRate();
+    cout << "Base model: " << model_name << endl;
+    
+    // obtain the user input model parameters if exists
+    vector<string> modelparams;
+    getUserInputModelParams(modelparams);
+    
+    for (int i = 1; i < nBranchModels; i++) {
+        string curr_model = model_name;
+        if (i < modelparams.size() && modelparams[i] != "") {
+            // model with user input parameters
+            curr_model = modelparams[i];
         }
+        cout << "Model " << i << "   : " << curr_model << endl;
+        mf = new ModelFactory(params, curr_model, this, models_block);
+        model_facts.push_back(mf);
+        model_branch->push_back((ModelMarkov*)mf->model);
+        orig_site_rate_models.push_back(mf->site_rate);
+        // replace the site rate by the site rate which is shared among all the model factories
+        mf->site_rate = getRate();
+    }
+    
+    // set checkpoint
+    getModelFactory()->setCheckpoint(checkpoint);
+    for (int i = 0; i < nBranchModels; i++) {
+        model_facts[i]->setCheckpoint(checkpoint);
     }
 }
 
@@ -50,24 +107,20 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
  *      return the associated substitution model
  */
 ModelSubst* PhyloTreeBranchModel::getModel(int branchmodel_id) {
-    if (branchmodel_id >= models.size())
-        return model;
-    
-    return models[branchmodel_id];
+    ASSERT (branchmodel_id < br_models->size());
+    return br_models->at(branchmodel_id);
 }
 
 ModelFactory* PhyloTreeBranchModel::getModelFactory(int branchmodel_id) {
-    if (branchmodel_id >= modelFacts.size())
-        return model_factory;
-    
-    return modelFacts[branchmodel_id];
+    ASSERT (branchmodel_id < br_models->size());
+    return model_facts[branchmodel_id];
 }
 
 /**
     @return number of branch models, default: 1
 */
 int PhyloTreeBranchModel::getNumBrModel() {
-    return models.size();
+    return br_models->size();
 }
 
 /*
@@ -157,11 +210,9 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
         for (int nodeid = 0; nodeid < nseq; nodeid++) {
             auto stateRow = getConvertedSequenceByNumber(nodeid);
             Node* leafnode = findNodeName(aln->getSeqName(nodeid));
-            cout << "nodeid = " << nodeid << "; leafnode->id = " << leafnode->id << endl;
             ASSERT(nodeid == leafnode->id);
             // get the first neighbor
             Neighbor* first_nei = leafnode->neighbors[0];
-            cout << "first neighbor's branch model: " << first_nei->branchmodel_id << endl;
             ModelSubst* curr_model = getModel(first_nei->branchmodel_id);
             double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
             for (size_t ptn = 0; ptn < nptn; ptn+=vector_size, partial_lh += nstates*vector_size) {
@@ -260,7 +311,7 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
     }
 
     // assign tip_partial_lh for all admissible states
-    int nmodels = models.size();
+    int nmodels = getNumBrModel();
     for (int modelid = 0; modelid < nmodels; modelid++) {
         int s = modelid * (aln->STATE_UNKNOWN+1) * nstates * nmixtures;
         for (state = 0; state <= aln->STATE_UNKNOWN; state++) {
@@ -281,4 +332,19 @@ double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log
         current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
     }
     return PhyloTree::computeLikelihood(pattern_lh, save_log_value);
+}
+
+void PhyloTreeBranchModel::computePtnInvar() {
+    // store the current pointers of model and model factory
+    ModelSubst* modelo = model;
+    ModelFactory* modelfacto = model_factory;
+    // set all pointers to the base model and model factory
+    model = br_models->at(0);
+    model_factory = model_facts[0];
+    // compute the invar of the patterns according to the base model4
+    // TODO: may need to update in the future
+    PhyloTree::computePtnInvar();
+    // restore the original values for the pointers
+    model = modelo = model;
+    model_factory = modelfacto;
 }

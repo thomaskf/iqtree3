@@ -1,6 +1,7 @@
 add_library(model
 modelmarkov.cpp modelmarkov.h
 modelbin.cpp modelbin.h
+modelbranch.cpp modelbranch.h
 modeldna.cpp modeldna.h
 modeldnaerror.cpp modeldnaerror.h
 modelfactory.cpp modelfactory.h

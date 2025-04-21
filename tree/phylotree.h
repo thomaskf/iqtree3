@@ -908,7 +908,7 @@ public:
   void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
     virtual void computeTipPartialLikelihood();
     void computeTipPartialParsimony();
-    void computePtnInvar();
+    virtual void computePtnInvar();
     void computePtnFreq();
 
 
