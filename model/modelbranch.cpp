@@ -52,20 +52,22 @@ void ModelBranch::decomposeRateMatrix() {
 }
 
 double ModelBranch::optimizeParameters(double gradient_epsilon) {
-    if (verbose_mode >= VB_DEBUG) {
-        cout << "ModelBranch -- optimizing parameters (gradient_epsilon = " << gradient_epsilon << "; logl_epsilon = " << logl_epsilon << ")" << endl;
-    }
     double prev_score = phylo_tree->computeLikelihood();
     double score = prev_score;
     int optimize_steps = 100;
+    int digit_prec = 5;
     int step, k;
-    
+
+    if (verbose_mode >= VB_DEBUG) {
+        cout << std::setprecision(digit_prec) << "ModelBranch -- optimizing parameters (gradient_epsilon = " << gradient_epsilon << "; logl_epsilon = " << logl_epsilon << ")" << endl;
+    }
+
     for (step = 0; step < optimize_steps; step++) {
         for (k = 0; k < size(); k++) {
             if (!at(k)->fixed_parameters && at(k)->getNDim() > 0) {
                 score = at(k)->optimizeParameters(gradient_epsilon);
                 if (verbose_mode >= VB_DEBUG) {
-                    cout << "step " << step << "; model " << k << ": " << score << endl;
+                    cout << std::setprecision(digit_prec) << "step " << step << "; model " << k << ": " << score << endl;
                 }
             }
         }
