@@ -1183,7 +1183,7 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet) {
     const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R"};
-    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false, false};
+    bool test_options_default[]   = {true,   true, false,  true,  true,   false,  true,  false, true};
     bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false, false};
     bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false, false};
     bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false, false};
