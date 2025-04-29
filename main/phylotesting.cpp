@@ -1518,6 +1518,13 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 #if defined(_NN) || defined(_OLD_NN)
         }
 #endif
+        // if the best-fit model is a GHOST model, then change the optimization of branch length to BFGS
+        if (iqtree.aln->model_name.find("+H")!=string::npos || iqtree.aln->model_name.find("*H")!=string::npos) {
+            if (params.optimize_alg_mixlen == "EM") {
+                cout << "The optimization of branch length is changed to using BFGS algorithm." << endl;
+                params.optimize_alg_mixlen = "BFGS";
+            }
+        }
     }
 
     // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
