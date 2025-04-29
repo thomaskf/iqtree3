@@ -1182,20 +1182,36 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
  */
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet) {
-    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R"};
-    bool test_options_default[]   = {true,   true, false,  true,  true,   false,  true,  false, true};
-    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false, false};
-    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false, false};
-    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false, false};
-    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false, false};
-    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false, false};
-    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false, false};
-    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false, true};
-    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true, false};
-    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false, false};
-    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true, false};
-    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false, false};
-    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false, false};
+    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R",
+        "+H", "+I+H", "*H", "+I*H"};
+    bool test_options_default[]   = {true,   true, false,  true,  true, false,  true, false,  true,
+        false, false, false, false};
+    bool test_options_fast[]      = {false, false, false, false,  true, false, false, false, false,
+        false, false, false, false};
+    bool test_options_morph[]     = {true,  false,  true,  true, false,  true, false, false, false,
+        false, false, false, false};
+    bool test_options_morph_fast[]= {false, false, false, false, false,  true, false, false, false,
+        false, false, false, false};
+    bool test_options_noASC_I[]   = {true,  false, false,  true, false, false, false, false, false,
+        false, false, false, false};
+    bool test_options_noASC_I_fast[]={false,false, false,  true, false, false, false, false, false,
+        false, false, false, false};
+    bool test_options_asc[]       ={false,  false,  true, false, false,  true, false, false, false,
+        false, false, false, false};
+    bool test_options_new[]       = {true,   true, false,  true,  true, false,  true, false,  true,
+        false, false, false, false};
+    bool test_options_morph_new[] = {true,  false,  true,  true, false,  true,  true,  true, false,
+        false, false, false, false};
+    bool test_options_noASC_I_new[]= {true, false, false,  true, false, false,  true, false, false,
+        false, false, false, false};
+    bool test_options_asc_new[]   = {false, false,  true, false, false,  true, false,  true, false,
+        false, false, false, false};
+    bool test_options_pomo[]      = {true,  false, false,  true, false, false, false, false, false,
+        false, false, false, false};
+    bool test_options_norate[]    = {true,  false, false, false, false, false, false, false, false,
+        false, false, false, false};
+    bool test_options_ghost[]    = {false,  false, false, false, false, false, false, false, false,
+        true, true, true, true};
     bool *test_options = test_options_default;
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
     const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -1203,13 +1219,19 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
 
     bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
     bool with_asc = model_name.find("ASC") != string::npos;
+    
+    // change to upper character
+    transform(rate_set.begin(),rate_set.end(),rate_set.begin(),::toupper);
 
     if (seq_type == SEQ_POMO) {
         for (i = 0; i < noptions; i++)
             test_options[i] = test_options_pomo[i];
     }
         // If not PoMo, go on with normal treatment.
-    else if (frac_invariant_sites == 0.0) {
+    else if (rate_set == "GHOST") {
+        // ghost model
+        test_options = test_options_ghost;
+    } else if (frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new && rate_set != "1") {
             if (with_asc)
@@ -1255,13 +1277,9 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
                     test_options[j] = false;
         }
     }
-    if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO")) {
+    if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO") && !iEquals(rate_set, "GHOST")) {
         // take the rate_options from user-specified models
         convert_string_vec(rate_set.c_str(), ratehet);
-        for (j = 0; j < ratehet.size(); j++) {
-            // change to upper character
-            transform(ratehet[j].begin(), ratehet[j].end(), ratehet[j].begin(), ::toupper);
-        }
         if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
             ratehet.erase(ratehet.begin());
             StrVector ratedef;
