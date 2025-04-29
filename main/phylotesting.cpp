@@ -1212,6 +1212,8 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
         false, false, false, false};
     bool test_options_ghost[]    = {false,  false, false, false, false, false, false, false, false,
         true, true, true, true};
+    bool test_options_all[]       = {true,   true, false,  true,  true, false,  true, false,  true,
+        true, true, true, true};
     bool *test_options = test_options_default;
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
     const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -1231,6 +1233,8 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     else if (rate_set == "GHOST") {
         // ghost model
         test_options = test_options_ghost;
+    } else if (rate_set == "ALL") {
+        test_options = test_options_all;
     } else if (frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new && rate_set != "1") {
