@@ -75,6 +75,8 @@ public:
     
     virtual void computePtnInvar();
 
+    virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
+
     /**
      model factories
      */

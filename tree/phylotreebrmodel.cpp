@@ -348,3 +348,10 @@ void PhyloTreeBranchModel::computePtnInvar() {
     model = modelo = model;
     model_factory = modelfacto;
 }
+
+string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+    br_models->logl_epsilon = logl_epsilon;
+    if (logl_epsilon == -1)
+        br_models->logl_epsilon = params->modelEps;
+    return IQTree::optimizeModelParameters(printInfo, logl_epsilon);
+}
