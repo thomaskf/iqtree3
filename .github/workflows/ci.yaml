@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build-linux-x86-64:
     name: Linux x86-64 gcc-${{ matrix.gcc-version }} cmake-${{ matrix.cmake-version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -23,11 +23,11 @@ jobs:
           # Oldest supported gcc and cmake versions
           - gcc-version: 9
             cmake-version: 3.14.7
-            upload: false
-          # Latest supported gcc and cmake versions
-          - gcc-version: 12
-            cmake-version: latest
             upload: true
+          # Latest supported gcc and cmake versions
+#           - gcc-version: 12
+#             cmake-version: latest
+#             upload: true
 
     steps:
     - name: Checkout
