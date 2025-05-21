@@ -497,6 +497,11 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
         }
         out << "]";
     }
+    
+    if ((brtype & WT_BR_MODEL_ID)) {
+        // print branch model ID
+        out << "[brmodel_id=" << length_nei->branchmodel_id << "]";
+    }
 }
 
 void MTree::printBranchModelinfo(ostream &out, Neighbor *length_nei) {

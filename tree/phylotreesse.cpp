@@ -241,7 +241,6 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
 
 
 void PhyloTree::computeTipPartialLikelihood() {
-    cout << "Enter PhyloTree::computeTipPartialLikelihood" << endl;
 	if ((tip_partial_lh_computed & 1) != 0)
 		return;
 	tip_partial_lh_computed |= 1;

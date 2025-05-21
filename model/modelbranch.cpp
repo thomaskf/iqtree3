@@ -1,8 +1,12 @@
 #include "modelbranch.h"
 
 // default constructor
-ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree) {
+ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, false) {
     logl_epsilon = 0.01;
+    // by default, the root frequency needs to optimize separately
+    opt_root_freq = true;
+    is_optimizing_root = false;
+    rootfreqs = NULL;
 }
 
 // destructor
@@ -11,6 +15,8 @@ ModelBranch::~ModelBranch() {
         delete(at(i));
     }
     clear();
+    if (rootfreqs != NULL)
+        delete(rootfreqs);
 }
 
 void ModelBranch::setCheckpoint(Checkpoint *checkpoint) {
@@ -71,6 +77,11 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
                 }
             }
         }
+        // optimize the root frequency if necessary
+        if (opt_root_freq) {
+            optimizeRootFreq(gradient_epsilon);
+            // score = optimizeRootFreq(gradient_epsilon);
+        }
         if (score < prev_score + logl_epsilon) {
             // converged
             break;
@@ -84,8 +95,34 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
  @return the number of dimensions
  */
 int ModelBranch::getNDim() {
+    if (is_optimizing_root) {
+        return (rootfreqs != NULL)?(num_states-1):0;
+    }
     int totndim = 0;
     for (iterator it = begin(); it != end(); it++)
         totndim += (*it)->getNDim();
     return totndim;
 }
+
+/*
+ * initialization of root frequencies
+ */
+void ModelBranch::initializeRootFreq() {
+    rootfreqs = new double[num_states];
+    if (size() > 0) {
+        for (int i = 0; i < num_states; i++) {
+            rootfreqs[i] = at(0)->state_freq[i];
+        }
+    }
+}
+
+/**
+ * optimization of root frequencies
+ */
+double ModelBranch::optimizeRootFreq(double gradient_epsilon) {
+    is_optimizing_root = true;
+    cout << "getNDim() = " << getNDim() << endl;
+    is_optimizing_root = false;
+    return 0.0;
+}
+

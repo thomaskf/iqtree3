@@ -49,10 +49,34 @@ public:
      * @return HMM model full name
      */
     virtual string getFullName() { return "Branch Model"; }
+
+    /*
+     * initialization of root frequencies
+     */
+    void initializeRootFreq();
+    
+    /**
+        @return TRUE if model is time-reversible, FALSE otherwise
+    */
+    virtual bool isReversible() { return false; }
+
+    /**
+     * optimization of root frequencies
+     */
+    double optimizeRootFreq(double gradient_epsilon);
     
     // value of logl_epsilson
     double logl_epsilon;
+    
+    // whether the root frequencies are optimized separately, by default it is true
+    bool opt_root_freq;
+    
+    double* rootfreqs;
 
+private:
+    
+    // in the progress of root frequencies optimization
+    bool is_optimizing_root;
 };
 
 #endif

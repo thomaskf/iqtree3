@@ -61,15 +61,16 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     cout << endl;
     cout << "Number of branch models: " << nBranchModels << endl;
 
-    ModelFactory *mf = new ModelFactory(params, model_name, this, models_block);
-    orig_sub_model = mf->model;
-    mf->model = model_branch;
-    setModelFactory(mf);
+    // dummy model
+    ModelFactory *dm = new ModelFactory(params, model_name, this, models_block);
+    orig_sub_model = dm->model;
+    dm->model = model_branch;
+    setModelFactory(dm);
     setModel(model_branch);
-    setRate(mf->site_rate);
+    setRate(dm->site_rate);
 
     // base model
-    mf = new ModelFactory(params, model_name, this, models_block);
+    ModelFactory *mf = new ModelFactory(params, model_name, this, models_block);
     model_facts.push_back(mf);
     model_branch->push_back((ModelMarkov*)mf->model);
     orig_site_rate_models.push_back(mf->site_rate);
@@ -95,6 +96,10 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         // replace the site rate by the site rate which is shared among all the model factories
         mf->site_rate = getRate();
     }
+    
+    
+    // initialize the root frequences
+    model_branch->initializeRootFreq();
     
     // set checkpoint
     getModelFactory()->setCheckpoint(checkpoint);
