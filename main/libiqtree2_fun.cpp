@@ -394,6 +394,143 @@ extern "C" StringResult version() {
     return output;
 }
 
+// Execute AliSim Simulation
+// output: results in YAML format that contains the simulated alignment and the content of the log file
+// trees -- array of NEWICK tree strings (multiple trees)
+// subst_model -- the substitution model name
+// seed -- the random seed
+// partition_info -- partition information
+// partition_type -- partition type is either ‘equal’, ‘proportion’, or ‘unlinked’
+// seq_length -- the length of sequences
+// insertion_ratio -- the insertion rate
+// deletion_ratio -- the deletion rate
+// root_seq -- the root sequence
+// num_threads -- the number of threads
+// insertion_size_distribution -- the insertion size distribution
+// deletion_size_distribution -- the deletion size distribution
+extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst_model, int seed, StringArray& partition_info, const char* partition_type, int seq_length, double insertion_ratio, double deletion_ratio, const char* root_seq, int num_threads, const char* insertion_size_distribution, const char* deletion_size_distribution) {
+    StringResult output;
+    output.errorStr = strdup("");
+    
+    try {
+        Params params = Params::getInstance();
+        params.setDefault();
+        
+        params.user_file = "AliSimTrees.nwk";
+        ofstream trees_file(params.user_file);
+        if (!trees_file.is_open())
+            throw "Failed to create or open the trees file for writing.";
+        for (int i = 0; i < trees.length; i++) {
+            if (trees.strings[i] == nullptr)
+                throw "Encountered null string pointer in trees.strings.";
+            trees_file << trees.strings[i];
+            if(strlen(trees.strings[i]) > 0 && trees.strings[i][strlen(trees.strings[i]) - 1] != ';')
+                trees_file << ";";
+            trees_file << endl;
+        }
+        trees_file.close();
+        
+        params.model_name = subst_model;
+        
+        params.ran_seed = seed;
+        
+        if((partition_type == nullptr || strcmp(partition_type, "") == 0) && partition_info.length > 0)
+            throw "When partition info is provided, partition type must be provided.";
+        else if(partition_type != nullptr && strcmp(partition_type, "") != 0) {
+            if(strcmp(partition_type, "equal") == 0) {
+                params.partition_type = BRLEN_FIX;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+            }
+            else if(strcmp(partition_type, "proportion") == 0) {
+                params.partition_type = BRLEN_SCALE;
+                params.opt_gammai = false;
+            }
+            else if(strcmp(partition_type, "unlinked") != 0)
+                throw "Partition type can be equal, proportion, or unlinked.";
+            params.partition_file = "AliSimPartitionInfo.nex";
+            ofstream partition_info_file(params.partition_file);
+            if (!partition_info_file.is_open())
+                throw "Failed to create or open the partition info file for writing.";
+            for (int i = 0; i < partition_info.length; i++) {
+                if (partition_info.strings[i] == nullptr)
+                    throw "Encountered null string pointer in partition_info.strings.";
+                partition_info_file << partition_info.strings[i] << endl;
+            }
+            partition_info_file.close();
+        }
+        
+        if (seq_length < 1)
+            throw "Positive sequence please.";
+        params.alisim_sequence_length = seq_length;
+        
+        if (insertion_ratio < 0)
+            throw "Insertion ratio must not be negative.";
+        params.alisim_insertion_ratio = insertion_ratio;
+        if (deletion_ratio < 0)
+            throw "Deletion ratio must not be negative.";
+        params.alisim_deletion_ratio = deletion_ratio;
+        
+        if(root_seq != nullptr && strcmp(root_seq, "") != 0) {
+            params.root_ref_seq_aln = "AliSimRootSequence.fasta";
+            ofstream root_seq_file(params.root_ref_seq_aln);
+            if (!root_seq_file.is_open())
+                throw "Failed to create or open the root sequence file for writing.";
+            root_seq_file << ">root" << endl;
+            root_seq_file << root_seq << endl;
+            root_seq_file.close();
+            params.root_ref_seq_name = "root";
+        }
+        
+        if (num_threads < 1)
+            throw "At least 1 thread please.";
+        params.num_threads = num_threads;
+        
+        if(insertion_size_distribution != nullptr && strcmp(insertion_size_distribution, "") != 0)
+            params.alisim_insertion_distribution = parseIndelDis(insertion_size_distribution, "Insertion");
+        if(deletion_size_distribution != nullptr && strcmp(deletion_size_distribution, "") != 0)
+            params.alisim_deletion_distribution = parseIndelDis(deletion_size_distribution, "Deletion");
+        
+        params.alisim_active = true;
+        params.alisim_output_filename = "AliSimAlignment";
+        
+        IQTree* iqtree_ptr = nullptr;
+        executeSimulation(params, iqtree_ptr);
+        
+        ostringstream yamlss;
+        string line;
+        yamlss << "alignment: |" << endl;
+        ifstream in_alignment("AliSimAlignment.phy");
+        if (!in_alignment)
+            throw "Failed to open the alignment file.";
+        while (safeGetline(in_alignment, line))
+            yamlss << "  " << line << endl;
+        in_alignment.close();
+        yamlss << endl << "log: |" << endl;
+        ifstream in_log("AliSimTrees.nwk.log");
+        if (!in_log)
+            throw "Failed to open the log file.";
+        while (safeGetline(in_log, line))
+            yamlss << "  " << line << endl;
+        in_log.close();
+        
+        string yamlstr = yamlss.str();
+        if (yamlstr.length() > 0) {
+            output.value = new char[yamlstr.length() + 1];
+            strcpy(output.value, yamlstr.c_str());
+        }
+        
+        funcExit();
+    } catch (const exception& e) {
+        if (strlen(e.what()) > 0) {
+            output.errorStr = new char[strlen(e.what()) + 1];
+            strcpy(output.errorStr, e.what());
+        }
+        funcExit();
+    }
+    return output;
+}
+
 // ----------------------------------------------
 // function for performing plylogenetic analysis
 // ----------------------------------------------

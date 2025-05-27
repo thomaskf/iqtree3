@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <fstream>
 
 using namespace std;
 
@@ -111,5 +112,23 @@ extern "C" StringResult build_njtree(StringArray& names, DoubleArray& distances)
  * verion number
  */
 extern "C" StringResult version();
+
+/*
+ * Execute AliSim Simulation
+ * output: results in YAML format that contains the simulated alignment and the content of the log file
+ * trees -- array of NEWICK tree strings (multiple trees)
+ * subst_model -- the substitution model name
+ * seed -- the random seed
+ * partition_info -- partition information
+ * partition_type -- partition type is either ‘equal’, ‘proportion’, or ‘unlinked’
+ * seq_length -- the length of sequences
+ * insertion_ratio -- the insertion rate
+ * deletion_ratio -- the deletion rate
+ * root_seq -- the root sequence
+ * num_threads -- the number of threads
+ * insertion_size_distribution -- the insertion size distribution
+ * deletion_size_distribution -- the deletion size distribution
+ */
+extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst_model, int seed, StringArray& partition_info, const char* partition_type = "", int seq_length = 1000, double insertion_ratio = 0, double deletion_ratio = 0, const char* root_seq = "", int num_threads = 1, const char* insertion_size_distribution = "", const char* deletion_size_distribution = "");
 
 #endif /* LIBIQTREE2_FUN */
