@@ -59,6 +59,8 @@ extern void printCopyright(ostream &out);
 #include <sstream>
 #endif
 
+using namespace std;
+
 /********************************************************
         Miscellaneous
  ********************************************************/
@@ -278,9 +280,9 @@ int getFilesInDir(const char *path, StrVector &filenames)
     struct dirent *ep;
     dp = opendir (path);
     
-    if (dp != NULL)
+    if (dp != nullptr)
     {
-        while ((ep = readdir (dp)) != NULL) {
+        while ((ep = readdir (dp)) != nullptr) {
             if (isFile((path_name + ep->d_name).c_str()))
                 filenames.push_back(ep->d_name);
         }
@@ -818,7 +820,7 @@ void random_frequencies_from_distributions(double *freqs, int num_states, string
     
     // calculate the total frequency
     double total_freq = 0;
-    for (int i = 0; i<num_states; i++)
+    for (size_t i = 0; i<num_states; i++)
     {
         // extract the name of distribution used for the current state
         int pos = list_distribution_names.find(',');
@@ -1089,8 +1091,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
-    params.user_file = NULL;
-    params.constraint_tree_file = NULL;
+    params.user_file = nullptr;
+    params.constraint_tree_file = nullptr;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
     params.opt_gammai_keep_bran = false;
@@ -1098,9 +1100,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
     params.exh_ai = false;
-    params.alpha_invar_file = NULL;
-    params.out_prefix = NULL;
-    params.out_file = NULL;
+    params.alpha_invar_file = nullptr;
+    params.out_prefix = nullptr;
+    params.out_file = nullptr;
     params.sub_size = 4;
     params.pd_proportion = 0.0;
     params.min_proportion = 0.0;
@@ -1110,20 +1112,20 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.find_all = false;
     params.run_mode = RunMode::DETECTED;
     params.detected_mode = RunMode::DETECTED;
-    params.param_file = NULL;
-    params.initial_file = NULL;
-    params.initial_area_file = NULL;
-    params.pdtaxa_file = NULL;
-    params.areas_boundary_file = NULL;
+    params.param_file = nullptr;
+    params.initial_file = nullptr;
+    params.initial_area_file = nullptr;
+    params.pdtaxa_file = nullptr;
+    params.areas_boundary_file = nullptr;
     params.boundary_modifier = 1.0;
-    params.dist_file = NULL;
+    params.dist_file = nullptr;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
     params.experimental = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.compute_ml_tree_only = false;
-    params.budget_file = NULL;
+    params.budget_file = nullptr;
     params.overlap = 0;
     params.is_rooted = false;
     params.root_move_dist = 2;
@@ -1138,7 +1140,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.budget = -1;
     params.min_budget = -1;
     params.step_budget = 1;
-    params.root = NULL;
+    params.root = nullptr;
     params.num_splits = 0;
     params.min_len = 0.001;
     params.mean_len = 0.1;
@@ -1147,22 +1149,22 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pd_limit = 100;
     params.calc_pdgain = false;
     params.multi_tree = false;
-    params.second_tree = NULL;
-    params.support_tag = NULL;
+    params.second_tree = nullptr;
+    params.support_tag = nullptr;
     params.site_concordance = 0;
     params.ancestral_site_concordance = 0;
     params.site_concordance_partition = false;
     params.print_cf_quartets = false;
     params.print_df1_trees = false;
     params.internode_certainty = 0;
-    params.tree_weight_file = NULL;
+    params.tree_weight_file = nullptr;
     params.consensus_type = CT_NONE;
     params.find_pd_min = false;
     params.branch_cluster = 0;
-    params.taxa_order_file = NULL;
+    params.taxa_order_file = nullptr;
     params.endemic_pd = false;
     params.exclusive_pd = false;
-    params.complement_area = NULL;
+    params.complement_area = nullptr;
     params.scaling_factor = -1;
     params.numeric_precision = -1;
     params.binary_programming = false;
@@ -1171,17 +1173,17 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_burnin = 0;
     params.tree_max_count = 1000000;
     params.split_threshold = 0.0;
-    params.split_threshold_str = NULL;
+    params.split_threshold_str = nullptr;
     params.split_weight_threshold = -1000;
     params.collapse_zero_branch = false;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
     params.gurobi_threads = 1;
     params.num_bootstrap_samples = 0;
-    params.bootstrap_spec = NULL;
+    params.bootstrap_spec = nullptr;
     params.transfer_bootstrap = 0;
 
-    params.aln_file = NULL;
+    params.aln_file = nullptr;
     params.phylip_sequential_format = false;
     params.symtest = SYMTEST_NONE;
     params.symtest_only = false;
@@ -1191,13 +1193,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_pcutoff = 0.05;
     params.symtest_stat = false;
     params.symtest_shuffle = 1;
-    //params.treeset_file = NULL;
+    //params.treeset_file = nullptr;
     params.topotest_replicates = 0;
     params.topotest_optimize_model = false;
     params.do_weighted_test = false;
     params.do_au_test = false;
-    params.siteLL_file = NULL; //added by MA
-    params.partition_file = NULL;
+    params.siteLL_file = nullptr; //added by MA
+    params.partition_file = nullptr;
     params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 10; // change the default from 100 to 10
     params.partfinder_rcluster_max = 0;
@@ -1206,14 +1208,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.merge_rates = "1";
     params.partfinder_log_rate = true;
     
-    params.sequence_type = NULL;
-    params.aln_output = NULL;
-    params.aln_site_list = NULL;
+    params.sequence_type = nullptr;
+    params.aln_output = nullptr;
+    params.aln_site_list = nullptr;
     params.aln_output_format = IN_PHYLIP;
     params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
-    params.gap_masked_aln = NULL;
-    params.concatenate_aln = NULL;
+    params.gap_masked_aln = nullptr;
+    params.concatenate_aln = nullptr;
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
     params.print_aln_info = false;
@@ -1244,15 +1246,15 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_runs = 1;
     params.model_name = "";
     params.contain_nonrev = false;
-    params.model_name_init = NULL;
+    params.model_name_init = nullptr;
     params.model_opt_steps = 10;
     params.model_set = "ALL";
-    params.model_extra_set = NULL;
-    params.model_subset = NULL;
-    params.state_freq_set = NULL;
+    params.model_extra_set = nullptr;
+    params.model_subset = nullptr;
+    params.state_freq_set = nullptr;
     params.ratehet_set = "AUTO";
     params.score_diff_thres = 10.0;
-    params.model_def_file = NULL;
+    params.model_def_file = nullptr;
     params.modelomatic = false;
     params.model_test_again = false;
     params.model_test_and_tree = 0;
@@ -1350,23 +1352,23 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
-    params.rate_file = NULL;
-    params.ngs_file = NULL;
-    params.ngs_mapped_reads = NULL;
+    params.rate_file = nullptr;
+    params.ngs_file = nullptr;
+    params.ngs_mapped_reads = nullptr;
     params.ngs_ignore_gaps = true;
     params.do_pars_multistate = false;
-    params.gene_pvalue_file = NULL;
+    params.gene_pvalue_file = nullptr;
     params.gene_scale_factor = -1;
     params.gene_pvalue_loga = false;
-    params.second_align = NULL;
+    params.second_align = nullptr;
     params.ncbi_taxid = 0;
-    params.ncbi_taxon_level = NULL;
-    params.ncbi_names_file = NULL;
-    params.ncbi_ignore_level = NULL;
+    params.ncbi_taxon_level = nullptr;
+    params.ncbi_names_file = nullptr;
+    params.ncbi_ignore_level = nullptr;
 
-	params.eco_dag_file  = NULL;
-	params.eco_type = NULL;
-	params.eco_detail_file = NULL;
+	params.eco_dag_file  = nullptr;
+	params.eco_type = nullptr;
+	params.eco_detail_file = nullptr;
 	params.k_percent = 0;
 	params.diet_min = 0;
 	params.diet_max = 0;
@@ -1418,7 +1420,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.treemix_eps = 0.001;
     params.treemixhmm_eps = 0.01;
     params.parbran = false;
-    params.binary_aln_file = NULL;
+    params.binary_aln_file = nullptr;
     params.maxtime = 1000000;
     params.reinsert_par = false;
     params.bestStart = true;
@@ -1436,20 +1438,20 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
-    params.sankoff_cost_file = NULL;
+    params.sankoff_cost_file = nullptr;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
-    params.bootlh_partitions = NULL;
-    params.site_freq_file = NULL;
-    params.tree_freq_file = NULL;
+    params.bootlh_partitions = nullptr;
+    params.site_freq_file = nullptr;
+    params.tree_freq_file = nullptr;
     params.num_threads = 1;
     params.num_threads_max = 10000;
     params.openmp_by_model = false;
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
-    params.root_state = NULL;
+    params.root_state = nullptr;
     params.print_bootaln = false;
     params.print_boot_site_freq = false;
 	params.print_subaln = false;
@@ -1474,12 +1476,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_init_tree = false;
     params.write_candidate_trees = false;
     params.write_branches = false;
-    params.freq_const_patterns = NULL;
+    params.freq_const_patterns = nullptr;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
     params.compute_seq_composition = true;
     params.lmap_num_quartets = -1;
-    params.lmap_cluster_file = NULL;
+    params.lmap_cluster_file = nullptr;
     params.print_lmap_quartet_lh = false;
     params.num_mixlen = 1;
     params.link_alpha = false;
@@ -1575,11 +1577,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_fundi_proportion = 0.0;
     params.fundi_init_proportion = 0.5;
     params.fundi_init_branch_length = 0.0;
-    params.alisim_distribution_definitions = NULL;
+    params.alisim_distribution_definitions = nullptr;
     params.alisim_skip_checking_memory = false;
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
-    params.branch_distribution = NULL;
+    params.branch_distribution = nullptr;
     params.alisim_insertion_ratio = 0;
     params.alisim_deletion_ratio = 0;
     params.alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,100);
@@ -3060,7 +3062,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 string arg = argv[cnt];
                 int pos = -1;
                 bool inside_bracket = false;
-                for (int i = 0; i < arg.length(); i++)
+                for (size_t i = 0; i < arg.length(); i++)
                 {
                     // detect brackets
                     if (arg[i] == '{')
@@ -5186,7 +5188,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                         // detect delimiter
                         string delimiter = ",";
                         bool inside_bracket = false;
-                        for (int i = 0; i < t_params.length(); i++)
+                        for (size_t i = 0; i < t_params.length(); i++)
                         {
                             // detect brackets
                             if (t_params[i] == '{')
@@ -5923,7 +5925,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 err += "\" option.";
                 throw err;
             } else {
-                if (params.user_file == NULL)
+                if (params.user_file == nullptr)
                     params.user_file = argv[cnt];
                 else
                     params.out_file = argv[cnt];
@@ -5972,7 +5974,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
 
-    if (params.root != NULL && params.is_rooted)
+    if (params.root != nullptr && params.is_rooted)
         outError("Not allowed to specify both -o <taxon> and -root");
     
     if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
@@ -6821,7 +6823,7 @@ double randomunitintervall()
 #undef RNMX
 
 int init_random(int seed) /* RAND4 */ {
-    //    srand((unsigned) time(NULL));
+    //    srand((unsigned) time(nullptr));
     //    if (seed < 0)
     // 	seed = rand();
     _idum = -(long) seed;
@@ -6865,7 +6867,7 @@ vector<int*> rstream_vec;
 vector<default_random_engine> generator_vec;
 
 int init_random(int seed, bool write_info, int** rstream) {
-    //    srand((unsigned) time(NULL));
+    //    srand((unsigned) time(nullptr));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
@@ -7117,14 +7119,14 @@ int random_int_lav(double a, int m)
     }
     
     // normalize totald_vec
-    for(int i = 0; i < totald_vec.size(); i++)
+    for(size_t i = 0; i < totald_vec.size(); i++)
     {
         totald_vec[i] /= totald;
     }
     
     // init random int
     double random_num = random_double();
-    for(int i = 0; i < totald_vec.size(); i++)
+    for(size_t i = 0; i < totald_vec.size(); i++)
         if (random_num < totald_vec.at(i))
             return i+1;
 
@@ -8212,8 +8214,8 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // concatenated) and linearly scaled by SCALE.
  double frob_norm(double m[], int n, double scale) {
    double sum = 0;
-   for (int i = 0; i < n; i++) {
-     for (int j = 0; j < n; j++) {
+   for (size_t i = 0; i < n; i++) {
+     for (size_t j = 0; j < n; j++) {
        sum += m[i*n + j] * m[i*n + j] * scale * scale;
      }
    }

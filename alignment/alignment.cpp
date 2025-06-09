@@ -68,12 +68,12 @@ Alignment::Alignment()
     num_states = 0;
     frac_const_sites = 0.0;
     frac_invariant_sites = 0.0;
-    codon_table = NULL;
-    genetic_code = NULL;
-    non_stop_codon = NULL;
+    codon_table = nullptr;
+    genetic_code = nullptr;
+    non_stop_codon = nullptr;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -256,7 +256,7 @@ void Alignment::checkSeqName() {
             // Have to normalize allele frequencies.
             double state_freq_norm[num_states];
             double sum_freq = 0.0;
-            for (int j = 0; j < num_states; j++) {
+            for (size_t j = 0; j < num_states; j++) {
                 sum_freq += state_freq[j];
                 state_freq_norm[j] = state_freq[j];
             }
@@ -267,10 +267,10 @@ void Alignment::checkSeqName() {
                 sum_count += count_per_seq[iRow + j];
             }
             double sum_inv = 1.0 / sum_count;
-            for (int j = 0; j < num_states; j++) {
+            for (size_t j = 0; j < num_states; j++) {
                 freq_per_sequence[j] = count_per_seq[iRow + j] * sum_inv;
             }
-            for (int j = 0; j < num_states; j++) {
+            for (size_t j = 0; j < num_states; j++) {
                 chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
             }
             chi2  *= sum_count;
@@ -281,10 +281,10 @@ void Alignment::checkSeqName() {
                 sum_count += count_per_seq[iRow + j];
             }
             double sum_inv = 1.0 / sum_count;
-            for (int j = 0; j < num_states; j++) {
+            for (size_t j = 0; j < num_states; j++) {
                 freq_per_sequence[j] = count_per_seq[iRow + j] * sum_inv;
             }
-            for (int j = 0; j < num_states; j++) {
+            for (size_t j = 0; j < num_states; j++) {
                 if (state_freq[j] > 0.0) {
                     chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
                 }
@@ -382,7 +382,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
     #ifdef _OPENMP
         #pragma omp parallel for schedule(static,100)
     #endif
-    for (int seq1=0; seq1<n; ++seq1) {
+    for (size_t seq1=0; seq1<n; ++seq1) {
         size_t hash = 0;
         for (iterator it = begin(); it != end(); ++it) {
             adjustHash((*it)[seq1], hash);
@@ -758,12 +758,12 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, str
     num_states = 0;
     frac_const_sites = 0.0;
     frac_invariant_sites = 0.0;
-    codon_table = NULL;
-    genetic_code = NULL;
-    non_stop_codon = NULL;
+    codon_table = nullptr;
+    genetic_code = nullptr;
+    non_stop_codon = nullptr;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
     double readStart = getRealTime();
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
@@ -838,12 +838,12 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type, string model
     num_states = 0;
     frac_const_sites = 0.0;
     frac_invariant_sites = 0.0;
-    codon_table = NULL;
-    genetic_code = NULL;
-    non_stop_codon = NULL;
+    codon_table = nullptr;
+    genetic_code = nullptr;
+    non_stop_codon = nullptr;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    pars_lower_bound = NULL;
+    pars_lower_bound = nullptr;
     
     extractDataBlock(data_block);
     if (verbose_mode >= VB_DEBUG)
@@ -920,9 +920,9 @@ void Alignment::buildSeqStates(vector<vector<int> > &seq_states, bool add_unobs_
 int Alignment::readNexus(char *filename) {
     NxsTaxaBlock *taxa_block;
     NxsAssumptionsBlock *assumptions_block;
-    NxsDataBlock *data_block = NULL;
-    NxsTreesBlock *trees_block = NULL;
-    NxsCharactersBlock *char_block = NULL;
+    NxsDataBlock *data_block = nullptr;
+    NxsTreesBlock *trees_block = nullptr;
+    NxsCharactersBlock *char_block = nullptr;
 
     taxa_block = new NxsTaxaBlock();
     assumptions_block = new NxsAssumptionsBlock(taxa_block);
@@ -1014,7 +1014,7 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
-    char *symbols = NULL;
+    char *symbols = nullptr;
     //num_states = strlen(symbols);
     char char_to_state[NUM_CHAR];
     char state_to_char[NUM_CHAR];
@@ -1056,7 +1056,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     computeUnknownState();
     memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
     memset(state_to_char, '?', NUM_CHAR);
-    for (int i = 0; i < strlen(symbols); i++) {
+    for (size_t i = 0; i < strlen(symbols); i++) {
         char_to_state[(int)symbols[i]] = i;
         state_to_char[i] = symbols[i];
     }
@@ -1469,7 +1469,7 @@ void Alignment::orderPatternByNumChars(int pat_type) {
     // now transform lower_bound
 //    assert(i == maxi-1);
 
-    for (int j = 0; j <= i; j++) {
+    for (size_t j = 0; j <= i; j++) {
         UINT newsum = sum - pars_lower_bound[j];
         pars_lower_bound[j] = sum;
         sum = newsum;
@@ -1890,7 +1890,7 @@ void Alignment::initCodon(char *gene_code_id) {
 	codon_table = new char[num_states];
 	non_stop_codon = new char[strlen(genetic_code)];
 	int state = 0;
-	for (int codon = 0; codon < strlen(genetic_code); codon++) {
+	for (size_t codon = 0; codon < strlen(genetic_code); codon++) {
 		if (genetic_code[codon] != '*') {
 			non_stop_codon[codon] = state++;
 			codon_table[(int)non_stop_codon[codon]] = codon;
@@ -1965,9 +1965,9 @@ string Alignment::getSeqTypeStr(SeqType sequence_type) {
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
-    codon_table = NULL;
-    genetic_code = NULL;
-    non_stop_codon = NULL;
+    codon_table = nullptr;
+    genetic_code = nullptr;
+    non_stop_codon = nullptr;
 
     if (nseq != seq_names.size()) {
         throw "Different number of sequences than specified";
@@ -3235,7 +3235,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         std::string& str  = seq_data[seq_id];
         auto patterns     = site_pattern.data();
         auto patternCount = site_pattern.size();
-        for (int i=0; i<patternCount; ++i) {
+        for (size_t i=0; i<patternCount; ++i) {
             if (kept_sites[i]) {
                 auto state = at(patterns[i])[seq_id];
                 if (num_states<=state) {
@@ -4043,7 +4043,7 @@ void Alignment::createBootstrapAlignment(IntVector &pattern_freq, const char *sp
     pattern_freq.resize(nptn, 0);
     int *internal_freq = new int [nptn];
     createBootstrapAlignment(internal_freq, spec);
-    for (int i = 0; i < nptn; i++)
+    for (size_t i = 0; i < nptn; i++)
     	pattern_freq[i] = internal_freq[i];
     delete [] internal_freq;
 }
@@ -4367,7 +4367,7 @@ void Alignment::generateUninfPatterns(StateType repeat, vector<StateType> &singl
     if (seq_pos.size() == singleton.size()) {
         Pattern pat;
         pat.resize(seqs, repeat);
-        for (int i = 0; i < seq_pos.size(); i++)
+        for (size_t i = 0; i < seq_pos.size(); i++)
             pat[seq_pos[i]] = singleton[i];
         unobserved_ptns.push_back(pat);
         return;
@@ -4692,7 +4692,7 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
 }
 
 void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
-    int i, j;
+    size_t i, j;
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
     double *new_freq = new double[num_states];
     double *new_state_freq = new double[num_states];
@@ -4861,18 +4861,18 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     }
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
-        for (int seq = 0; seq < nseqs; seq++) {
+        for (size_t seq = 0; seq < nseqs; seq++) {
             double *state_freq = &freq_per_sequence[seq*num_states];
             memset(new_state_freq, 0, sizeof(double)*num_states);
-            for (int i = 0; i <= STATE_UNKNOWN; i++) {
+            for (size_t i = 0; i <= STATE_UNKNOWN; i++) {
                 if (state_count[seq*(STATE_UNKNOWN+1)+i] == 0) continue;
                 double sum_freq = 0.0;
-                for (int j = 0; j < num_states; j++) {
+                for (size_t j = 0; j < num_states; j++) {
                     new_freq[j] = state_freq[j] * states_app[i*num_states+j];
                     sum_freq += new_freq[j];
                 }
                 sum_freq = 1.0/sum_freq;
-                for (int j = 0; j < num_states; j++) {
+                for (size_t j = 0; j < num_states; j++) {
                     new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
                 }
             }
@@ -4880,7 +4880,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
             for (int j = 0; j < num_states; j++)
                 sum_freq += new_state_freq[j];
             sum_freq = 1.0/sum_freq;
-            for (int j = 0; j < num_states; j++)
+            for (size_t j = 0; j < num_states; j++)
                 state_freq[j] = new_state_freq[j]*sum_freq;
          }
     }
@@ -5114,13 +5114,13 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                 
                 // delete the cache
                 delete cache_ntfreq;
-                cache_ntfreq = NULL;
+                cache_ntfreq = nullptr;
             }
         }
         else
         {
             for (iterator it = begin(); it != end(); it++) {
-                for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+                for (size_t seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
                     int codon = codon_table[(int)(*it)[seq]];
     //				int codon = (int)(*it)[seq];
                     int nt1 = codon / 16;
@@ -5140,14 +5140,14 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		for (int i = 0; i < 4; i++)
 			ntfreq[i] /= sum;
 		if (verbose_mode >= VB_MED) {
-			for (int i = 0; i < 4; i++)
+			for (size_t i = 0; i < 4; i++)
 				cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
 			cout << endl;
 		}
 		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
 		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
         sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
+		for (size_t i = 0; i < num_states; i++) {
             int codon = codon_table[i];
             state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
 			if (isStopCodon(i)) {
@@ -5189,7 +5189,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                         outError("To use F3X4, please specify 12 frequencies by +F3X4{<freq_0>,...,<freq_11>} or let AliSim randomly generate the frequencies by +F3X4.");
                     
                     // extract user-specified frequencies one by one
-                    for (int i = 0; i < 12; i++)
+                    for (size_t i = 0; i < 12; i++)
                     {
                         size_t pos = freq_params.find(separator);
                         ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str(), true);
@@ -5215,7 +5215,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                         random_frequencies_from_distributions(tmp_freqs);
                         
                         // copy the current set of frequencies to ntfreq
-                        for (int j = 0; j < 4; j++)
+                        for (size_t j = 0; j < 4; j++)
                             ntfreq[i*4+j] = tmp_freqs[j];
                     }
                     
@@ -5235,7 +5235,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                 
                 // delete the cache
                 delete cache_ntfreq;
-                cache_ntfreq = NULL;
+                cache_ntfreq = nullptr;
             }
         }
         else
@@ -5253,7 +5253,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                 }
             }
         }
-		for (int j = 0; j < 12; j+=4) {
+		for (size_t j = 0; j < 12; j+=4) {
 			double sum = 0;
 			for (int i = 0; i < 4; i++)
 				sum += ntfreq[i+j];
@@ -5264,7 +5264,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			for (int i = 0; i < 4; i++)
 				ntfreq[i+j] /= sum;
 			if (verbose_mode >= VB_MED) {
-				for (int i = 0; i < 4; i++)
+				for (size_t i = 0; i < 4; i++)
 					cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
 				cout << endl;
 			}
@@ -5272,7 +5272,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 
 //        double sum_stop=0.0;
         double sum = 0.0;
-		for (int i = 0; i < num_states; i++) {
+		for (size_t i = 0; i < num_states; i++) {
             int codon = codon_table[i];
             state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
 			if (isStopCodon(i)) {
@@ -5482,8 +5482,8 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<S
     }
     double max_divergence = 0.0;
     
-    for (int seq1 = 0; seq1 < nseq; seq1++) {
-        for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
+    for (size_t seq1 = 0; seq1 < nseq; seq1++) {
+        for (size_t seq2 = seq1+1; seq2 < nseq; seq2++) {
             MatrixXd pair_freq = MatrixXd::Zero(num_states, num_states);
             if (rstream) {
                 for (auto it = ptn_shuffled.begin(); it != ptn_shuffled.end(); it++)
@@ -5756,7 +5756,7 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
     r[0] = ell[0];
     expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
     //int sum = expectedNorFre[0];
-    for (int j = 1; j < patNum; j++ )
+    for (size_t j = 1; j < patNum; j++ )
     {
         r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
         expectedNorFre[j] = (int)floor(r[j]+0.5);
@@ -5820,7 +5820,7 @@ void Alignment::multinomialProb (double *logLL, double &prob)
     r[0] = ell[0];
     expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
     //int sum = expectedNorFre[0];
-    for (int j = 1; j < patNum; j++ ) {
+    for (size_t j = 1; j < patNum; j++ ) {
         r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
         expectedNorFre[j] = (int)floor(r[j]+0.5);
         //sum += expectedNorFre[j];
@@ -5919,7 +5919,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
                 // compare freq with prev_site
                 bool matched_freq = true;
                 double *prev_freq = site_state_freq[site_model[prev_site]];
-                for (int i = 0; i < num_states; ++i) {
+                for (size_t i = 0; i < num_states; ++i) {
                     if (site_freq_entry[i] != prev_freq[i]) {
                         matched_freq = false;
                         break;
@@ -5943,7 +5943,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 			for (size_t i = 0; i < site_model.size(); ++i)
 				if (site_model[i] == -1)
 					site_model[i] = site_state_freq.size();
-			site_state_freq.push_back(NULL);
+			site_state_freq.push_back(nullptr);
 		}
 		in.clear();
 		// set the failbit again
@@ -6075,7 +6075,7 @@ string Alignment::generateRef(StrVector &sequences)
                 // get the start pos of the codon
                 int start_pos = i - i % 3; // pos_in_codon is 0 1 2
                 // replace the condon with gaps by the default codon
-                for (int pos_in_codon = 0; pos_in_codon < 3; ++pos_in_codon)
+                for (size_t pos_in_codon = 0; pos_in_codon < 3; ++pos_in_codon)
                     ref_str[start_pos + pos_in_codon] = default_state_str[pos_in_codon];
                 
                 // move to the start of the next codon

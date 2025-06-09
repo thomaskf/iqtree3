@@ -1040,7 +1040,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree* tree)
 {
-	ModelSubst *model = NULL;
+	ModelSubst *model = nullptr;
 	string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
@@ -1188,7 +1188,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 	@param tree associated tree for the model
 */
 ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
-	prop = NULL;
+	prop = nullptr;
 	fix_prop = true;
     optimizing_gtr = false;
     optimize_steps = 0;
@@ -1198,7 +1198,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 	: ModelMarkov(tree)
 {
-	prop = NULL;
+	prop = nullptr;
 	fix_prop = true;
     optimizing_gtr = false;
     optimize_steps = 0;
@@ -1353,7 +1353,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		cur_pos = pos+1;
 		ModelMarkov* model;
 		if (freq == FREQ_MIXTURE) {
-			for(int f = 0; f != freq_vec.size(); f++) {
+			for(size_t f = 0; f != freq_vec.size(); f++) {
                 if (freq_vec[f] == nxs_freq_empirical)
 					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree);
                 else if (freq_vec[f] == nxs_freq_optimize)
@@ -1655,7 +1655,7 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
             }
             endCheckpoint();
             // update all the class weights by multiplying ( 1 - init_weight )
-            for (int i = 0 ; i < nmix - 1; i++)
+            for (size_t i = 0 ; i < nmix - 1; i++)
                 prop[i] = prop[i] * (1.0 - init_weight);
         } else {
             // for 2-class mixture model
@@ -1737,7 +1737,7 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
         // fused model, take the weight from site_rate
         if (fused)
             weight = phylo_tree->getRate()->getProp(i) / (1.0 - phylo_tree->getRate()->getPInvar());
-        for (int j = 0; j < num_states; j++)
+        for (size_t j = 0; j < num_states; j++)
             state_freq[j] += weight*state_freq_class[j];
     }
     // // DEBUG.
@@ -2204,7 +2204,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             subst_model->optimizeParameters(gradient_epsilon);
             // reset subst model
-            tree->setModel(NULL);
+            tree->setModel(nullptr);
             subst_model->setTree(phylo_tree);
             // phylo_tree->clearAllPartialLH();
             rescale_codon_mix();
@@ -2216,9 +2216,9 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     }
 
     // deattach memory
-    tree->central_partial_lh = NULL;
-    tree->central_scale_num = NULL;
-    tree->central_partial_pars = NULL;
+    tree->central_partial_lh = nullptr;
+    tree->central_scale_num = nullptr;
+    tree->central_partial_pars = nullptr;
 
     delete tree;
     aligned_free(new_prop);
@@ -2297,7 +2297,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 				double *matrix = new double[nrate];
 				at(0)->getRateMatrix(matrix);
 				double div = matrix[nrate-1];
-				for(int i=0; i<nrate; i++){
+				for(size_t i=0; i<nrate; i++){
 					matrix[i] = matrix[i] / div;
 				}
 				for (iterator it = begin(); it != end(); it++) {
@@ -2560,7 +2560,7 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         (*it)->freq_type=freq;
         //manually set these params for the restartParameters method; TODO: properly fix this -JD
         if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
-            for(int i=1; i<=ndim; i++){
+            for(size_t i=1; i<=ndim; i++){
                 bound_check[i] = true;
                 upper_bound[i] = 100;
             }
@@ -2580,7 +2580,7 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
                 (*it)->freq_type=FREQ_USER_DEFINED;
                 int m = (*it)->getNDim();
                 (*it)->freq_type=freq;
-                for(int i=1; i<=m; i++){
+                for(size_t i=1; i<=m; i++){
                     bound_check[i] = true;
                     upper_bound[i] = 100;
                 }

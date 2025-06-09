@@ -266,13 +266,13 @@ const static int BDF[] =
  */
 const static double *TRANSFORM_A[]  = {D,    tE1,  tE2};
 const static double *TRANSFORM_A2[] = {mD,    E1,   E2};
-const static double *TRANSFORM_B[]  = {NULL, mE2,  mE1};
-const static double *TRANSFORM_C[]  = {NULL,  E2,  mE1};
-const static double *TRANSFORM_D1[] = {NULL,  E1,  mE2};
-const static double *TRANSFORM_F1[] = {mE1,  NULL, NULL};
-const static double *TRANSFORM_F2[] = {mE2,  NULL, NULL};
-const static double *TRANSFORM_G1[] = {NULL,  mD,  NULL};
-const static double *TRANSFORM_G2[] = {NULL, NULL,  mD};
+const static double *TRANSFORM_B[]  = {nullptr, mE2,  mE1};
+const static double *TRANSFORM_C[]  = {nullptr,  E2,  mE1};
+const static double *TRANSFORM_D1[] = {nullptr,  E1,  mE2};
+const static double *TRANSFORM_F1[] = {mE1,  nullptr, nullptr};
+const static double *TRANSFORM_F2[] = {mE2,  nullptr, nullptr};
+const static double *TRANSFORM_G1[] = {nullptr,  mD,  nullptr};
+const static double *TRANSFORM_G2[] = {nullptr, nullptr,  mD};
 
 const static double **BASIS_TRANSFORM[] = {
   TRANSFORM_A,  TRANSFORM_A2, TRANSFORM_B, 
@@ -362,7 +362,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         convert_double_vec_with_distributions(model_params.c_str(), vec, false, separator);
         if (vec.size() != num_params) 
             outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
-        for (int i = 0; i < num_params; i++) {
+        for (size_t i = 0; i < num_params; i++) {
             if (vec[i] <= MIN_LIE_WEIGHT || vec[i] >= MAX_LIE_WEIGHT)
                 outError("Weights for Lie Markov model must be between " + convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
                     convertDoubleToString(MAX_LIE_WEIGHT));
@@ -1157,17 +1157,17 @@ void ModelLieMarkov::setBasis() {
       int basisIndex = BASES[model_num][i];
       double unpermuted_rates[NUM_RATES];
       memcpy(unpermuted_rates, LM_BASIS_MATRICES[basisIndex], NUM_RATES* sizeof(double));
-      for (int tauIndex=0; tauIndex<3; tauIndex++) {
+      for (size_t tauIndex=0; tauIndex<3; tauIndex++) {
         const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
-	    if (tau[tauIndex]!=0 && transformationMatrix != NULL) {
-          for (int rate=0; rate<NUM_RATES; rate++) {
+	    if (tau[tauIndex]!=0 && transformationMatrix != nullptr) {
+          for (size_t rate=0; rate<NUM_RATES; rate++) {
 	        unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
 	      } // for rate
-	    } // if tau && !=NULL
+	    } // if tau && !=nullptr
       } // for tauIndex
 
       double* permuted_rates = new double[NUM_RATES];
-      for (int rate=0; rate<NUM_RATES; rate++) {
+      for (size_t rate=0; rate<NUM_RATES; rate++) {
         permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
       }
       basis[i] = permuted_rates;
@@ -1179,7 +1179,7 @@ void ModelLieMarkov::setBasis() {
       for (int i=0;i<=num_params;i++) {
         const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
         double* permuted_rates = new double[NUM_RATES];
-        for (int rate=0; rate<NUM_RATES; rate++) {
+        for (size_t rate=0; rate<NUM_RATES; rate++) {
 	      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
         } // for rate
         basis[i] = permuted_rates;
@@ -1195,20 +1195,20 @@ void ModelLieMarkov::setRates() {
     memset(rates, 0, NUM_RATES*sizeof(double));  // rates = 0
     double* aprime = basis[0]; // the only basis matrix with all offdiagonals non-negative, and trace non-zero
     double max_abs = 0;
-    for (int param=0; param<num_params; param++) {
-        // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
+    for (size_t param=0; param<num_params; param++) {
+        // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double
         max_abs = (fabs(model_parameters[param])>max_abs ? fabs(model_parameters[param]) : max_abs);
-        for (int rate=0; rate<NUM_RATES; rate++) 
+        for (size_t rate=0; rate<NUM_RATES; rate++)
             rates[rate] += model_parameters[param]*basis[param+1][rate];
         // basis[0] is 'A' matrix which doesn't get a parameter.
     }
     double min_unnorm = DBL_MAX;
-    for (int rate=0; rate<NUM_RATES; rate++) {
-        double ratio = rates[rate]/aprime[rate]; 
+    for (size_t rate=0; rate<NUM_RATES; rate++) {
+        double ratio = rates[rate]/aprime[rate];
         min_unnorm = (ratio<min_unnorm ? ratio : min_unnorm);
     }
     double norm = (max_abs==0 ? 0 : -max_abs/min_unnorm);
-    for (int rate=0; rate<NUM_RATES; rate++) 
+    for (size_t rate=0; rate<NUM_RATES; rate++)
         rates[rate]=aprime[rate]+norm*rates[rate];
     if (verbose_mode >= VB_DEBUG) {
       cout << "LM setRates params = (";
@@ -2209,7 +2209,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		int error = 0;
 		for (j = 0; j < num_states; j++) {
 			for (i = 0, zero = 0.0; i < num_states; i++) {
-				for (int k = 0; k < num_states; k++)
+				for (size_t k = 0; k < num_states; k++)
 					zero += rate_matrix[i*num_states+k] * cevec[j*num_states+k];
 				zero -= ceval[j] * cevec[j*num_states+i];
 				if (abs(zero) > 1.0e-5) {
@@ -2225,7 +2225,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		for (i = 0; i < num_states; i++) {
 			for (j = 0, zero = 0.0; j < num_states; j++) {
 
-				for (int k = 0; k < num_states; k++)
+				for (size_t k = 0; k < num_states; k++)
 					zero += cinv_evec[i*num_states+k] * cevec[k*num_states+j];
 				double deltaij = 0;
 				if (i == j) deltaij = 1;

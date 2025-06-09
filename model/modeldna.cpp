@@ -314,7 +314,7 @@ string ModelDNA::getNameParams(bool show_fixed_params) {
         string tmp_retname = "{";
         int nrates = getNumRateEntries();
         int k = 0;
-        for (int i = 0; i < nrates; i++) {
+        for (size_t i = 0; i < nrates; i++) {
             if (param_spec[i] > k) {
                 if (k>0) tmp_retname += ",";
                 tmp_retname += convertDoubleToString(rates[i]);
@@ -540,7 +540,7 @@ bool ModelDNA::getVariables(double *variables) {
 void ModelDNA::setVariables(double *variables) {
     if (num_params > 0) {
         int num_all = param_spec.length();
-        for (int i = 0; i < num_all; i++)
+        for (size_t i = 0; i < num_all; i++)
             if (!param_fixed[param_spec[i]])
                 variables[(int)param_spec[i]] = rates[i];
     }

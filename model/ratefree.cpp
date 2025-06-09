@@ -22,7 +22,7 @@ const double MAX_FREE_RATE_PROP = 1000;
 
 RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params = 0;
-	prop = NULL;
+	prop = nullptr;
     this->sorted_rates = sorted_rates;
     optimizing_params = 0;
     this->optimize_alg = opt_alg;
@@ -257,7 +257,7 @@ RateFree::~RateFree() {
 string RateFree::getNameParams() {
 	stringstream str;
 	str << "+R" << ncategory << "{";
-	for (int i = 0; i < ncategory; i++) {
+	for (size_t i = 0; i < ncategory; i++) {
 		if (i > 0) str << ",";
 		str << prop[i]<< "," << rates[i];
 	}
@@ -267,7 +267,7 @@ string RateFree::getNameParams() {
 
 double RateFree::meanRates() {
 	double ret = 0.0;
-	for (int i = 0; i < ncategory; i++)
+	for (size_t i = 0; i < ncategory; i++)
 		ret += prop[i] * rates[i];
 	return ret;
 }
@@ -488,7 +488,7 @@ bool RateFree::getVariables(double *variables) {
 */
 void RateFree::writeInfo(ostream &out) {
 	out << "Site proportion and rates: ";
-	for (int i = 0; i < ncategory; i++)
+	for (size_t i = 0; i < ncategory; i++)
 		out << " (" << prop[i] << "," << rates[i] << ")";
 	out << endl;
 }
@@ -498,7 +498,7 @@ void RateFree::writeInfo(ostream &out) {
 	@param out output stream
 */
 void RateFree::writeParameters(ostream &out) {
-	for (int i = 0; i < ncategory; i++)
+	for (size_t i = 0; i < ncategory; i++)
 		out << "\t" << prop[i] << "\t" << rates[i];
 
 }
@@ -653,7 +653,7 @@ double RateFree::optimizeWithEM() {
             rates[c] = scaling;
             sum += prop[c] * rates[c];
             // reset subst model
-            tree->setModel(NULL);
+            tree->setModel(nullptr);
             subst_model->setTree(phylo_tree);
         }
         
@@ -667,9 +667,9 @@ double RateFree::optimizeWithEM() {
     }
     
     // deattach memory
-//    tree->central_partial_lh = NULL;
-//    tree->central_scale_num = NULL;
-//    tree->central_partial_pars = NULL;
+//    tree->central_partial_lh = nullptr;
+//    tree->central_scale_num = nullptr;
+//    tree->central_partial_pars = nullptr;
 
     delete tree;
     aligned_free(new_prop);

@@ -5,6 +5,8 @@
 #include "MPIHelper.h"
 #include "timeutil.h"
 
+using namespace std;
+
 /**
  *  Initialize the single getInstance of MPIHelper
  */
@@ -179,8 +181,8 @@ void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
     int msgCount = str.length();
 
     // first send the counts to MASTER
-    int *msgCounts = NULL, *displ = NULL;
-    char *recvBuffer = NULL;
+    int *msgCounts = nullptr, *displ = nullptr;
+    char *recvBuffer = nullptr;
     int totalCount = 0;
 
     if (isMaster()) {
@@ -191,7 +193,7 @@ void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
 
     // now real contents to MASTER
     if (isMaster()) {
-        for (int i = 0; i < getNumProcesses(); i++) {
+        for (size_t i = 0; i < getNumProcesses(); i++) {
             displ[i] = totalCount;
             totalCount += msgCounts[i];
         }

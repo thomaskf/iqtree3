@@ -63,7 +63,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -105,15 +105,15 @@ public:
 
     /**
             @param[out] lenvec tree lengths for each class in mixlen model
-            @param node the starting node, NULL to start from the root
+            @param node the starting node, nullptr to start from the root
             @param dad dad of the node, used to direct the search
      */
-    virtual void treeLengths(DoubleVector &lenvec, Node *node = NULL, Node *dad = NULL);
+    virtual void treeLengths(DoubleVector &lenvec, Node *node = nullptr, Node *dad = nullptr);
 
     /**
      * assign branch length as mean over all branch lengths of categories
      */
-    void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
+    void assignMeanMixBranches(Node *node = nullptr, Node *dad = nullptr);
 
 
     /**
@@ -140,7 +140,7 @@ public:
     /**
         initialize mixture branch lengths
     */
-    void initializeMixBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeMixBranches(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /** initialize parameters if necessary */
     void initializeMixlen(double tolerance, bool write_info);

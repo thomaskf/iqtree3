@@ -28,7 +28,7 @@ PartitionModel::PartitionModel()
 {
 	linked_alpha = -1.0;
     opt_gamma_invar = false;
-    partLike = NULL;
+    partLike = nullptr;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -59,7 +59,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     double init_by_divmat = false;
     if (params.model_name_init && strcmp(params.model_name_init, "DIVMAT") == 0) {
         init_by_divmat = true;
-        params.model_name_init = NULL;
+        params.model_name_init = nullptr;
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
@@ -117,7 +117,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
             continue;
         // count state occurrences
-        size_t *sum_state_counts = NULL;
+        size_t *sum_state_counts = nullptr;
         int num_parts = 0;
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
@@ -135,7 +135,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                     sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
                     memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
                 }
-                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
+                for (size_t state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
                     sum_state_counts[state] += state_counts[state];
                 }
             }
@@ -309,7 +309,7 @@ double PartitionModel::targetFunk(double x[]) {
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic) if(tree->num_threads > 1)
     #endif
-    for (int j = 0; j < ntrees; j++) {
+    for (size_t j = 0; j < ntrees; j++) {
         
         int i = tree->part_order[j];
         ModelSubst *part_model = tree->at(i)->getModel();
@@ -385,7 +385,7 @@ double PartitionModel::computeMarginalLh() {
     t_seqs_vec_array.resize(ntrees);
     t_seqs_set_array.resize(ntrees);
 
-    for (int j = 0; j < ntrees; j++) {
+    for (size_t j = 0; j < ntrees; j++) {
         PhyloTree *t = tree->at(j);
         t->getTaxaName(t_seqs_vec_array[j]);
         t_seqs_set_array[j].insert(t_seqs_vec_array[j].begin(), t_seqs_vec_array[j].end());
@@ -394,7 +394,7 @@ double PartitionModel::computeMarginalLh() {
     // compute the mixture-based log-likelihood
     double mix_lh = 0.0;
 
-    for (int j = 0; j < ntrees; j++) {
+    for (size_t j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
         Alignment *tree1_aln = tree->at(j)->aln;
         int tree1_nsite = tree1_aln->getNSite();
@@ -406,7 +406,7 @@ double PartitionModel::computeMarginalLh() {
 #ifdef _OPENMP
 #pragma omp parallel for if(tree->num_threads > 1)
 #endif
-        for (int k = 0; k < ntrees ; k++) {
+        for (size_t k = 0; k < ntrees ; k++) {
             PhyloTree *tree2 = tree->at(k);
 
             // get the intersection of tree1_aln and tree2.
@@ -439,7 +439,7 @@ double PartitionModel::computeMarginalLh() {
 
             if (inter_seqs_id.size() > 1) {
                 // subset tree1_aln
-                Alignment *sub_tree1_aln = NULL;
+                Alignment *sub_tree1_aln = nullptr;
                 if (tree1_seqs.size() != inter_seqs.size()) {
                     sub_tree1_aln = new Alignment();
                     sub_tree1_aln->extractSubAlignment(tree1_aln, inter_seqs_id, 0);
@@ -448,9 +448,9 @@ double PartitionModel::computeMarginalLh() {
                 }
 
                 // subset tree2
-                PhyloTree *sub_tree2 = NULL;
+                PhyloTree *sub_tree2 = nullptr;
                 string inter_seqs_set (tree2_seqs.size(), 0);
-                for (int l = 0; l < tree2_seqs.size(); l++) {
+                for (size_t l = 0; l < tree2_seqs.size(); l++) {
                     if (inter_seqs.find(tree2_seqs[l]) != inter_seqs.end()) {
                         inter_seqs_set[l] = 1;
                     }
@@ -561,8 +561,8 @@ double PartitionModel::computeMarginalLh() {
                 if (tree1_seqs.size() != inter_seqs.size()) {
                     delete sub_tree1_aln;
                 }
-                sub_tree2->setModelFactory(NULL);
-                sub_tree2->aln = NULL;
+                sub_tree2->setModelFactory(nullptr);
+                sub_tree2->aln = nullptr;
                 delete sub_tree2;
                 delete[] ptn_lh_array;
                 /*
@@ -711,11 +711,11 @@ double PartitionModel::computeMarginalLh() {
 
         // compute partition log-likelihood from sites
         double mix_lh_partition = 0.0;
-        for (int l = 0; l < tree1_nsite; l++) {
+        for (size_t l = 0; l < tree1_nsite; l++) {
             double weighted_lh, max_lh, mix_lh_site;
             //int ptn_freq = tree1_aln->at(l).frequency;
 
-            for (int k = 0; k < ntrees; k++) {
+            for (size_t k = 0; k < ntrees; k++) {
                 weighted_lh = log_weight_array[k]+lh_array[tree1_nsite*k+l];
                 if (k == 0) {
                     max_lh = weighted_lh;
@@ -976,7 +976,7 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
 
 PartitionModel::~PartitionModel()
 {
-    if (partLike != NULL)
+    if (partLike != nullptr)
         delete[] partLike;
 }
 

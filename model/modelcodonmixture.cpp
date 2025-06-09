@@ -100,7 +100,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
     bool changed = ModelMixture::getVariables(variables);
     auto kappa = ((ModelCodon*)at(0))->kappa;
     auto kappa2 = ((ModelCodon*)at(0))->kappa2;
-    for (int i = 1; i < size(); i++) {
+    for (size_t i = 1; i < size(); i++) {
         ModelCodon *model = (ModelCodon*)at(i);
         model->kappa = kappa;
         model->kappa2 = kappa2;

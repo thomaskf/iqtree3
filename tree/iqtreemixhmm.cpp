@@ -15,7 +15,7 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
-    siteTypes = NULL;
+    siteTypes = nullptr;
 }
 
 IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln) : IQTreeMix(params, aln), PhyloHmm(getAlnNSite(), ntree) {
@@ -26,7 +26,7 @@ IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln) : IQTreeMix(params, a
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
-    siteTypes = NULL;
+    siteTypes = nullptr;
     setSiteTypes();
 }
 

@@ -36,7 +36,7 @@ void PDTreeSet::init(Params &params) {
 		params.sub_size++;
 		params.min_size++;
 	}
-	if (isRootedTrees() && params.root != NULL) {
+	if (isRootedTrees() && params.root != nullptr) {
 		outError(ERR_CONFLICT_ROOT);
 	}
 
@@ -52,15 +52,15 @@ void PDTreeSet::init(Params &params) {
 		readRootNode(rname);
 	}
 	// read the parameter file
-	if (params.param_file != NULL) {
+	if (params.param_file != nullptr) {
 		readParams(params);
 	}
 	// identify the root
-	if (params.root != NULL) 
+	if (params.root != nullptr) 
 		readRootNode(params.root);
 
 	// read the initial set of taxa, incoporate info into the split system
-	if (params.initial_file != NULL) {
+	if (params.initial_file != nullptr) {
 		readInitialSet(params);
 	}
 }
@@ -99,7 +99,7 @@ void PDTreeSet::readParams(Params &params) {
 		mytree->buildLeafMapName(lsn);
 		DoubleVector tax_weight;
 		tax_weight.resize(ntaxa, 0);
-		for (int i = 0; i < tax_name.size(); i++) {
+		for (size_t i = 0; i < tax_name.size(); i++) {
 			LeafMapName::iterator nameit = lsn.find(tax_name[i]);
 			if (nameit == lsn.end())
 				outError(ERR_NO_TAXON, tax_name[i]);

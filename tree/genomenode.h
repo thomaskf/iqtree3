@@ -36,7 +36,7 @@ public:
         pos = 0;
         length = 0;
         is_append = false;
-        next = NULL;
+        next = nullptr;
     }
     
     /**
@@ -47,7 +47,7 @@ public:
         pos = n_pos;
         length = n_length;
         is_append = n_is_append;
-        next = NULL;
+        next = nullptr;
     }
     
     /**

@@ -27,8 +27,6 @@
 #include "utils/tools.h"
 #include "nclextra/msplitsblock.h"
 
-using namespace std;
-
 
 const int UINT_BITS = sizeof(UINT) * 8;
 const int BITS_DIV = (sizeof(int) == 2) ? 4 : ((sizeof(int)==4) ? 5 : 6);

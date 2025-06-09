@@ -298,7 +298,7 @@ int cmatby (complex a[], complex b[], complex c[], int n,int m,int k)
 
    FOR (i,n)  FOR(j,k) {
        complex t = comply(0, 0);
-       for (int i1 = 0; i1 < m; i1++) {
+       for (size_t i1 = 0; i1 < m; i1++) {
            t = cplus(t, cby(a[i * m + i1], b[i1 * k + j]));
        }
        c[i*k+j] = t;

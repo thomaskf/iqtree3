@@ -111,8 +111,8 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         // reallocate the mem spaces
         if (rates && old_reversible) {
             // copy old reversible rates into new non-reversible
-            for (int i = 0, k = 0; i < num_states; i++) {
-                for (int j = i+1; j < num_states; j++, k++) {
+            for (size_t i = 0, k = 0; i < num_states; i++) {
+                for (size_t j = i+1; j < num_states; j++, k++) {
                     rate_matrix[i*num_states+j] = rates[k] * state_freq[j];
                     rate_matrix[j*num_states+i] = rates[k] * state_freq[i];
                 }
@@ -591,7 +591,7 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
     double evol_time = time / total_num_subst;
     double trans_prob = 0.0;
     derv1 = derv2 = 0.0;
-    for (int i = 0; i < num_states; i++) {
+    for (size_t i = 0; i < num_states; i++) {
         double trans = eigenvectors[state1*num_states+i]
         * inv_eigenvectors[i*num_states+state2]
         * exp(evol_time * eigenvalues[i]);
@@ -1100,7 +1100,7 @@ double ModelMarkov::targetFunk(double x[]) {
 	}
 
     // avoid numerical issue if state_freq is too small
-    for (int i = 0; i < num_states; i++) {
+    for (size_t i = 0; i < num_states; i++) {
         if (state_freq[i] < 0 || (state_freq[i] > 0 && state_freq[i] < Params::getInstance().min_state_freq)) {
             //outWarning("Weird state_freq[" + convertIntToString(i) + "]=" + convertDoubleToString(state_freq[i]));
             return 1.0e+30;
@@ -1610,16 +1610,16 @@ void ModelMarkov::decomposeRateMatrixRev() {
         rate_matrix[i] = new double[num_states];
     }
     if (half_matrix) {
-        for (int i = 0, k = 0; i < num_states; i++) {
+        for (size_t i = 0, k = 0; i < num_states; i++) {
             rate_matrix[i][i] = 0.0;
-            for (int j = i+1; j < num_states; j++, k++) {
+            for (size_t j = i+1; j < num_states; j++, k++) {
                 rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
                 rate_matrix[j][i] = rate_matrix[i][j];
             }
         }
     } else {
         // full matrix
-        for (int i = 0; i < num_states; i++) {
+        for (size_t i = 0; i < num_states; i++) {
             memcpy(rate_matrix[i], &rates[i*num_states], num_states*sizeof(double));
             rate_matrix[i][i] = 0.0;
         }
@@ -1836,7 +1836,7 @@ void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
         double saved_state_freq[num_states];
         memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
         decomposeRateMatrix();
-        for (int i = 0; i < num_states; i++)
+        for (size_t i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
                 cout << "WARNING: State " << i << " frequency " << state_freq[i]
                      << " does not match " << saved_state_freq[i] << endl;
@@ -1871,7 +1871,7 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
         double saved_state_freq[num_states];
         memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
         decomposeRateMatrix();
-        for (int i = 0; i < num_states; i++)
+        for (size_t i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
                 cout << "WARNING: State " << i << " frequency " << state_freq[i]
                      << " does not match " << saved_state_freq[i] << endl;
@@ -1958,7 +1958,7 @@ void ModelMarkov::setRates() {
 	        return (new ModelLieMarkov(model_name, tree, model_params, freq_type, freq_params));
 	} else {
 		cerr << "Unrecognized model name " << model_name << endl;
-		return (NULL);
+		return (nullptr);
 	}
 }
 
@@ -1987,7 +1987,7 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
 	double *exptime = new double[nstates_2];
 
     memset(exptime, 0, sizeof(double)*nstates_2);
-    for (int i = 0; i < num_states; i++) {
+    for (size_t i = 0; i < num_states; i++) {
         if (eigenvalues_imag[i] == 0.0) {
             exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
         } else {
@@ -2002,10 +2002,10 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
         }
     }
     // compute V * exp(L t)
-    for (int i = 0; i < num_states; i++) {
-        for (int j = 0; j < num_states; j++) {
+    for (size_t i = 0; i < num_states; i++) {
+        for (size_t j = 0; j < num_states; j++) {
             double val = 0;
-            for (int k = 0; k < num_states; k++)
+            for (size_t k = 0; k < num_states; k++)
                 val += eigenvectors[i*num_states+k] * exptime[k*num_states+j];
             trans_matrix[i*num_states+j] = val;
         }
@@ -2013,11 +2013,11 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
     memcpy(exptime, trans_matrix, sizeof(double)*nstates_2);
 
     // then compute V * exp(L t) * V^{-1}
-    for (int i = 0; i < num_states; i++) {
+    for (size_t i = 0; i < num_states; i++) {
         double row_sum = 0.0;
-        for (int j = 0; j < num_states; j++) {
+        for (size_t j = 0; j < num_states; j++) {
             double val = 0;
-            for (int k = 0; k < num_states; k++)
+            for (size_t k = 0; k < num_states; k++)
                 val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
             // make sure that trans_matrix are non-negative
             ASSERT(val >= -0.001);

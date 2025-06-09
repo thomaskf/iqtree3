@@ -47,7 +47,7 @@ int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phylo
             state = aln->STATE_UNKNOWN;
         } else {
             ASSERT(node->id < aln->getNSeq());
-            state = (*aln)[ptn][node->id];
+            state = (*aln)[ptn][static_cast<size_t>(node->id)];
         }
         if (state == aln->STATE_UNKNOWN) {
             states = (1 << aln->num_states) - 1;
@@ -91,7 +91,7 @@ int TinaTree::computeParsimonyScore() {
     for (size_t ptn = 0; ptn < aln->size(); ++ptn)
         if (!aln->at(ptn).isConst()) {
             int states;
-            int ptn_score = computeParsimonyScore(ptn, states);
+            int ptn_score = computeParsimonyScore(static_cast<int>(ptn), states);
             score += ptn_score * (*aln)[ptn].frequency;
             if (verbose_mode >= VB_MAX) {
             	for (size_t seq=0; seq < aln->getNSeq(); ++seq)
@@ -111,7 +111,7 @@ void TinaTree::initializeAllPartialLh() {
 }
 
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
-    int pars_block_size = getBitsBlockSize();
+    size_t pars_block_size = getBitsBlockSize();
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory

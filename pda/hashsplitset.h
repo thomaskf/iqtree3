@@ -25,8 +25,6 @@
 #include "utils/tools.h"
 #include "split.h"
 
-using namespace std;
-
 class SplitGraph;
 
 #ifdef USE_HASH_MAP
@@ -70,7 +68,7 @@ namespace std {
 		*/
 		bool operator()(const Split *s1, const Split *s2) const {
 			ASSERT(s1->size() == s2->size());
-			for (int i = 0; i < s1->size(); i++)
+			for (size_t i = 0; i < s1->size(); i++)
 				if ((*s1)[i] < (*s2)[i]) 
 					return true;
 				else if ((*s1)[i] > (*s2)[i]) return false;

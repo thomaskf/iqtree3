@@ -305,10 +305,10 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << "Best-fit model according to " << criterionName(params.model_test_criterion) << ": ";
 //    ModelCheckpoint::iterator it;
     string best_model;
-    PhyloSuperTree *stree = (tree->isSuperTree()) ? ((PhyloSuperTree*)tree) : NULL;
+    PhyloSuperTree *stree = (tree->isSuperTree()) ? ((PhyloSuperTree*)tree) : nullptr;
     if (tree->isSuperTree()) {
         SuperAlignment *saln = (SuperAlignment*)stree->aln;
-        for (int part = 0; part != stree->size(); part++) {
+        for (size_t part = 0; part != stree->size(); part++) {
             if (part != 0)
                 out << ",";
             out << saln->partitions[part]->model_name << ":" << saln->partitions[part]->name;
@@ -887,7 +887,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     vector<double> totalLens; // for tree mixture
     int df;
     size_t i;
-    IQTreeMix* treemix = NULL;
+    IQTreeMix* treemix = nullptr;
 
     if (tree.isTreeMix() && !tree.isSuperTree()) {
         treemix = (IQTreeMix*) &tree;
@@ -993,7 +993,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << " - measured in number of mutations and frequency shifts per site: " << totalLen << endl;
         out << " - measured in number of substitutions per site (divided by N^2): " << totalLen / (N * N) << endl;
     } else {
-        if (treemix == NULL) {
+        if (treemix == nullptr) {
             out << "Total tree length (sum of branch lengths): " << totalLen << endl;
         } else {
             out << "Total tree lengths (sum of branch lengths):";
@@ -1004,7 +1004,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         }
     }
 
-    if (treemix != NULL) {
+    if (treemix != nullptr) {
         vector<double> totalLenInternals;
         vector<double> totalLenInternalPs;
         for (i = 0; i < treemix->size(); i++) {
@@ -1043,7 +1043,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         return;
     }
 
-    if (treemix != NULL) {
+    if (treemix != nullptr) {
         // out << "No drawing will be displayed for mixture of trees here" << endl;
         out << "Trees with branch lengths are provided in the file: " << params.out_prefix << ".treefile" << endl;
         out << endl;
@@ -1051,9 +1051,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     }
 
     //out << "ZERO BRANCH EPSILON = " << epsilon << endl;
-    int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
+    int zero_internal_branches = tree.countZeroInternalBranches(nullptr, nullptr, epsilon);
     if (zero_internal_branches > 0) {
-        //int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
+        //int zero_internal_branches = tree.countZeroInternalBranches(nullptr, nullptr, epsilon);
         /*
         out << "WARNING: " << zero_branches
                 << " branches of near-zero lengths (<" << epsilon << ") and should be treated with caution!"
@@ -1070,7 +1070,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << "         Such branches are denoted by '**' in the figure below"
                 << endl << endl;
     }
-    int long_branches = tree.countLongBranches(NULL, NULL, params.max_branch_length-0.2);
+    int long_branches = tree.countLongBranches(nullptr, nullptr, params.max_branch_length-0.2);
     if (long_branches > 0) {
         //stringstream sstr;
         out << "WARNING: " << long_branches << " too long branches (>"
@@ -1654,7 +1654,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << "Run     logL" << endl;
             DoubleVector runLnL;
             tree.getCheckpoint()->getVector("runLnL", runLnL);
-            for (int run = 0; run < runLnL.size(); run++)
+            for (size_t run = 0; run < runLnL.size(); run++)
                 out << run+1 << "\t" << fixed << runLnL[run] << endl;
             out << endl;
         }
@@ -1767,7 +1767,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             contree.printTree(out);
             out << endl << endl;
 //            tree.freeNode();
-//            tree.root = NULL;
+//            tree.root = nullptr;
 //            tree.readTree(con_file.c_str(), rooted);
 //            if (removed_seqs.size() > 0) {
 //                tree.reinsertIdenticalSeqs(tree.aln, removed_seqs, twin_seqs);
@@ -3210,7 +3210,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
             }
         }
 
-        printMCMCFileFormat(iqtree, hessian, tree_stream, branch_lengths_vector, gradient_vector_eigen, NULL, 0,
+        printMCMCFileFormat(iqtree, hessian, tree_stream, branch_lengths_vector, gradient_vector_eigen, nullptr, 0,
                             iqtree->leftSingleRoot);
 
         outfile << endl << iqtree->aln->getNSeq() << endl << endl;
@@ -3307,7 +3307,7 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
                 outError("Alignment does not have specified outgroup taxon ", *it);
     }
 
-//    if (params.count_trees && pllTreeCounter == NULL)
+//    if (params.count_trees && pllTreeCounter == nullptr)
 //        pllTreeCounter = new StringIntMap;
 
     // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
@@ -3364,14 +3364,14 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
                 if ((*it)->root){
 
                     (*it)->freeNode();
-                    (*it)->root = NULL;
+                    (*it)->root = nullptr;
                 }
             }
         }
         // delete the tree itself
         if (iqtree->root){
             iqtree->freeNode();
-            iqtree->root = NULL;
+            iqtree->root = nullptr;
         }
     }
 }
@@ -3589,7 +3589,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->initializeAllPartialLh();
 
         if (iqtree->getRate()->name.find("+I+G") != string::npos) {
-            if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
+            if (params.alpha_invar_file != nullptr) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
                 computeLoglFromUserInputGAMMAInvar(params, *iqtree);
                 exit(0);
             }
@@ -3906,7 +3906,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.collapse_zero_branch) {
         cout << "Collapsing near-zero internal branches... ";
-        cout << iqtree->collapseInternalBranches(NULL, NULL, params.min_branch_length*4);
+        cout << iqtree->collapseInternalBranches(nullptr, nullptr, params.min_branch_length*4);
         cout << " collapsed" << endl;
     }
 
@@ -3941,7 +3941,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
         weight_threshold *= 100.0;
         computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-                             weight_threshold, NULL, params.out_prefix, NULL, &params);
+                             weight_threshold, nullptr, params.out_prefix, nullptr, &params);
         // now optimize branch lengths of the consensus tree
         string current_tree = iqtree->getTreeString();
         optimizeConTree(params, iqtree);
@@ -4262,7 +4262,7 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
     aiFileResults.precision(4);
     DoubleVector lenvec;
     aiFileResults << "Alpha P_Invar Logl TreeLength\n";
-    for (int i = 0; i < alphas.size(); i++) {
+    for (size_t i = 0; i < alphas.size(); i++) {
         iqtree.saveBranchLengths(lenvec);
         aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
         site_rates->setGammaShape(alphas.at(i));
@@ -4311,7 +4311,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     iqtree.getModel()->getStateFrequency(state_freqs);
     double *bestStateFreqs =  new double[numStates];
 
-    for (int i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 10; i++) {
         cout << endl;
         cout << "Testing alpha: " << initAlphas[i] << endl;
         // Initialize model parameters
@@ -4491,7 +4491,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
             bootstrap_alignment = new SuperAlignment;
         else
             bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
+        bootstrap_alignment->createBootstrapAlignment(alignment, nullptr, params.bootstrap_spec);
 
         // restore randstream
         finish_random();
@@ -4596,7 +4596,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         const char* saved_root = params.root;
         params.root = root_name.c_str();
         computeConsensusTree(boottrees_name.c_str(), 0, 1e6, -1,
-                params.split_threshold, NULL, params.out_prefix, NULL, &params);
+                params.split_threshold, nullptr, params.out_prefix, nullptr, &params);
         params.root = saved_root;
     }
 
@@ -4624,7 +4624,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
                     treefile_name.c_str(), false, treefile_name.c_str(),
-                    params.out_prefix, ext_tree, NULL, &params);
+                    params.out_prefix, ext_tree, nullptr, &params);
             tree->copyTree(&ext_tree);
             if (tree->rooted) {
                 cout << "Computing rootstrap supports from " << params.num_bootstrap_samples << " bootstrap trees..." << endl;
@@ -4660,7 +4660,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         string out_raw_tree = (string)params.out_prefix + ".tbe.rawtree";
         string stat_out = (string)params.out_prefix + ".tbe.stat";
         main_booster(input_tree.c_str(), boot_trees.c_str(), out_tree.c_str(),
-                     (params.transfer_bootstrap==2) ? out_raw_tree.c_str() : NULL,
+                     (params.transfer_bootstrap==2) ? out_raw_tree.c_str() : nullptr,
                      stat_out.c_str(), (verbose_mode >= VB_MED) ? 0 : 1);
         cout << "TBE tree written to " << out_tree << endl;
         if (params.transfer_bootstrap == 2)
@@ -4694,7 +4694,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
             bootstrap_alignment = new SuperAlignment;
         else
             bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
+        bootstrap_alignment->createBootstrapAlignment(alignment, nullptr, params.bootstrap_spec);
         delete alignment;
         alignment = bootstrap_alignment;
         iqtree->aln = alignment;
@@ -4902,7 +4902,7 @@ void doSymTest(Alignment *alignment, Params &params) {
         num_parts = ((SuperAlignment*)alignment)->partitions.size();
     
     string filename_stat = string(params.out_prefix) + ".symstat.csv";
-    ofstream *out_stat = NULL;
+    ofstream *out_stat = nullptr;
     if (params.symtest_stat) {
         out_stat = new ofstream;
         out_stat->open(filename_stat);
@@ -4929,11 +4929,11 @@ void doSymTest(Alignment *alignment, Params &params) {
     intsym.resize(num_parts*params.symtest_shuffle);
 
     for (int i = 0; i < params.symtest_shuffle; i++) {
-        vector<SymTestStat> *stats = NULL;
+        vector<SymTestStat> *stats = nullptr;
         if (params.symtest_stat)
             stats = new vector<SymTestStat>;
         if (i == 0) // original alignment
-            alignment->doSymTest(i*num_parts, sym, marsym, intsym, NULL, stats);
+            alignment->doSymTest(i*num_parts, sym, marsym, intsym, nullptr, stats);
         else {
             int *rstream;
             init_random(params.ran_seed+i+1, false, &rstream);
@@ -5006,7 +5006,7 @@ void doSymTest(Alignment *alignment, Params &params) {
     
     if (alignment->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)alignment;
-        for (int part = 0; part < saln->partitions.size(); part++)
+        for (size_t part = 0; part < saln->partitions.size(); part++)
             out << saln->partitions[part]->name << ','
                 << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
     } else {
@@ -5014,7 +5014,7 @@ void doSymTest(Alignment *alignment, Params &params) {
     }
 
     if (params.symtest_shuffle > 1) {
-        for (int part = num_parts; part < sym.size(); part++) {
+        for (size_t part = num_parts; part < sym.size(); part++) {
             sym[part].pvalue_perm = marsym[part].pvalue_perm = intsym[part].pvalue_perm = -1.0;
             out << part % num_parts << ','
             << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
@@ -5228,7 +5228,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
                 cout << endl << "For your convenience alignment with unique sequences printed to " << filename << endl;
             }
         }
-        alignment = NULL; // from now on use tree->aln instead
+        alignment = nullptr; // from now on use tree->aln instead
 
         startTreeReconstruction(params, tree, *model_info);
         // call main tree reconstruction
@@ -5539,7 +5539,7 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             outError("Rooted trees not allowed: ", params.user_file);
         if (part_trees.size() != super_aln->partitions.size())
             outError("User tree file does not have the same number of trees as partitions");
-        params.user_file = NULL;
+        params.user_file = nullptr;
     }
 
     ModelCheckpoint *model_info = new ModelCheckpoint;
@@ -5600,7 +5600,7 @@ void assignBranchSupportNew(Params &params) {
     if (params.num_threads == 0)
         outError("-nt AUTO is not supported for concordance factor analysis, please specify no. cores");
     PhyloTree *tree;
-    Alignment *aln = NULL;
+    Alignment *aln = nullptr;
     if (params.site_concordance) {
         if (!params.aln_file && !params.partition_file)
             outError("Please provide an alignment (-s) or partition file");

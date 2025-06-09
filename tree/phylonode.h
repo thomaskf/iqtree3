@@ -45,11 +45,11 @@ public:
         @param alength length of branch
      */
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
-        partial_lh = NULL;
-        scale_num = NULL;
+        partial_lh = nullptr;
+        scale_num = nullptr;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
-        partial_pars = NULL;
+        partial_pars = nullptr;
         direction = UNDEFINED_DIRECTION;
         size = 0;
     }
@@ -61,11 +61,11 @@ public:
         @param aid branch ID
      */
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
-        partial_lh = NULL;
-        scale_num = NULL;
+        partial_lh = nullptr;
+        scale_num = nullptr;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
-        partial_pars = NULL;
+        partial_pars = nullptr;
         direction = UNDEFINED_DIRECTION;
         size = 0;
     }
@@ -75,11 +75,11 @@ public:
      @param nei another Neighbor
      */
     PhyloNeighbor(PhyloNeighbor *nei) : Neighbor(nei) {
-        partial_lh = NULL;
-        scale_num = NULL;
+        partial_lh = nullptr;
+        scale_num = nullptr;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
-        partial_pars = NULL;
+        partial_pars = nullptr;
         direction = nei->direction;
         size = nei->size;
     }
@@ -115,7 +115,7 @@ public:
 
     /**
         DEPRECATED, moved to PhyloTree
-        if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
+        if partial_lh is nullptr, reorient partial_lh (LM_PER_NODE technique)
         @param dad dad of this neighbor
     */
 //    void reorientPartialLh(Node *dad);

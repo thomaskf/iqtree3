@@ -317,7 +317,7 @@ void StopRule::cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size) 
 			invMat[ix][jx] = wk[ix];
 	}
 	free((char *)wk);
-	wk = NULL;
+	wk = nullptr;
 } /* luinverse */
 
 void StopRule::readMat (char *fileName, DoubleMatrix &oriMat, int &size) {
@@ -343,7 +343,7 @@ void StopRule::multiple (DoubleMatrix &mat1, DoubleMatrix &mat2, DoubleMatrix &p
 	for (row_ = 0; row_ < nrow_; row_ ++)
 		for (col_ = 0; col_ < ncol_; col_ ++) {
 			proMat[row_][col_] = 0.0;
-			for (int count_ = 0; count_ < mat1[0].size(); count_ ++) {
+			for (size_t count_ = 0; count_ < mat1[0].size(); count_ ++) {
 				proMat[row_][col_] += mat1[row_][count_] * mat2[count_][col_];
 				//         std::cout << mat1[row_][count_] << " --> " << mat2[count_][col_] << endl;
 			}
@@ -384,7 +384,7 @@ void StopRule::multiple (DoubleVector &vec1, DoubleVector &vec2, DoubleMatrix &p
 
 double StopRule::multiple (DoubleVector &vec1, DoubleVector &vec2) {
 	double sum_ = 0.0;
-	for (int count_ = 0; count_ < vec1.size(); count_ ++)
+	for (size_t count_ = 0; count_ < vec1.size(); count_ ++)
 		sum_ += vec1[count_] * vec2[count_];
 	return sum_;
 }
@@ -414,7 +414,7 @@ double StopRule::cmpLnGamma (double alpha) {
 void StopRule::readVector(DoubleVector &tmpTimeVec_) {
 //	nTime_ = tmpTimeVec_.size();
 	time_vec.resize(tmpTimeVec_.size());
-	for (int count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
+	for (size_t count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
 		time_vec[count_] = tmpTimeVec_[tmpTimeVec_.size() - count_ - 1];
 }
 
@@ -440,7 +440,7 @@ void StopRule::readFile (const char *fileName) {
 	inFile_.close ();
 
 	time_vec.resize(tmpTimeVec_.size());
-	for (int count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
+	for (size_t count_ = 0; count_ < tmpTimeVec_.size(); count_ ++)
 		time_vec[count_] = tmpTimeVec_[tmpTimeVec_.size() - count_ - 1];
 }
 
@@ -518,7 +518,7 @@ double StopRule::cmpExtinctTime (int k) {
 	DoubleVector a;
 	cmpVecA (k, a);
 	double extinctTime_ = 0.0;
-	for (int count_ = 0; count_ < k; count_ ++)
+	for (size_t count_ = 0; count_ < k; count_ ++)
 		extinctTime_ += a[count_] * time_vec[count_];
 	return extinctTime_;
 }

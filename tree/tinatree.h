@@ -50,11 +50,11 @@ public:
             @param ptn pattern ID
             @param states set of admissible states at the current node (in binary code)
      */
-    int computeParsimonyScore(int ptn, int &states, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    int computeParsimonyScore(int ptn, int &states, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
 	virtual void initializeAllPartialLh();
 
-	virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+	virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
 };
 
