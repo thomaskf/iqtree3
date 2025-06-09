@@ -19,7 +19,7 @@ Get-Content $input_file | ForEach-Object {
         return
     }
 
-    $iqtree_file = $columns[0]
+    $iqtree_file = Join-Path "test_scripts/test_data" $columns[0]
     $field_name = $columns[1]
     $expected_value = [double]$columns[2]
     $threshold = [double]$columns[3]
