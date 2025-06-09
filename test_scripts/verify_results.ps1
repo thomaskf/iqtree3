@@ -46,6 +46,7 @@ Get-Content $input_file | ForEach-Object {
 
     if ($abs_diff -le $threshold) {
         Write-Host "PASS: ${iqtree_file} (${field_name})" -ForegroundColor Green
+        Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
     } else {
         Write-Host "FAIL: ${iqtree_file} (${field_name})" -ForegroundColor Red
         Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
