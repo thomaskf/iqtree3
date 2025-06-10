@@ -19,7 +19,7 @@ Get-Content $input_file | ForEach-Object {
         return
     }
 
-    $iqtree_file = $columns[0]
+    $iqtree_file = Join-Path "test_scripts/test_data" $columns[0]
     $field_name = $columns[1]
     $expected_value = [double]$columns[2]
     $threshold = [double]$columns[3]
@@ -46,6 +46,7 @@ Get-Content $input_file | ForEach-Object {
 
     if ($abs_diff -le $threshold) {
         Write-Host "PASS: ${iqtree_file} (${field_name})" -ForegroundColor Green
+        Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
     } else {
         Write-Host "FAIL: ${iqtree_file} (${field_name})" -ForegroundColor Red
         Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
