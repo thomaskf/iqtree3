@@ -21,13 +21,14 @@
 #include "tree/phylotree.h"
 #include "rateheterogeneity.h"
 
+using namespace std;
 
 RateHeterogeneity::RateHeterogeneity()
  : Optimization(), CheckpointFactory()
 {
 	name = "";
 	full_name = "Uniform";
-	phylo_tree = NULL;
+	phylo_tree = nullptr;
 }
 
 void RateHeterogeneity::setTree(PhyloTree *tree) {

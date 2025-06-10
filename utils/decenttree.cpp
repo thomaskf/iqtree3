@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     std::string outputFilePath;
     bool isOutputZipped = false;
     bool isBannerSuppressed = false;
-    for (int argNum=1; argNum<argc; ++argNum) {
+    for (size_t argNum=1; argNum<argc; ++argNum) {
         std::string arg = argv[argNum];
         std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
         if (arg=="-in") {

@@ -1313,7 +1313,7 @@ public:
                 minVector = select(less, adjVector, minVector);
             }
             //Extract minimum and column number
-            for (int c=0; c<blockSize; ++c) {
+            for (size_t c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];
@@ -1376,7 +1376,7 @@ public:
                 minVector = select(less, rowVector, minVector);
             }
             //Extract minimum and column number
-            for (int c=0; c<blockSize; ++c) {
+            for (size_t c=0; c<blockSize; ++c) {
                 if (minVector[c] < pos.value) {
                     pos.value  = minVector[c];
                     pos.column = ixVector[c];

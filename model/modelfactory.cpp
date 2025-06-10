@@ -129,8 +129,8 @@ ModelsBlock *readModelsDefinition(Params &params) {
 }
 
 ModelFactory::ModelFactory() : CheckpointFactory() {
-    model = NULL;
-    site_rate = NULL;
+    model = nullptr;
+    site_rate = nullptr;
     store_trans_matrix = false;
     is_storing = false;
     joint_optimize = false;
@@ -178,14 +178,14 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
     if (model_str.find("+GC") != std::string::npos) {
         std::string tmp_model_str(1, model_str[0]);
-        for (int c_index = 1; c_index < model_str.length(); c_index++)
+        for (size_t c_index = 1; c_index < model_str.length(); c_index++)
             if (!(model_str[c_index-1]=='G' && model_str[c_index]=='C'))
                 tmp_model_str = tmp_model_str + model_str[c_index];
         model_name = tmp_model_str;
     }
 
     /********* preprocessing model string ****************/
-    NxsModel *nxsmodel  = NULL;
+    NxsModel *nxsmodel  = nullptr;
 
     string new_model_str = "";
     size_t mix_pos;
@@ -212,7 +212,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
             size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
             string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
-            // cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
             nxsmodel = models_block->findMixModel(sub_model_str);
             if (nxsmodel) sub_model_str = nxsmodel->description;
             new_model_str += sub_model_str;
@@ -697,7 +696,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (tree->aln->num_informative_sites != tree->getAlnNSite()) {
             if (!params.partition_file) {
                 string infsites_file = ((string)params.out_prefix + ".infsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, NULL, EXCLUDE_UNINF);
+                tree->aln->printAlignment(params.aln_output_format, infsites_file.c_str(), false, nullptr, EXCLUDE_UNINF);
                 cerr << "For your convenience alignment with parsimony-informative sites printed to " << infsites_file << endl;
             }
             outError("Invalid use of +ASC_INF because of " + convertIntToString(tree->getAlnNSite() - tree->aln->num_informative_sites) +
@@ -715,7 +714,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (tree->aln->frac_invariant_sites > 0) {
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, nullptr, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
             outError("Invalid use of +ASC_MIS because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
@@ -749,7 +748,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //                }
             if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
-                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, NULL, EXCLUDE_INVAR);
+                tree->aln->printAlignment(params.aln_output_format, varsites_file.c_str(), false, nullptr, EXCLUDE_INVAR);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
             }
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
@@ -1127,10 +1126,8 @@ bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
         */
 
         for (i = 0; i < nested_models.size(); i++) {
-            map<string, string>::iterator itr = checkpoint->find(nested_models[i] + rate_name);
-            ASSERT(itr != checkpoint->end());
-
-            string best_model_logl_df = itr->second;
+            string best_model_logl_df;
+            ASSERT(checkpoint->getString(nested_models[i] + rate_name, best_model_logl_df));
             stringstream ss(best_model_logl_df);
             ss >> cur_logl;
 
@@ -1179,10 +1176,8 @@ bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
 
         for (i = 0; i < nested_models.size(); i++) {
             nested_mix_model = replaceLastQ(model_name, nested_models[i]);
-            map<string, string>::iterator itr = checkpoint->find(nested_mix_model + rate_name);
-            ASSERT(itr != checkpoint->end());
-
-            string best_model_logl_df = itr->second;
+            string best_model_logl_df;
+            ASSERT(checkpoint->getString(nested_mix_model + rate_name, best_model_logl_df));
             stringstream ss(best_model_logl_df);
             ss >> cur_logl;
 

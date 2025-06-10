@@ -47,7 +47,7 @@ public:
         logl = 0.0;
         df = 0;
         tree_len = 0.0;
-        aln = NULL;
+        aln = nullptr;
         AIC_score = DBL_MAX;
         AICc_score = DBL_MAX;
         BIC_score = DBL_MAX;
@@ -154,7 +154,7 @@ public:
     bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
             if ((posR = model->rate_name.find(rates[i])) != string::npos) {
                 int cat = convert_int(model->rate_name.substr(posR+2).c_str());
                 subst_name = model->subst_name;
@@ -276,15 +276,15 @@ public:
     int getLowerKModel(int model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = at(static_cast<size_t>(model)).rate_name.find(rates[i])) == string::npos)
                 continue;
-            int cat = convert_int(at(model).rate_name.substr(posR+2).c_str());
+            int cat = convert_int(at(static_cast<size_t>(model)).rate_name.substr(posR+2).c_str());
             for (int prev_model = model-1; prev_model >= 0; prev_model--, cat--) {
-                string name = at(model).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
-                if (at(prev_model).rate_name != name)
+                string name = at(static_cast<size_t>(model)).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
+                if (at(static_cast<size_t>(prev_model)).rate_name != name)
                     break;
-                if (!at(prev_model).hasFlag(MF_DONE))
+                if (!at(static_cast<size_t>(prev_model)).hasFlag(MF_DONE))
                     continue;
                 return prev_model;
             }
@@ -292,16 +292,16 @@ public:
         return -1;
     }
 
-    int getHigherKModel(int model) {
+    int getHigherKModel(size_t model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
             if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
                 continue;
             size_t this_posR = at(model).rate_name.find(rates[i]);
             ASSERT(this_posR != string::npos);
             int cat = convert_int(at(model).rate_name.substr(this_posR+2).c_str());
-            for (int next_model = model+1; next_model < size(); next_model++, cat++) {
+            for (size_t next_model = model+1; next_model < size(); next_model++, cat++) {
 //                if (at(next_model).name.substr(0, posR) != orig_name.substr(0, posR))
 //                    break;
                 string rate_name = at(model).rate_name.substr(posR, 2) + convertIntToString(cat+1);
@@ -422,7 +422,7 @@ public:
     void getCompatiblePairs(int num, ModelPairSet &res) {
         set<int> part_ids;
 
-        for (auto it = begin(); it != end() && res.size() < num; it++) {
+        for (auto it = begin(); it != end() && res.size() < static_cast<size_t>(num); it++) {
 
             // check for compatibility
             vector<int> overlap;

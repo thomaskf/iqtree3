@@ -36,7 +36,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
             outError("Model UNREST requires "+convertIntToString(num_params)+" parameters. Please check and try again!");
         
         // set rates from input params
-        for (int i = 0; i < tmp_rates.size(); i++) {
+        for (size_t i = 0; i < tmp_rates.size(); i++) {
             rates[i] = tmp_rates[i];
             
             // check to fix parameters

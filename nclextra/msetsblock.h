@@ -119,7 +119,7 @@ public:
 		@param id set id
 		@return reference to the corresponding set
 	*/
-	inline TaxaSetName *getSet(int id) { return sets[id]; }
+	inline TaxaSetName *getSet(int id) { return sets[static_cast<size_t>(id)]; }
 
 	/**
 		@return vector of all taxa set

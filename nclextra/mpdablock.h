@@ -105,7 +105,7 @@ public:
 	*/
 	double getCost(int tax_id) {
 		ASSERT(tax_id < (int) costs.size());
-		return costs[tax_id];
+		return costs[static_cast<size_t>(tax_id)];
 	}
 
 

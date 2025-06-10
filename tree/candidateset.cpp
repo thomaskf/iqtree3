@@ -19,7 +19,7 @@ CandidateSet::~CandidateSet() {
 }
 
 CandidateSet::CandidateSet() : CheckpointFactory() {
-    aln = NULL;
+    aln = nullptr;
     numStableSplits = 0;
     this->maxSize = Params::getInstance().maxCandidates;
 }
@@ -76,12 +76,14 @@ void CandidateSet::restoreCheckpoint() {
 
 string CandidateSet::getRandTopTree(int numTopTrees) {
     ASSERT(!empty());
-    if (empty())
+    if (empty()) {
         return "";
+    }
     int id = random_int(min(numTopTrees, (int) size()));
     for (reverse_iterator it = rbegin(); it != rend(); it++) {
-        if (id == 0)
+        if (id == 0) {
             return it->second.tree;
+        }
         id--;
     }
     ASSERT(0);
@@ -104,11 +106,14 @@ vector<string> CandidateSet::getBestTreeStringsForProcess(int numTree) {
     int numProc = MPIHelper::getInstance().getNumProcesses();
     int procID = MPIHelper::getInstance().getProcessID();
 
-    if (numTree < numProc)
+    if (numTree < numProc) {
         numTree = numProc; // BUG FIX: make sure that each process gets at least 1 tree
+    }
 
     vector<string> alltrees = getBestTreeStrings(numTree);
-    if (numProc == 1) return alltrees;
+    if (numProc == 1) {
+        return alltrees;
+    }
     
     if (numTree == 0 || numTree > alltrees.size()) {
         numTree = alltrees.size();
@@ -170,7 +175,7 @@ void CandidateSet::addCandidateSplits(string treeString) {
     for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
         int value;
         Split *sp = candSplits.findSplit(*splitIt, value);
-        if (sp != NULL) {
+        if (sp != nullptr) {
             sp->setWeight(value + 1);
             candSplits.setValue(sp, value + 1);
         } else {
@@ -270,8 +275,9 @@ int CandidateSet::update(string newTree, double newScore) {
 }
 
 vector<double> CandidateSet::getBestScores(int numBestScore) {
-    if (numBestScore == 0)
+    if (numBestScore == 0) {
         numBestScore = size();
+    }
     vector<double> res;
     for (reverse_iterator rit = rbegin(); rit != rend() && numBestScore > 0; rit++, numBestScore--) {
         res.push_back(rit->first);
@@ -280,10 +286,11 @@ vector<double> CandidateSet::getBestScores(int numBestScore) {
 }
 
 double CandidateSet::getBestScore() {
-    if (size() == 0)
+    if (size() == 0) {
         return -DBL_MAX;
-    else
+    } else {
         return rbegin()->first;
+    }
 }
 
 string CandidateSet::convertTreeString(string treeString, int format) {
@@ -341,8 +348,9 @@ void CandidateSet::clearTopologies() {
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
     CandidateSet res;
-    if (numTrees >= size() || numTrees == 0)
+    if (numTrees >= size() || numTrees == 0) {
         numTrees = (int) size();
+    }
 
     for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
         res.insert(*rit);
@@ -374,8 +382,9 @@ bool CandidateSet::treeExist(string tree) {
 
 CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
     for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-        if (rit->second.topology == topology)
+        if (rit->second.topology == topology) {
             return --(rit.base());
+        }
     }
     return end();
 }
@@ -424,7 +433,7 @@ int CandidateSet::computeSplitOccurences(double supportThreshold) {
         for (itg = splits.begin(); itg != splits.end(); itg++) {
             int value;
             Split *sp = candSplits.findSplit(*itg, value);
-            if (sp != NULL) {
+            if (sp != nullptr) {
                 int newHashWeight = value + 1;
                 double newSupport = (double) newHashWeight / (double) candSplits.getNumTree();
                 sp->setWeight(newSupport);
@@ -448,10 +457,12 @@ int CandidateSet::computeSplitOccurences(double supportThreshold) {
 }
 
 int CandidateSet::countStableSplits(double thresHold) {
-    if (thresHold >= 1.0)
+    if (thresHold >= 1.0) {
         thresHold = 0.99;
-    if (candSplits.empty())
+    }
+    if (candSplits.empty()) {
         return 0;
+    }
     int numMaxSupport = 0;
     for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
         if (it->first->getWeight() >= thresHold && it->first->countTaxa() > 1) {

@@ -2448,7 +2448,7 @@ pllTreeInitTopologyForAlignment(pllInstance* tr, pllAlignmentData* alignmentData
 
     pllTreeInitDefaults(tr, tips);
 
-    for (int i = 1; i <= tips; ++i) {
+    for (size_t i = 1; i <= tips; ++i) {
         rax_malloc_string_copy(nameList[i], &(tr->nameList[i]));
         pllHashAdd(tr->nameHash, pllHashString(tr->nameList[i], tr->nameHash->size), tr->nameList[i], (void*)(tr->nodep[i]));
     }

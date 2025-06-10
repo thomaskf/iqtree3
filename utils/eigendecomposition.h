@@ -33,7 +33,7 @@ class EigenDecomposition{
 public:
     EigenDecomposition();
 
-    ~EigenDecomposition();
+    virtual ~EigenDecomposition();
 
 	/**
 		EigenSystem for symmetric matrix

@@ -204,7 +204,7 @@ double AlignmentPairwise::computeFunction(double value) {
         size_t sequenceLength = tree->getConvertedSequenceLength();
         
         if (site_rate->isSiteSpecificRate()) {
-            for (int i = 0; i < sequenceLength; i++) {
+            for (size_t i = 0; i < sequenceLength; i++) {
                 int state1 = sequence1[i];
                 int state2 = sequence2[i];
                 if (state1 >= num_states || state2 >= num_states) {
@@ -215,7 +215,7 @@ double AlignmentPairwise::computeFunction(double value) {
             }
             return lh;
         } else if (tree->getModel()->isSiteSpecificModel()) {
-            for (int i = 0; i < nptn; i++) {
+            for (size_t i = 0; i < nptn; i++) {
                 int state1 = sequence1[i];
                 int state2 = sequence2[i];
                 if (state1 >= num_states || state2 >= num_states) {
@@ -229,7 +229,7 @@ double AlignmentPairwise::computeFunction(double value) {
     }
     // site-specific rates
     if (site_rate->isSiteSpecificRate()) {
-        for (int i = 0; i < nptn; i++) {
+        for (size_t i = 0; i < nptn; i++) {
             int state1 = tree->aln->at(i)[seq_id1];
             int state2 = tree->aln->at(i)[seq_id2];
             if (state1 >= num_states || state2 >= num_states) continue;
@@ -239,7 +239,7 @@ double AlignmentPairwise::computeFunction(double value) {
         return lh;
     }
     if (tree->getModel()->isSiteSpecificModel()) {
-        for (int i = 0; i < nptn; i++) {
+        for (size_t i = 0; i < nptn; i++) {
             int state1 = tree->aln->at(i)[seq_id1];
             int state2 = tree->aln->at(i)[seq_id2];
             if (state1 >= num_states || state2 >= num_states) continue;
@@ -254,7 +254,7 @@ double AlignmentPairwise::computeFunction(double value) {
         for (int cat = 0; cat < ncat; cat++) {
             tree->getModelFactory()->computeTransMatrix(value*site_rate->getRate(cat), trans_mat);
             double *pair_pos = pair_freq + cat*trans_size;
-            for (int i = 0; i < trans_size; i++)
+            for (size_t i = 0; i < trans_size; i++)
                 if (pair_pos[i] > Params::getInstance().min_branch_length) {
                     if (trans_mat[i] <= 0) {
                       throw "Negative transition probability";
@@ -271,11 +271,11 @@ double AlignmentPairwise::computeFunction(double value) {
         tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(0), sum_trans_mat);
         for (int cat = 1; cat < ncat; cat++) {
             tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(cat), trans_mat);
-            for (int i = 0; i < trans_size; i++)
+            for (size_t i = 0; i < trans_size; i++)
                 sum_trans_mat[i] += trans_mat[i];
         }
     }
-    for (int i = 0; i < trans_size; i++) {
+    for (size_t i = 0; i < trans_size; i++) {
         lh -= pair_freq[i] * log(sum_trans_mat[i]);
     }
     // negative log-likelihood (for minimization)
@@ -348,7 +348,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     if (tree->getModel()->isSiteSpecificModel()) {
         if (sequence1!=nullptr && sequence2!=nullptr && frequencies!=nullptr) {
             #pragma omp parallel for reduction(-:df,ddf) schedule(dynamic,100)
-            for (int i = 0; i < nptn; i++) {
+            for (size_t i = 0; i < nptn; i++) {
                 int state1 = sequence1[i];
                 if (num_states<=state1) {
                     continue;
@@ -396,7 +396,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
             double derv1 = 0.0, derv2 = 0.0;
             tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, trans_derv1, trans_derv2);
             double *pair_pos = pair_freq + cat*trans_size;
-            for (int i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
+            for (size_t i = 0; i < trans_size; i++) if (pair_pos[i] > 0) {
                 if (trans_mat[i] <= 0) {
                     throw "Negative transition probability";
                 }
@@ -425,7 +425,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
         double coeff2 = rate_val * coeff1;
         //cout << "cat " << cat << "," << (intptr_t)trans_mat << ", " << (intptr_t)trans_derv1 << ", " << (intptr_t)trans_derv2 << endl;
         tree->getModelFactory()->computeTransDerv(value * rate_val, trans_mat, trans_derv1, trans_derv2);
-        for (int i = 0; i < trans_size; i++) {
+        for (size_t i = 0; i < trans_size; i++) {
             sum_trans[i] += trans_mat[i] * prop_val;
             sum_derv1[i] += trans_derv1[i] * coeff1;
             sum_derv2[i] += trans_derv2[i] * coeff2;
@@ -435,12 +435,12 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     // 2019-07-03: incorporate p_invar
     double p_invar = site_rate->getPInvar();
     if (p_invar > 0.0) {
-        for (int i = 0; i < num_states; i++) {
+        for (size_t i = 0; i < num_states; i++) {
             sum_trans[i*num_states+i] += p_invar;
         }
     }
     
-    for (int i = 0; i < trans_size; i++) {
+    for (size_t i = 0; i < trans_size; i++) {
         if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0.0) {
             double d1 = sum_derv1[i] / sum_trans[i];
             df  -= pair_freq[i] * d1;

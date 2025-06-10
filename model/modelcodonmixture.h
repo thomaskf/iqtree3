@@ -51,6 +51,12 @@ protected:
     virtual bool getVariables(double *variables);
 
     
+    // impose restrictions on the omega values if user inputs the parameters
+    // omega1 is resticted to < 1 for both M1a and M2a models
+    // omega2 is resticted to 1.0 for both M1a and M2a models
+    // omega3 is resticted to > 1 for M2a model
+    void restrict_omega_values(string cmix_type);
+
 };
 
 #endif /* modelcodonmixture_h */

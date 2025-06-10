@@ -44,7 +44,7 @@ void MemSlotVector::reset() {
         return;
     for (iterator it = begin(); it != end(); it++) {
         it->status = 0;
-        it->nei = NULL;
+        it->nei = nullptr;
     }
     nei_id_map.clear();
     free_count = 0;
@@ -137,7 +137,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
     // first find a free slot
     if (free_count < size() && (at(free_count).status & MEM_SPECIAL) == 0) {
         iterator it = begin() + free_count;
-        ASSERT(it->nei == NULL);
+        ASSERT(it->nei == nullptr);
         addNei(nei, it);
         free_count++;
         return it-begin();
@@ -193,8 +193,8 @@ void MemSlotVector::cleanup() {
     for (auto it = nei_id_map.begin(); it != nei_id_map.end(); it++)
         if (it->first != it->second->nei) {
             it->first->partial_lh_computed &= ~1; // clear bit
-            it->first->partial_lh = NULL;
-            it->first->scale_num = NULL;
+            it->first->partial_lh = nullptr;
+            it->first->scale_num = nullptr;
         } else {
             new_map[it->first] = it->second;
         }
@@ -207,8 +207,8 @@ void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
     ASSERT(taken_nei->partial_lh);
     nei->partial_lh = taken_nei->partial_lh;
     nei->scale_num = taken_nei->scale_num;
-    taken_nei->partial_lh = NULL;
-    taken_nei->scale_num = NULL;
+    taken_nei->partial_lh = nullptr;
+    taken_nei->scale_num = nullptr;
     taken_nei->partial_lh_computed &= ~1; // clear bit
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
@@ -244,7 +244,7 @@ void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     ASSERT(it->nei == new_nei);
     ASSERT(nei_id_map[old_nei] == it-begin());
     it->nei = it->saved_nei;
-    it->saved_nei = NULL;
+    it->saved_nei = nullptr;
     it->partial_lh = old_nei->partial_lh;
     it->scale_num = old_nei->scale_num;
     it->status = 0;

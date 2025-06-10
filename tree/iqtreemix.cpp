@@ -82,15 +82,15 @@ int getTreeMixNum(Params& params) {
 
 
 IQTreeMix::IQTreeMix() : IQTree() {
-    ptn_freq = NULL; // double frequencies of each pattern (can be changed)
-    patn_isconst = NULL;
-    patn_parsimony = NULL;
-    ptn_like_cat = NULL;
-    _ptn_like_cat = NULL;
-    ptn_scale_cat = NULL;
-    single_ptn_tree_like = NULL;
-    ptn_like = NULL;
-    _pattern_scaling = NULL;
+    ptn_freq = nullptr; // double frequencies of each pattern (can be changed)
+    patn_isconst = nullptr;
+    patn_parsimony = nullptr;
+    ptn_like_cat = nullptr;
+    _ptn_like_cat = nullptr;
+    ptn_scale_cat = nullptr;
+    single_ptn_tree_like = nullptr;
+    ptn_like = nullptr;
+    _pattern_scaling = nullptr;
     // initialize the variables
     isTreeWeightFixed = false;
     weightGrpExist = false;
@@ -102,7 +102,7 @@ IQTreeMix::IQTreeMix() : IQTree() {
     isLinkSiteRate = true;
     anySiteRate = false;
     isNestedOpenmp = false;
-    rhas_var = NULL;
+    rhas_var = nullptr;
     ntree = 0;
 }
 
@@ -123,7 +123,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln) : IQTree(aln) {
             cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
         params.min_gamma_shape = MIN_GAMMA_SHAPE_TREEMIX;
     }
-    if (params.user_file == NULL) {
+    if (params.user_file == nullptr) {
         outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
     }
 
@@ -192,7 +192,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln) : IQTree(aln) {
     isLinkSiteRate = true;
     anySiteRate = false;
     isNestedOpenmp = false;
-    rhas_var = NULL;
+    rhas_var = nullptr;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -208,41 +208,41 @@ IQTreeMix::~IQTreeMix() {
         at(i)->getRate()->setTree(at(i));
     }
 
-    model_factory = NULL;
-    model = NULL;
-    site_rate = NULL;
+    model_factory = nullptr;
+    model = nullptr;
+    site_rate = nullptr;
     
     for (i=0; i<size(); i++) {
         delete (at(i));
     }
-    if (ptn_like_cat != NULL) {
+    if (ptn_like_cat != nullptr) {
         aligned_free(ptn_like_cat);
     }
-    if (_ptn_like_cat != NULL) {
+    if (_ptn_like_cat != nullptr) {
         aligned_free(_ptn_like_cat);
     }
-    if (ptn_scale_cat != NULL){
+    if (ptn_scale_cat != nullptr){
         aligned_free(ptn_scale_cat);
     }
-    if (ptn_freq != NULL) {
+    if (ptn_freq != nullptr) {
         aligned_free(ptn_freq);
     }
-    if (patn_isconst != NULL) {
+    if (patn_isconst != nullptr) {
         aligned_free(patn_isconst);
     }
-    if (patn_parsimony != NULL) {
+    if (patn_parsimony != nullptr) {
         aligned_free(patn_parsimony);
     }
-    if (single_ptn_tree_like != NULL) {
+    if (single_ptn_tree_like != nullptr) {
         aligned_free(single_ptn_tree_like);
     }
-    if (ptn_like != NULL) {
+    if (ptn_like != nullptr) {
         aligned_free(ptn_like);
     }
-    if (_pattern_scaling != NULL) {
+    if (_pattern_scaling != nullptr) {
         aligned_free(_pattern_scaling);
     }
-    if (rhas_var != NULL) {
+    if (rhas_var != nullptr) {
         aligned_free(rhas_var);
     }
 }
@@ -1051,12 +1051,12 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh, bool save_log_va
             subLike += ptn_like_cat[i] * weights[t];
             i++;
         }
-        if (pattern_lh != NULL && !save_log_value) {
+        if (pattern_lh != nullptr && !save_log_value) {
             pattern_lh[ptn] = subLike;
         }
         // cout << ptn << "\t" << log(subLike) << "\t" << ptn_freq[ptn] << endl;
         double ptnLike = log(subLike) + _pattern_scaling[ptn];
-        if (pattern_lh != NULL && save_log_value) {
+        if (pattern_lh != nullptr && save_log_value) {
             pattern_lh[ptn] = ptnLike;
         }
         ptnLike = ptnLike * ptn_freq[ptn];
@@ -1105,7 +1105,7 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
         // cout << ptn << "\t" << ptnlike << "\t" << ptn_freq[ptn] << endl;
         logLike += ptnLike * (double) ptn_freq[ptn];
         ptn_like[ptn] = ptnLike;
-        if (pattern_lh != NULL) {
+        if (pattern_lh != nullptr) {
             pattern_lh[ptn] = ptnLike;
         }
     }
@@ -1121,7 +1121,7 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
         @param pattern_lh (OUT) pattern log-likelihoods,
                         assuming pattern_lh has the size of the number of patterns
         @param cur_logl current log-likelihood (for sanity check)
-        @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
+        @param pattern_lh_cat (OUT) if not nullptr, store all pattern-likelihood per category
  */
 void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
                                          double *pattern_lh_cat, SiteLoglType wsl) {
@@ -1227,7 +1227,7 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     score = computeLikelihood_combine(pattern_lh);
     
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
-    if (cur_logl != NULL) {
+    if (cur_logl != nullptr) {
         *cur_logl = score;
     }
 }
@@ -1365,7 +1365,7 @@ double IQTreeMix::optimizeBranchLensByBFGS(double gradient_epsilon) {
 }
 
 // save branch lengths of all trees
-// node and dad are always NULL
+// node and dad are always nullptr
 void IQTreeMix::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     size_t i;
 
@@ -1378,7 +1378,7 @@ void IQTreeMix::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *da
 }
 
 // restore branch lengths of all trees
-// node and dad are always NULL
+// node and dad are always nullptr
 void IQTreeMix::setBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     ASSERT(len.size() == ntree);
     size_t i;
@@ -1828,7 +1828,7 @@ void IQTreeMix::computeInitialTree(LikelihoodKernel kernel, istream* in) {
 
     if (size() == 0)
         outError("No tree is inputted for the tree-mixture model");
-    if (params->user_file == NULL) {
+    if (params->user_file == nullptr) {
         outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
     }
     
@@ -2721,13 +2721,13 @@ void IQTreeMix::drawTree(ostream &out, int brtype, double zero_epsilon) {
 /**
         print the tree to the output file in newick format
         @param out the output file.
-        @param node the starting node, NULL to start from the root
+        @param node the starting node, nullptr to start from the root
         @param dad dad of the node, used to direct the search
         @param brtype type of branch to print
         @return ID of the taxon with smallest ID
  */
 void IQTreeMix::printTree(ostream & out, int brtype) {
-    for (int i=0; i<size(); i++) {
+    for (size_t i=0; i<size(); i++) {
         at(i)->printTree(out, brtype);
     }
 }
@@ -2943,7 +2943,7 @@ void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike, 
 // For the linked RHAS model
 // Store the RHAS variables of tree 0 to the array rhas_var
 void IQTreeMix::storeTree0RHAS() {
-    RateFree* rfmodel = NULL;
+    RateFree* rfmodel = nullptr;
     int rf_orig_optim_params;
     
     if (at(0)->getRate()->isFreeRate()) {
@@ -2954,7 +2954,7 @@ void IQTreeMix::storeTree0RHAS() {
         rfmodel->optimizing_params = 0;
     }
 
-    if (rhas_var == NULL) {
+    if (rhas_var == nullptr) {
         // allocate memory to the array rhas_var
         rhas_var = aligned_alloc<double>(at(0)->getRate()->getNDim() + 1);
     }
@@ -2972,7 +2972,7 @@ void IQTreeMix::storeTree0RHAS() {
 // Replace the RHAS variables of tree t by those of tree 0
 // The array rhas_var should have stored the updated RHAS variables of tree 0
 void IQTreeMix::copyRHASfrTree0(int t) {
-    RateFree* rfmodel = NULL;
+    RateFree* rfmodel = nullptr;
     int rf_orig_optim_params;
     
     

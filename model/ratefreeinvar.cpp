@@ -50,7 +50,7 @@ void RateFreeInvar::setNCategory(int ncat) {
 	// RateFree::setNCategory(ncat);
     double sum = 0;
     // normalize prop
-    for (int i = 0; i < ncategory; i++) {
+    for (size_t i = 0; i < ncategory; i++) {
         prop[i] *= (1.0-getPInvar());
         sum += rates[i] * prop[i];
     }

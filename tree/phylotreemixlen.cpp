@@ -25,7 +25,7 @@ PhyloTreeMixlen::PhyloTreeMixlen() : IQTree()
 {
 	mixlen = 1;
     cur_mixture = -1;
-//    relative_treelen = NULL;
+//    relative_treelen = nullptr;
     initializing_mixlen = false;
 }
 
@@ -36,7 +36,7 @@ PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln)
 {
 //	cout << "Initializing heterotachy mixture branch lengths" << endl;
     cur_mixture = -1;
-//    relative_treelen = NULL;
+//    relative_treelen = nullptr;
     initializing_mixlen = false;
     setMixlen(mixlen);
 }
@@ -59,7 +59,7 @@ void PhyloTreeMixlen::saveCheckpoint() {
         if (this->relative_treelen.size() > 0) {
             ASSERT(mixlen == this->relative_treelen.size());
             double relative_treelen[mixlen];
-            for (int i = 0; i < mixlen; i++)
+            for (size_t i = 0; i < static_cast<size_t>(mixlen); i++)
                 relative_treelen[i] = this->relative_treelen[i];
             CKP_ARRAY_SAVE(mixlen, relative_treelen);
         }
@@ -77,7 +77,7 @@ void PhyloTreeMixlen::restoreCheckpoint() {
         double relative_treelen[mixlen];
         if (CKP_ARRAY_RESTORE(mixlen, relative_treelen)) {
             this->relative_treelen.resize(mixlen);
-            for (int i = 0; i < mixlen; i++)
+            for (size_t i = 0; i < static_cast<size_t>(mixlen); i++)
                 this->relative_treelen[i] = relative_treelen[i];
         }
         endCheckpoint();
@@ -428,8 +428,10 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             outError("Please use option -optlen BFGS to disable EM algorithm");
         
         // EM algorithm
-        size_t nptn = aln->getNPattern();
-        size_t nmix = site_rate->getNRate();
+        ASSERT(aln->getNPattern() >= 0);
+        size_t nptn = static_cast<size_t>(aln->getNPattern());
+        ASSERT(site_rate->getNRate() >= 0);
+        size_t nmix = static_cast<size_t>(site_rate->getNRate());
         ASSERT(nmix == mixlen);
 
         // first compute _pattern_lh_cat
@@ -766,8 +768,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     ASSERT((dad_branch->partial_lh_computed & 1) || node->isLeaf());
     ASSERT((node_branch->partial_lh_computed & 1) || dad->isLeaf());
 
-    size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
+    ASSERT(aln->num_states >= 0);
+    size_t nstates = static_cast<size_t>(aln->num_states);
+    size_t ncat = static_cast<size_t>(site_rate->getNRate());
     size_t nmixture = model->getNMixtures();
 
     size_t block = ncat * nstates * nmixture;
@@ -794,7 +797,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
                 
                 // TODO: check with vectorclass!
                 double *lh_tip = tip_partial_lh +
-                ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
+                ((int)((ptn < orig_nptn) ? (aln->at(ptn))[static_cast<size_t>(dad->id)] :  model_factory->unobserved_ptns[ptn-orig_nptn][static_cast<size_t>(dad->id)]))*statemix;
                 for (size_t m = 0; m < nmixture; m++) {
                     for (size_t i = 0; i < statecat; i++) {
                         theta[m*statecat+i] = lh_tip[m*nstates + i%nstates] * partial_lh_dad[m*statecat+i];
@@ -827,9 +830,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     double *val1 = new double[statecat];
     double *val2 = new double[statecat];
     for (size_t c = 0; c < ncat; c++) {
-        double prop = site_rate->getProp(c);
+        double prop = site_rate->getProp(static_cast<int>(c));
         for (size_t i = 0; i < nstates; i++) {
-            double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
+            double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(static_cast<int>(c));
             // length for heterotachy model
             double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * model->getMixtureWeight(cur_mixture);
             double val1_ = cof*val;

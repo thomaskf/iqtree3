@@ -35,8 +35,6 @@
 
 class MTreeSet;
 
-using namespace std;
-
 /**
 SplitGraph class
 
@@ -240,7 +238,7 @@ public:
 		@return number of areas
 	*/
 	int getNAreas() {
-		return sets->getNSets();
+		return static_cast<int>(sets->getNSets());
 	}
 
 	/**
@@ -328,7 +326,7 @@ public:
 	*/
 	int getCircleId(int i) {
 		ASSERT(i >= 0 && i < getNTaxa());
-		return splits->cycle[i];
+		return splits->cycle[static_cast<size_t>(i)];
 	}
 
 	/**

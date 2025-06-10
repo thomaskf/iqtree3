@@ -469,7 +469,7 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
             }
         }
         //JB2020-06-16 Begin
-        for (int x=2; x<=n; ++x) //JB2020-06-18 Can start at 2
+        for (size_t x=2; x<=n; ++x) //JB2020-06-18 Can start at 2
         {
             if (0<rowMinColumn[x]) {
                 if (rowQmin[x] < Qmin - 0.000001) {

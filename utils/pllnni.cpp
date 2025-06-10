@@ -57,7 +57,7 @@ StringIntMap pllTreeCounter;
  * ****************************************************************************
  */
 
-pllUFBootData * pllUFBootDataPtr = NULL;
+pllUFBootData * pllUFBootDataPtr = nullptr;
 
 
 int compareDouble(const void * a, const void * b) {
@@ -71,18 +71,18 @@ int compareDouble(const void * a, const void * b) {
 
 pllNNIMove *getNNIList(pllInstance* tr) {
 	static pllNNIMove* nniList;
-	if (nniList == NULL) {
+	if (nniList == nullptr) {
 		nniList = (pllNNIMove*) malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
-		ASSERT(nniList != NULL);
+		ASSERT(nniList != nullptr);
 	}
 	return nniList;
 }
 
 pllNNIMove *getNonConflictNNIList(pllInstance* tr) {
 	static pllNNIMove* nonConfNNIList;
-	if (nonConfNNIList == NULL) {
+	if (nonConfNNIList == nullptr) {
 		nonConfNNIList = (pllNNIMove*) malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
-		ASSERT(nonConfNNIList != NULL);
+		ASSERT(nonConfNNIList != nullptr);
 	}
 	return nonConfNNIList;
 }
@@ -190,7 +190,7 @@ void quicksort_nni(pllNNIMove* arr,int left, int right) {
 //TODO: Workaround for memory leak problem when calling setupTopol within doNNISearch
 topol *_setupTopol(pllInstance* tr) {
 	static topol* tree;
-	if (tree == NULL)
+	if (tree == nullptr)
 		tree = setupTopol(tr->mxtips);
 	return tree;
 }
@@ -324,7 +324,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
         if (verbose_mode >= VB_DEBUG) {
         	cout << "curScore: "  << searchinfo.curLogl << endl;
-            for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
+            for (size_t i = 0; i < searchinfo.posNNIList.size(); i++) {
                 cout << "Logl of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
             }
         }
@@ -419,7 +419,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 void updateBranchLengthForNNI(pllInstance* tr, partitionList *pr, pllNNIMove &nni) {
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	/*  apply branch lengths */
-	for (int i = 0; i < numBranches; i++) {
+	for (size_t i = 0; i < numBranches; i++) {
 		nni.p->z[i] = nni.z0[i];
 		nni.p->back->z[i] = nni.z0[i];
 		nni.p->next->z[i] = nni.z1[i];
@@ -838,11 +838,11 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
     struct pllHashItem * item_ptr = (struct pllHashItem *) malloc(sizeof(struct pllHashItem));
     item_ptr->data = (int *) malloc(sizeof(int));
-    item_ptr->next = NULL;
-    item_ptr->str = NULL;
+    item_ptr->next = nullptr;
+    item_ptr->str = nullptr;
 
     unsigned int tree_index = -1;
-    char * tree_str = NULL;
+    char * tree_str = nullptr;
     pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_FALSE,
             PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
     tree_str = (char *) malloc (strlen(tr->tree_string) + 1);
@@ -867,7 +867,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
             printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
-        if (pllUFBootDataPtr->boot_samples == NULL) {
+        if (pllUFBootDataPtr->boot_samples == nullptr) {
             (pllUFBootDataPtr->treels_ptnlh)[tree_index] =
                     (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
             pllComputePatternLikelihood(tr, (pllUFBootDataPtr->treels_ptnlh)[tree_index], &cur_logl);
@@ -902,7 +902,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 	}
     pllComputePatternLikelihood(tr, pattern_lh, &cur_logl);
 
-    if (pllUFBootDataPtr->boot_samples == NULL) {
+    if (pllUFBootDataPtr->boot_samples == nullptr) {
         // for runGuidedBootstrap
         pllUFBootDataPtr->treels_ptnlh[tree_index] = pattern_lh;
 		free(tree_str); //James B. 23-Jul-2020 (memory leak)
@@ -914,9 +914,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		int nptn = pllUFBootDataPtr->n_patterns;
 		int updated = 0;
 		int nsamples = globalParams->gbo_replicates;
-		for (int sample = 0; sample < nsamples; sample++) {
+		for (size_t sample = 0; sample < nsamples; sample++) {
 			double rell = 0.0;
-			for (int ptn = 0; ptn < nptn; ptn++)
+			for (size_t ptn = 0; ptn < nptn; ptn++)
 				rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
 			if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParams->ufboot_epsilon ||
@@ -949,7 +949,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
     if (pllUFBootDataPtr->boot_samples){
         free(pattern_lh);
-        pllUFBootDataPtr->treels_ptnlh[tree_index] = NULL;
+        pllUFBootDataPtr->treels_ptnlh[tree_index] = nullptr;
     }
 }
 
@@ -1044,7 +1044,7 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 			if(( !isTip(p->number, tr->mxtips)) &&
 					( !isTip(p->back->number, tr->mxtips)))
 			{
-				ASSERT(p->bInf != (branchInfo *)NULL);
+				ASSERT(p->bInf != (branchInfo *)nullptr);
 				if(rellTree)
 					snprintf(treestr, 1000, "%d:%8.20f", p->bInf->support, p->z[0]);
 				if(branchLabelSupport)

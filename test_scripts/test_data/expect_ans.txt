@@ -1,0 +1,14 @@
+#file name	key-words	value	diff-threshold
+small.nex.iqtree	Log-likelihood of the tree	-535.7420	1
+turtle.fa.iqtree	Log-likelihood of the tree	-5370.3729	1
+turtle.loci.iqtree	Log-likelihood of the tree	-5263.0947	1
+turtle.merge.iqtree	Log-likelihood of the tree	-5370.3728	1
+turtle.mix.iqtree	Log-likelihood of the tree	-5342.1012	1
+turtle.mix.jc.link.iqtree	Log-likelihood of the tree	-5827.4822	1
+turtle.mix.link.iqtree	Log-likelihood of the tree	-5625.6391	1
+turtle.mixfinder.iqtree	Log-likelihood of the tree	-5332.2489	1
+turtle.nex.constr.iqtree	Log-likelihood of the tree	-5360.0758	1
+turtle.nex.constr2.iqtree	Log-likelihood of the tree	-5360.0758	1
+turtle.nex.iqtree	Log-likelihood of the tree	-5360.0759	1
+turtle.test.iqtree	Log-likelihood of the tree	-5372.1363	1
+turtle.wpl.iqtree	Log-likelihood of the tree	-5361.6271	1
