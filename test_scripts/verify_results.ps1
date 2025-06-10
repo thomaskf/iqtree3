@@ -45,19 +45,17 @@ Get-Content $input_file | ForEach-Object {
     $abs_diff = [math]::Abs($actual_value - $expected_value)
 
     if ($abs_diff -le $threshold) {
-        Write-Host "PASS: ${iqtree_file} (${field_name})" -ForegroundColor Green
-        Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
+        Write-Host "PASS: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Abs-diff: ${abs_diff}, Threshold: ${threshold}"
     } else {
-        Write-Host "FAIL: ${iqtree_file} (${field_name})" -ForegroundColor Red
-        Write-Host "  Expected: ${expected_value}, Found: ${actual_value}, Diff: ${abs_diff}, Threshold: ${threshold}"
+        Write-Host "FAIL: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Abs-diff: ${abs_diff}, Threshold: ${threshold}"
         $fail_count++
     }
 }
 
 Write-Host ""
 if ($fail_count -eq 0) {
-    Write-Host "✅ All checks passed." -ForegroundColor Green
+    Write-Host "✅ All checks passed."
 } else {
-    Write-Host "❌ ${fail_count} checks failed." -ForegroundColor Red
+    Write-Host "❌ ${fail_count} checks failed."
     exit 1
 }
