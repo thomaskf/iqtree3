@@ -1,79 +1,6 @@
-/***************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
- *   minh.bui@univie.ac.at   *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
- *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
- ***************************************************************************/
+#include "suppFunc.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <iqtree_config.h>
-
-#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-#include <winsock2.h>
-//#include <windows.h>
-//extern __declspec(dllexport) int gethostname(char *name, int namelen);
-#else
-#include <sys/resource.h>
-#endif
-
-#include <stdio.h>
-#include "tree/phylotree.h"
-#include <signal.h>
-#include <cstdio>
-#include <streambuf>
-#include <iostream>
-#include <cstdlib>
-#include <errno.h>
-#include "pda/greedy.h"
-#include "pda/pruning.h"
-#include "pda/splitgraph.h"
-#include "pda/circularnetwork.h"
-#include "tree/mtreeset.h"
-#include "tree/mexttree.h"
-#include "ncl/ncl.h"
-#include "nclextra/msetsblock.h"
-#include "nclextra/myreader.h"
-#include "phyloanalysis.h"
-#include "alisim.h"
-#include "tree/matree.h"
-#include "obsolete/parsmultistate.h"
-#include "alignment/maalignment.h" //added by MA
-#include "tree/ncbitree.h"
-#include "pda/ecopd.h"
-#include "tree/upperbounds.h"
-#include "terraceanalysis.h"
-#include "pda/ecopdmtreeset.h"
-#include "pda/gurobiwrapper.h"
-#include "utils/timeutil.h"
-#include "utils/operatingsystem.h" //for getOSName()
-#include <stdlib.h>
-#include "vectorclass/instrset.h"
-
-#include "utils/MPIHelper.h"
-
-#ifdef _OPENMP
-    #include <omp.h>
-#endif
-
-using namespace std;
-
-inline void separator(ostream &out, int type = 0) {
+inline void separator(ostream &out, int type) {
     switch (type) {
     case 0:
         out << endl << "==============================================================================" << endl;
@@ -86,39 +13,15 @@ inline void separator(ostream &out, int type = 0) {
     }
 }
 
-void printCopyright(ostream &out) {
-    string osname, pre, post;
-    osname = getOSName();
 
-    size_t osx_pos = osname.find("Mac OS X");
-    size_t linux_pos = osname.find("Linux");
-    if (osx_pos != string::npos) {
-        // change the "Mac OS X" to "MacOS ARM" or "MacOS Intel"
-        pre = osname.substr(0,osx_pos);
-        post = osname.substr(osx_pos+8);
-        #if defined(__ARM_NEON)
-            osname = pre + "MacOS ARM" + post;
-        #else
-            osname = pre + "MacOS Intel" + post;
-        #endif
-    } else if (linux_pos != string::npos) {
-        // change the "Linux" to "Linux ARM" or "Linux x86"
-        pre = osname.substr(0,linux_pos);
-        post = osname.substr(linux_pos+5);
-        #if defined(__ARM_NEON)
-            osname = pre + "Linux ARM" + post;
-        #else
-            osname = pre + "Linux x86" + post;
-        #endif
-    }
-    
+void printCopyright(ostream &out) {
 #ifdef IQ_TREE
      out << "IQ-TREE";
     #ifdef _IQTREE_MPI
     out << " MPI";
     #endif
-    #ifndef _OPENMP
-    out << " single-core";
+    #ifdef _OPENMP
+    out << " multicore";
     #endif
     #ifdef __AVX512KNL
     out << " Xeon Phi KNL";
@@ -127,18 +30,16 @@ void printCopyright(ostream &out) {
 #else
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH; // << " COVID-edition";
-    out << " for " << osname;
+    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
+    out << " for " << getOSName();
     out << " built " << __DATE__;
 #if defined DEBUG
     out << " - debug mode";
 #endif
 
 #ifdef IQ_TREE
-    out << endl
-        << "Developed by Bui Quang Minh, Thomas Wong, Nhan Ly-Trong, Huaiyan Ren" << endl
-        << "Contributed by Lam-Tung Nguyen, Dominik Schrempf, Chris Bielow," << endl
-        << "Olga Chernomor, Michael Woodhams, Diep Thi Hoang, Heiko Schmidt" << endl << endl;
+    out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung,"
+        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams, Ly Trong Nhan." << endl << endl;
 #else
     out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
@@ -166,14 +67,14 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
     if(params.eco_dag_file)
         out << "Input food web file name: "<<params.eco_dag_file<<endl;
      out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
-    if (params.initial_file != nullptr)
+    if (params.initial_file != NULL)
         out << "Initial taxa file: " << params.initial_file << endl;
-    if (params.param_file != nullptr)
+    if (params.param_file != NULL)
         out << "Parameter file: " << params.param_file << endl;
     out << endl;
-    out << "Type of measure: " << ((params.root != nullptr || params.is_rooted) ? "Rooted": "Unrooted") <<
+    out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
             (analysis_type== IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
-    if (params.root != nullptr) out << " at " << params.root;
+    if (params.root != NULL) out << " at " << params.root;
     out << endl;
     if (params.run_mode != RunMode::CALC_DIST && params.run_mode != RunMode::PD_USER_SET) {
         out << "Search objective: " << ((params.find_pd_min) ? "Minimum" : "Maximum") << endl;
@@ -258,7 +159,7 @@ void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
 void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
     PDRelatedMeasures &pd_more) {
     string filename;
-    if (params.out_file == nullptr) {
+    if (params.out_file == NULL) {
         filename = params.out_prefix;
         filename += ".pda";
     } else
@@ -405,7 +306,7 @@ void runPDTree(Params &params)
 
         if (params.endemic_pd)
             tree.calcPDEndemism(taxa_set, pd_more.PDEndemism);
-        if (params.complement_area != nullptr)
+        if (params.complement_area != NULL)
             tree.calcPDComplementarity(taxa_set, params.complement_area, pd_more.PDComplementarity);
 
         t_end = getCPUTime();
@@ -429,7 +330,7 @@ void runPDTree(Params &params)
 
     test_greedy.init(params);
 
-    if (params.root == nullptr && !params.is_rooted)
+    if (params.root == NULL && !params.is_rooted)
         cout << endl << "Running PD algorithm on UNROOTED tree..." << endl;
     else
         cout << endl << "Running PD algorithm on ROOTED tree..." << endl;
@@ -545,7 +446,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
     IntVector::iterator inti;
     ranking.clear();
     bool nested = true;
-    Split *cur_sp = nullptr;
+    Split *cur_sp = NULL;
     int id = 1;
     for (it = pd_set.begin(); it != pd_set.end(); it++) {
         if ((*it).empty()) continue;
@@ -654,7 +555,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         printNexusSets(nex_file.c_str(), sg, pd_set);
     }
     string filename;
-    if (params.out_file == nullptr) {
+    if (params.out_file == NULL) {
         filename = params.out_prefix;
         filename += ".pda";
     } else
@@ -959,7 +860,7 @@ void printGainMatrix(char *filename, mmatrix(double) &delta_gain, int start_k) {
         int k = start_k;
         for (mmatrix(double)::iterator it = delta_gain.begin(); it != delta_gain.end(); it++, k++) {
             out << k;
-            for (size_t i = 0; i < (*it).size(); i++)
+            for (int i = 0; i < (*it).size(); i++)
                 out << "  " << (*it)[i];
             out << endl;
         }
@@ -1023,7 +924,7 @@ void runPDSplit(Params &params) {
         if (params.endemic_pd)
             sg.calcPDEndemism(pd_set[0], pd_more.PDEndemism);
 
-        if (params.complement_area != nullptr)
+        if (params.complement_area != NULL)
             sg.calcPDComplementarity(pd_set[0], params.complement_area, pd_more.setName, pd_more.PDComplementarity);
 
     } else {
@@ -1230,7 +1131,7 @@ void scaleBranchLength(Params &params) {
         cout << "Scaling clade support with a factor of " << params.scaling_factor << " ..." << endl;
         tree.scaleCladeSupport(params.scaling_factor, false);
     }
-    if (params.out_file != nullptr)
+    if (params.out_file != NULL)
         tree.printTree(params.out_file);
     else {
         tree.printTree(cout);
@@ -1266,7 +1167,7 @@ void calcDistribution(Params &params) {
     }
 }
 
-void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode, bool print_msg = true) {
+void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode, bool print_msg) {
     int i, j;
 
     try {
@@ -1321,7 +1222,7 @@ void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode
 void computeRFDistExtended(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
     int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = nullptr;
+    double *rfdist_raw = NULL;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1364,7 +1265,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
 void computeRFDistSamePair(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
     int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = nullptr;
+    double *rfdist_raw = NULL;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1431,7 +1332,7 @@ void computeRFDist(Params &params) {
     MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
     int n = trees.size(), m = trees.size();
     double *rfdist;
-    double *incomp_splits = nullptr;
+    double *incomp_splits = NULL;
     string infoname = params.out_prefix;
     infoname += ".rfinfo";
     string treename = params.out_prefix;
@@ -1523,7 +1424,7 @@ void branchStats(Params &params){
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(output.c_str());
-        for (size_t i = 0; i < nodes1.size(); i++)
+        for (int i = 0; i < nodes1.size(); i++)
             out << nodes1[i]->findNeighbor(nodes2[i])->length << " ";
         out << endl;
     } catch (ios::failure) {
@@ -1589,7 +1490,7 @@ void compare(Params &params){
         for ( int treeID = 0; treeID < numTree; treeID++ )
         {
             out << treeID << "  ";
-            for (size_t nodeID = 0; nodeID < numNode; nodeID++ )
+            for (int nodeID = 0; nodeID < numNode; nodeID++ )
                 if ( brMatrix[treeID][nodeID] != -2 )
                     out << brMatrix[treeID][nodeID] << "  ";
             out << RFs[treeID] << "  " << BSDs[treeID] << endl;
@@ -1685,42 +1586,15 @@ void processNCBITree(Params &params) {
     }
 }
 
-/* write simultaneously to cout/cerr and a file */
-class outstreambuf : public streambuf {
-public:
-    outstreambuf* open( const char* name, ios::openmode mode = ios::out);
-    bool is_open();
-    outstreambuf* close();
-    ~outstreambuf() { close(); }
-    streambuf *get_fout_buf() {
-        return fout_buf;
-    }
-    streambuf *get_cout_buf() {
-        return cout_buf;
-    }
-    ofstream *get_fout() {
-        return &fout;
-    }
-    
-protected:
-    ofstream fout;
-    streambuf *cout_buf;
-    streambuf *fout_buf;
-    virtual int     overflow( int c = EOF);
-    virtual int     sync();
-};
-
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    if (!(Params::getInstance().suppress_output_flags & OUT_LOG)) {
-        if (MPIHelper::getInstance().isMaster()) {
-            fout.open(name, mode);
-            if (!fout.is_open()) {
-                cerr << "ERROR: Could not open " << name << " for logging" << endl;
-                exit(EXIT_FAILURE);
-                return nullptr;
-            }
-            fout_buf = fout.rdbuf();
+    if (!(Params::getInstance().suppress_output_flags & OUT_LOG) && MPIHelper::getInstance().isMaster()) {
+        fout.open(name, mode);
+        if (!fout.is_open()) {
+            cerr << "ERROR: Could not open " << name << " for logging" << endl;
+            exit(EXIT_FAILURE);
+            return NULL;
         }
+        fout_buf = fout.rdbuf();
     }
     cout_buf = cout.rdbuf();
     cout.rdbuf(this);
@@ -1738,7 +1612,7 @@ outstreambuf* outstreambuf::close() {
         fout.close();
         return this;
     }
-    return nullptr;
+    return NULL;
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
@@ -1758,97 +1632,9 @@ int outstreambuf::sync() { // used for output buffer only
     if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) || verbose_mode >= VB_MED)
         cout_buf->pubsync();
     if ((Params::getInstance().suppress_output_flags & OUT_LOG) || !MPIHelper::getInstance().isMaster())
-        return 0;        
+        return 0;
     return fout_buf->pubsync();
 }
-
-class errstreambuf : public streambuf {
-public:
-    void init(streambuf *fout_buf) {
-        this->fout_buf = fout_buf;
-        cerr_buf = cerr.rdbuf();
-        cerr.rdbuf(this);
-        new_line = true;
-    }
-    
-    void reset() {
-        cerr.rdbuf(cerr_buf);
-    }
-    
-    ~errstreambuf() {
-        cerr.rdbuf(cerr_buf);
-    }
-    
-protected:
-    streambuf *cerr_buf;
-    streambuf *fout_buf;
-    bool new_line;
-    
-    virtual int overflow( int c = EOF) {
-        if (new_line)
-            cerr_buf->sputn("ERROR: ", 7);
-        if (cerr_buf->sputc(c) == EOF) {
-            new_line = false;
-            if (c == '\n') new_line = true;
-            return EOF;
-        }
-        if ((Params::getInstance().suppress_output_flags & OUT_LOG)) {
-            new_line = false;
-            if (c == '\n') new_line = true;
-            return c;
-        }
-        if (new_line)
-            fout_buf->sputn("ERROR: ", 7);
-        new_line = false;
-        if (c == '\n') new_line = true;
-        if (fout_buf->sputc(c) == EOF) return EOF;
-        return c;
-    }
-    
-    virtual int sync() {
-        cerr_buf->pubsync();
-        if (Params::getInstance().suppress_output_flags & OUT_LOG)
-            return 0;        
-        return fout_buf->pubsync();
-    }
-};
-
-class muststreambuf : public streambuf {
-public:
-    void init(streambuf *cout_buf, streambuf *fout_buf) {
-        this->fout_buf = fout_buf;
-        this->cout_buf = cout_buf;
-    }
-    
-protected:
-    streambuf *cout_buf;
-    streambuf *fout_buf;
-    
-    virtual int overflow( int c = EOF) {
-        if (cout_buf->sputc(c) == EOF) {
-            return EOF;
-        }
-        if (fout_buf->sputc(c) == EOF) return EOF;
-        return c;
-    }
-    
-    virtual int sync() {
-        cout_buf->pubsync();
-        return fout_buf->pubsync();
-    }
-};
-
-
-/*********************************************************************************
- * GLOBAL VARIABLES
- *********************************************************************************/
-outstreambuf _out_buf;
-errstreambuf _err_buf;
-muststreambuf _must_buf;
-ostream cmust(&_must_buf);
-
-string _log_file;
-int _exit_wait_optn = FALSE;
 
 extern "C" void startLogFile(bool append_log) {
     if (append_log)
@@ -1879,10 +1665,11 @@ void funcExit(void) {
 extern "C" void funcAbort(int signal_number)
 {
     /*Your code goes here. You can output debugging info.
-      If you return from this function, and it was called 
+      If you return from this function, and it was called
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
+    /*
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(WIN64) && !defined(__CYGWIN__)
     print_stacktrace(cerr);
 #endif
@@ -1900,11 +1687,12 @@ extern "C" void funcAbort(int signal_number)
     cerr << endl;
     cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
     cerr << endl << "***    Alignment files (if possible)" << endl;
+    */
     funcExit();
     signal(signal_number, SIG_DFL);
 }
 
-extern "C" void getintargv(int *argc, char **argv[]) 
+extern "C" void getintargv(int *argc, char **argv[])
 {
     int    done;
     int    count;
@@ -1974,10 +1762,10 @@ extern "C" void getintargv(int *argc, char **argv[])
             ch = (char) tolower((int) ch);
         
             switch (ch) {
-                case 'y': 
+                case 'y':
                     done=TRUE;
                     break;
-                case 'e': 
+                case 'e':
                     fprintf(stdout, "\nEnter single parameter [! for none]: ");
                     fflush(stdout);
                     count = fscanf(stdin, "%s", argstr[n]);
@@ -1994,14 +1782,14 @@ extern "C" void getintargv(int *argc, char **argv[])
                         }
                     }
                     break;
-                case 'l': 
+                case 'l':
                     if (n>1) n--;
                     break;
-                case 'a': 
+                case 'a':
                     n=1;
                     break;
-                case 'q': 
-                       // tp_exit(0, nullptr, FALSE, __FILE__, __LINE__, _exit_wait_optn);
+                case 'q':
+                       // tp_exit(0, NULL, FALSE, __FILE__, __LINE__, _exit_wait_optn);
                     if(_exit_wait_optn) {
                         printf("\npress [return] to finish: ");
                         fflush(stdout);
@@ -2187,485 +1975,10 @@ void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
     bool isrooted = false;
     tree.readTree(user_file, isrooted);
     tree.collapseLowBranchSupport(minsup);
-    tree.collapseZeroBranches(nullptr, nullptr, -1.0);
+    tree.collapseZeroBranches(NULL, NULL, -1.0);
     if (verbose_mode >= VB_MED)
         tree.drawTree(cout);
     string outfile = (string)user_file + ".collapsed";
     tree.printTree(outfile.c_str());
     cout << "Tree with collapsed branches written to " << outfile << endl;
-}
-
-
-/********************************************************
-    main function
-********************************************************/
-/*
-int main(){
-    IQTree tree;
-    char * str = "(1, (2, 345));";
-    string k;
-    tree.pllConvertTaxaID2IQTreeForm(str, k);
-    cout << str << endl;
-    cout << k << endl;
-    cout << "WHAT" << endl;
-    return 0;
-}
-*/
-
-
-int main(int argc, char *argv[]) {
-
-    /*
-    Instruction set ID reported by vectorclass::instrset_detect
-    0           = 80386 instruction set
-    1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
-    2  or above = SSE2
-    3  or above = SSE3
-    4  or above = Supplementary SSE3 (SSSE3)
-    5  or above = SSE4.1
-    6  or above = SSE4.2
-    7  or above = AVX supported by CPU and operating system
-    8  or above = AVX2
-    9  or above = AVX512F
-    */
-    int instruction_set;
-
-    MPIHelper::getInstance().init(argc, argv);
-    
-    atexit(funcExit);
-
-    /*************************/
-    { /* local scope */
-        int found = FALSE;              /* "click" found in cmd name? */
-        int n, dummyint;
-        char *tmpstr;
-        int intargc;
-        char **intargv;
-        intargc = 0;
-        intargv = nullptr;
-
-        for (n = strlen(argv[0]) - 5;
-             (n >= 0) && !found && (argv[0][n] != '/')
-             && (argv[0][n] != '\\'); n--) {
-
-            tmpstr = &(argv[0][n]);
-            dummyint = 0;
-            (void) sscanf(tmpstr, "click%n", &dummyint);
-            if (dummyint == 5) found = TRUE;
-            else {
-                dummyint = 0;
-                (void) sscanf(tmpstr, "CLICK%n", &dummyint);
-                if (dummyint == 5) found = TRUE;
-                else {
-                    dummyint = 0;
-                    (void) sscanf(tmpstr, "Click%n", &dummyint);
-                    if (dummyint == 5) found = TRUE;
-                }
-            }
-        }
-        if (found) _exit_wait_optn = TRUE;
-
-        if (_exit_wait_optn) { // get commandline parameters from keyboard
-            getintargv(&intargc, &intargv);
-            fprintf(stdout, "\n\n");
-            if (intargc > 1) { // if there were option entered, use them as argc/argv
-                argc = intargc;
-                argv = intargv;
-            }
-        }
-    } /* local scope */
-    /*************************/
-
-    parseArg(argc, argv, Params::getInstance());
-
-    // 2015-12-05
-    Checkpoint *checkpoint = new Checkpoint;
-    string filename = (string)Params::getInstance().out_prefix +".ckp.gz";
-    checkpoint->setFileName(filename);
-    
-    bool append_log = false;
-    
-    if (!Params::getInstance().ignore_checkpoint && fileExists(filename)) {
-        checkpoint->load();
-        if (checkpoint->hasKey("finished")) {
-            if (checkpoint->getBool("finished")) {
-                if (Params::getInstance().force_unfinished) {
-                    if (MPIHelper::getInstance().isMaster())
-                        cout << "NOTE: Continue analysis although a previous run already finished" << endl;
-                } else {
-                    delete checkpoint;
-                    if (MPIHelper::getInstance().isMaster())
-                        outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
-                            "Use `-redo` option if you really want to redo the analysis and overwrite all output files.\n" +
-                            "Use `--redo-tree` option if you want to restore ModelFinder and only redo tree search.\n" +
-                            "Use `--undo` option if you want to continue previous run when changing/adding options."
-                        );
-                    else
-                        exit(EXIT_SUCCESS);
-                    exit(EXIT_FAILURE);
-                } 
-            } else {
-                append_log = true;
-            }
-        } else {
-            if (MPIHelper::getInstance().isMaster())
-                outWarning("Ignore invalid checkpoint file " + filename);
-            checkpoint->clear();
-        }
-    }
-
-    if (MPIHelper::getInstance().isWorker())
-        checkpoint->setFileName("");
-
-    _log_file = Params::getInstance().out_prefix;
-    _log_file += ".log";
-    startLogFile(append_log);
-    time_t start_time;
-
-    if (append_log) {
-        cout << endl << "******************************************************"
-             << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
-    }
-
-    MPIHelper::getInstance().syncRandomSeed();
-    
-    signal(SIGABRT, &funcAbort);
-    signal(SIGFPE, &funcAbort);
-    signal(SIGILL, &funcAbort);
-    signal(SIGSEGV, &funcAbort);
-#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__ && !defined WIN64
-    signal(SIGBUS, &funcAbort);
-#endif
-    printCopyright(cout);
-
-    /*
-    double x=1e-100;
-    double y=1e-101;
-    if (x > y) cout << "ok!" << endl;
-    else cout << "shit!" << endl;
-    */
-    //FILE *pfile = popen("hostname","r");
-    char hostname[100];
-#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-    gethostname(hostname, sizeof(hostname));
-    WSACleanup();
-#else
-    gethostname(hostname, sizeof(hostname));
-#endif
-    //fgets(hostname, sizeof(hostname), pfile);
-    //pclose(pfile);
-
-    instruction_set = instrset_detect();
-#if defined(BINARY32) || defined(__NOAVX__)
-    instruction_set = min(instruction_set, (int)LK_SSE42);
-#endif
-    if (instruction_set < LK_SSE2) outError("Your CPU does not support SSE2!");
-    bool has_fma3 = (instruction_set >= LK_AVX) && hasFMA3();
-
-#ifdef __FMA__
-    bool has_fma =  has_fma3;
-    if (!has_fma) {
-        outError("Your CPU does not support FMA instruction, quiting now...");
-    }
-#endif
-
-    cout << "Host:    " << hostname << " (";
-    switch (instruction_set) {
-    case 0: cout << "x86, "; break;
-    case 1: cout << "SSE, "; break;
-    case 2: cout << "SSE2, "; break;
-    case 3: cout << "SSE3, "; break;
-    case 4: cout << "SSSE3, "; break;
-    case 5: cout << "SSE4.1, "; break;
-    case 6: cout << "SSE4.2, "; break;
-    case 7: cout << "AVX, "; break;
-    case 8: cout << "AVX2, "; break;
-    default: cout << "AVX512, "; break;
-    }
-    if (has_fma3) cout << "FMA3, ";
-//    if (has_fma4) cout << "FMA4, ";
-//#if defined __APPLE__ || defined __MACH__
-    cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
-//#else
-//    cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
-//#endif
-
-    cout << "Command:";
-    int i;
-    for (i = 0; i < argc; i++)
-        cout << " " << argv[i];
-    cout << endl;
-
-    checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
-    cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
-    init_random(Params::getInstance().ran_seed + MPIHelper::getInstance().getProcessID(), true);
-    // initialize multiple random streams if needed
-    if (Params::getInstance().multi_rstreams_used)
-        init_multi_rstreams();
-
-    time(&start_time);
-    cout << "Time:    " << ctime(&start_time);
-
-    // increase instruction set level with FMA
-    if (has_fma3 && instruction_set < LK_AVX_FMA)
-        instruction_set = LK_AVX_FMA;
-
-    Params::getInstance().SSE = min(Params::getInstance().SSE, (LikelihoodKernel)instruction_set);
-
-    cout << "Kernel:  ";
-
-    if (Params::getInstance().lk_safe_scaling) {
-        cout << "Safe ";
-    }
-
-    if (Params::getInstance().pll) {
-#ifdef __AVX__
-        cout << "PLL-AVX";
-#else
-        cout << "PLL-SSE3";
-#endif
-    } else {
-        if (Params::getInstance().SSE >= LK_AVX512)
-            cout << "AVX-512";
-        else if (Params::getInstance().SSE >= LK_AVX_FMA) {
-            cout << "AVX+FMA";
-        } else if (Params::getInstance().SSE >= LK_AVX) {
-            cout << "AVX";
-        } else if (Params::getInstance().SSE >= LK_SSE2){
-            cout << "SSE2";
-        } else
-            cout << "x86";
-    }
-
-#ifdef _OPENMP
-    if (Params::getInstance().num_threads >= 1) {
-        omp_set_num_threads(Params::getInstance().num_threads);
-        Params::getInstance().num_threads = omp_get_max_threads();
-    }
-//    int max_threads = omp_get_max_threads();
-    int max_procs = countPhysicalCPUCores();
-    cout << " - ";
-    if (Params::getInstance().num_threads > 0)
-        cout << Params::getInstance().num_threads  << " threads";
-    else
-        cout << "auto-detect threads";
-    cout << " (" << max_procs << " CPU cores detected)";
-    if (Params::getInstance().num_threads  > max_procs) {
-        cout << endl;
-        outError("You have specified more threads than CPU cores available");
-    }
-    // omp_set_nested(false); // don't allow nested OpenMP parallelism
-    omp_set_max_active_levels(1);
-#else
-    if (Params::getInstance().num_threads != 1) {
-        cout << endl << endl;
-        outError("Number of threads must be 1 for sequential version.");
-    }
-#endif
-
-#ifdef _IQTREE_MPI
-    cout << endl << "MPI:     " << MPIHelper::getInstance().getNumProcesses() << " processes";
-#endif
-    
-    int num_procs = countPhysicalCPUCores();
-#ifdef _OPENMP
-    if (num_procs > 1 && Params::getInstance().num_threads == 1 && !Params::getInstance().alisim_active) {
-        cout << endl << endl << "HINT: Use -nt option to specify number of threads because your CPU has " << num_procs << " cores!";
-        cout << endl << "HINT: -nt AUTO will automatically determine the best number of threads to use.";
-    }
-#else
-    if (num_procs > 1)
-        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
-#endif
-
-    //cout << "sizeof(int)=" << sizeof(int) << endl;
-    cout << endl << endl;
-    
-    // show msgs which are delayed to show
-    cout << Params::getInstance().delay_msgs;
-
-    cout.precision(3);
-    cout.setf(ios::fixed);
-    
-    // checkpoint general run information
-    checkpoint->startStruct("iqtree");
-    string command;
-    
-    if (CKP_RESTORE_STRING(command)) {
-        // compare command between saved and current commands
-        stringstream ss(command);
-        string str;
-        bool mismatch = false;
-        for (i = 1; i < argc; i++) {
-            if (!(ss >> str)) {
-                outWarning("Number of command-line arguments differs from checkpoint");
-                mismatch = true;
-                break;
-            }
-            if (str != argv[i]) {
-                outWarning((string)"Command-line argument `" + argv[i] + "` differs from checkpoint `" + str + "`");
-                mismatch = true;
-            }
-        }
-        if (mismatch) {
-            outWarning("Command-line differs from checkpoint!");
-        }
-        command = "";
-    }
-    
-    for (i = 1; i < argc; i++)
-        command += string(" ") + argv[i];
-    CKP_SAVE(command);
-    int seed = Params::getInstance().ran_seed;
-    CKP_SAVE(seed);
-    CKP_SAVE(start_time);
-
-    // check for incompatible version
-    string version;
-    stringstream sversion;
-    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
-    version = sversion.str();
-    CKP_SAVE(version);
-    checkpoint->endStruct();
-    
-    // load distributions from built-in file and user-specified file
-    // load distributions from built-in file
-    read_distributions();
-    // load distributions from user-specified file
-    if (Params::getInstance().alisim_distribution_definitions)
-    {
-        cout<<"Reading user-specified distributions/lists of random numbers."<<endl;
-        read_distributions(Params::getInstance().alisim_distribution_definitions);
-    }
-
-    if (MPIHelper::getInstance().getNumProcesses() > 1) {
-        if (Params::getInstance().alisim_active) {
-            runAliSim(Params::getInstance(), checkpoint);
-        } else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-        } else {
-            outError("Please use one MPI process! The feature you wanted does not need parallelization.");
-        }
-    } else
-    // call the main function
-    if (Params::getInstance().alisim_active) {
-        runAliSim(Params::getInstance(), checkpoint);
-    } else if (Params::getInstance().tree_gen != NONE && Params::getInstance().start_tree!=STT_RANDOM_TREE) {
-        generateRandomTree(Params::getInstance());
-    } else if (Params::getInstance().do_pars_multistate) {
-        doParsMultiState(Params::getInstance());
-    } else if (Params::getInstance().rf_dist_mode != 0) {
-        computeRFDist(Params::getInstance());
-    } else if (Params::getInstance().test_input != TEST_NONE) {
-        Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
-        testInputFile(Params::getInstance());
-    } else if (Params::getInstance().run_mode == RunMode::PRINT_TAXA) {
-        printTaxa(Params::getInstance());
-    } else if (Params::getInstance().run_mode == RunMode::PRINT_AREA) {
-        printAreaList(Params::getInstance());
-    } else if (Params::getInstance().run_mode == RunMode::SCALE_BRANCH_LEN || Params::getInstance().run_mode == RunMode::SCALE_NODE_NAME) {
-        scaleBranchLength(Params::getInstance());
-    } else if (Params::getInstance().run_mode == RunMode::PD_DISTRIBUTION) {
-        calcDistribution(Params::getInstance());
-    } else if (Params::getInstance().run_mode == RunMode::STATS){ /**MINH ANH: for some statistics on the input tree*/
-        branchStats(Params::getInstance()); // MA
-    } else if (Params::getInstance().branch_cluster > 0) {
-        calcTreeCluster(Params::getInstance());
-    } else if (Params::getInstance().ncbi_taxid) {
-        processNCBITree(Params::getInstance());
-    } else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
-        processECOpd(Params::getInstance());
-    } else if (Params::getInstance().gen_all_NNI){
-        PhyloTree *tree = new PhyloTree();
-        tree->readTree(Params::getInstance().user_file, Params::getInstance().is_rooted);
-        tree->gen_all_nni_trees();
-    } else if (Params::getInstance().terrace_analysis) { /**Olga: Terrace analysis*/
-        runterraceanalysis(Params::getInstance());
-    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
-               Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
-    {
-        if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
-        {
-            if (Params::getInstance().siteLL_file)
-                guidedBootstrap(Params::getInstance());
-            if (Params::getInstance().second_align)
-                computeMulProb(Params::getInstance());
-        } else {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-        }
-//    } else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
-//        runNGSAnalysis(Params::getInstance());
-//    } else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
-//        runGSSAnalysis(Params::getInstance());
-    } else if (Params::getInstance().consensus_type != CT_NONE) {
-        MExtTree tree;
-        switch (Params::getInstance().consensus_type) {
-            case CT_CONSENSUS_TREE:
-                computeConsensusTree(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
-                    Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file, &Params::getInstance());
-                break;
-            case CT_CONSENSUS_NETWORK:
-                computeConsensusNetwork(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
-                    Params::getInstance().split_weight_summary, Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file);
-                break;
-            case CT_ASSIGN_SUPPORT:
-                assignBootstrapSupport(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, 
-                    Params::getInstance().second_tree, Params::getInstance().is_rooted, Params::getInstance().out_file,
-                    Params::getInstance().out_prefix, tree, Params::getInstance().tree_weight_file, &Params::getInstance());
-                break;
-            case CT_ASSIGN_SUPPORT_EXTENDED:
-                assignBranchSupportNew(Params::getInstance());
-                break;
-            case CT_NONE: break;
-            /**MINH ANH: for some comparison*/
-            case COMPARE: compare(Params::getInstance()); break; //MA
-            case CT_ROOTSTRAP:
-                runRootstrap(Params::getInstance()); break;
-        }
-    } else if (Params::getInstance().split_threshold_str) {
-        // for Ricardo: keep those splits from input tree above given support threshold
-        collapseLowBranchSupport(Params::getInstance().user_file, Params::getInstance().split_threshold_str);
-    } else {
-        Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
-        if (Params::getInstance().intype == IN_NEWICK && Params::getInstance().pdtaxa_file && Params::getInstance().tree_gen == NONE) {
-            if (Params::getInstance().budget_file) {
-                //if (Params::getInstance().budget < 0) Params::getInstance().run_mode = PD_USER_SET;
-            } else {
-                if (Params::getInstance().sub_size < 1 && Params::getInstance().pd_proportion == 0.0)
-                    Params::getInstance().run_mode = RunMode::PD_USER_SET;
-            }
-            // input is a tree, check if it is a reserve selection -> convert to splits
-            if (Params::getInstance().run_mode != RunMode::PD_USER_SET) Params::getInstance().multi_tree = true;
-        }
-
-
-        if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == nullptr &&
-            Params::getInstance().find_pd_min == false && Params::getInstance().calc_pdgain == false &&
-            Params::getInstance().run_mode != RunMode::LINEAR_PROGRAMMING && Params::getInstance().multi_tree == false)
-            runPDTree(Params::getInstance());
-        else if (Params::getInstance().intype == IN_NEXUS || Params::getInstance().intype == IN_NEWICK) {
-            if (Params::getInstance().run_mode == RunMode::LINEAR_PROGRAMMING && Params::getInstance().find_pd_min)
-                outError("Current linear programming does not support finding minimal PD sets!");
-            if (Params::getInstance().find_all && Params::getInstance().run_mode == RunMode::LINEAR_PROGRAMMING)
-                Params::getInstance().binary_programming = true;
-            runPDSplit(Params::getInstance());
-        } else {
-            outError("Unknown file input format");
-        }
-    }
-
-    time(&start_time);
-    cout << "Date and Time: " << ctime(&start_time);
-    try{
-    delete checkpoint;
-    }catch(int err_num){}
-
-    finish_random();
-    // finish multiple random streams if used
-    if (Params::getInstance().multi_rstreams_used)
-        finish_multi_rstreams();
-    
-    return EXIT_SUCCESS;
 }
