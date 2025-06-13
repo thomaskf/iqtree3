@@ -252,6 +252,9 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+// to check how many classes from the model string
+int getClassNum(string model_str);
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -1974,7 +1977,7 @@ string CandidateModel::evaluate(Params &params,
 
         if (!prev_rate_present){
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-            //iqtree->setCheckpoint(&in_model_info);
+            iqtree->setCheckpoint(&in_model_info);
             bool init_success;
             if (mixture_action != MA_FIND_RATE && iqtree->aln->seq_type == SEQ_DNA) {
                 init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
@@ -3161,7 +3164,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         model_info.endStruct();
 
         if (under_mix_finder && is_better_model) {
-            model_info.putSubCheckpoint(&out_model_info, "BestOfTheKClass");
+            int k = getClassNum(at(model).getName());
+            model_info.putSubCheckpoint(&out_model_info, "BestOfThe" + convertIntToString(k) + "Class");
         }
 
         switch (params.model_test_criterion) {
@@ -6623,15 +6627,23 @@ void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mode
     model_info.put("best_model_AICc", best_model_pre_AICc);
     model_info.put("best_model_BIC", best_model_pre_BIC);
     
-    // overwrite the checkpoint by the best models
-    ModelCheckpoint best_model_info;
-    model_info.getSubCheckpoint(&best_model_info, model_info.getStructName() + "BestOfTheKClass");
-    model_info.putSubCheckpoint(&best_model_info, "");
-    
     best_subst_name = model_str;
     if (params.optimize_from_given_params == false)
         best_rate_name = best_orig_rate_name;
     int n_class = getClassNum(model_str);
+    ASSERT(n_class >= 1);
+
+    // overwrite the checkpoint by the best K models
+    ModelCheckpoint best_model_info;
+    model_info.getSubCheckpoint(&best_model_info, model_info.getStructName() + "BestOfThe" + convertIntToString(n_class) + "Class");
+    model_info.putSubCheckpoint(&best_model_info, "");
+    
+    // update the tree to the best tree
+    Checkpoint* orig_tree_chkpt = iqtree->getCheckpoint();
+    iqtree->setCheckpoint(&model_info);
+    iqtree->restoreCheckpoint();
+    iqtree->setCheckpoint(orig_tree_chkpt);
+    
     if (params.opt_rhas_again) {
         if (n_class == 1) {
             cout << endl;

@@ -1640,7 +1640,7 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
         return;
     
     int nmix = getNMixtures();
-    checkpoint->startStruct("BestOfTheKClass");
+    checkpoint->startStruct("BestOfThe" + convertIntToString(nmix-1) + "Class");
     if (init_weight > 0) {
         if (nmix > 2) {
             checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()-1));
@@ -1674,7 +1674,6 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
             at(nmix - 1)->setStateFrequency(state_freq);
         }
 
-        //cout << "[init] " << getNameParams(false) << endl;
     } else {
         checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()));
         if (!fix_prop) {
