@@ -43,34 +43,34 @@ AA_FASTA=${WD}/turtle_aa.fasta
 AA_NEX=${WD}/turtle_aa.nex
 AA_prefix=${WD}/turtle_aa
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -B 1000 -T 1 -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -B 1000 -T 1 -seed $SEED
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p $AA_NEX -B 1000 -T 1 -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p $AA_NEX -B 1000 -T 1 -seed $SEED
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p $AA_NEX -B 1000 -T 1 -m MFP+MERGE -rcluster 10 --prefix ${WD}/turtle_aa.merge -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p $AA_NEX -B 1000 -T 1 -m MFP+MERGE -rcluster 10 --prefix ${WD}/turtle_aa.merge -seed $SEED
 
 Get-Content $AA_FASTA.treefile, $AA_NEX.treefile |
     Set-Content ${WD}/turtle_aa.trees
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p ${WD}/turtle_aa.merge.best_scheme.nex -z ${WD}/turtle_aa.trees -zb 10000 -au -n 0 --prefix ${WD}/turtle_aa.test -seed $SEED -T 1
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p ${WD}/turtle_aa.merge.best_scheme.nex -z ${WD}/turtle_aa.trees -zb 10000 -au -n 0 --prefix ${WD}/turtle_aa.test -seed $SEED -T 1
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -m GTR+F+I+R3+T -te ${WD}/turtle_aa.trees -T 1 --prefix ${WD}/turtle_aa.mix -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -m GTR+F+I+R3+T -te ${WD}/turtle_aa.trees -T 1 --prefix ${WD}/turtle_aa.mix -seed $SEED
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p $AA_NEX.best_scheme.nex -z ${WD}/turtle_aa.trees -n 0 -wpl --prefix ${WD}/turtle_aa.wpl -seed $SEED -T 1
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p $AA_NEX.best_scheme.nex -z ${WD}/turtle_aa.trees -n 0 -wpl --prefix ${WD}/turtle_aa.wpl -seed $SEED -T 1
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -S $AA_NEX --prefix ${WD}/turtle_aa.loci -T 1 -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -S $AA_NEX --prefix ${WD}/turtle_aa.loci -T 1 -seed $SEED
 
-${BUILD_DIR}/iqtree3 -t $AA_NEX.treefile --gcf ${WD}/turtle_aa.loci.treefile -s $AA_FASTA --scf 100 -seed $SEED -T 1
+"$BUILD_DIR/iqtree3"  -t $AA_NEX.treefile --gcf ${WD}/turtle_aa.loci.treefile -s $AA_FASTA --scf 100 -seed $SEED -T 1
 
-${BUILD_DIR}/iqtree3 -t $AA_FASTA.treefile --gcf ${WD}/turtle_aa.loci.treefile -s $AA_FASTA --scf 100 -seed $SEED -T 1
+"$BUILD_DIR/iqtree3"  -t $AA_FASTA.treefile --gcf ${WD}/turtle_aa.loci.treefile -s $AA_FASTA --scf 100 -seed $SEED -T 1
 
 # link-exchange-rates model
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX{LG+F,LG+F}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.link -seed $SEED -T 1
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -m "MIX{LG+F,LG+F}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.link -seed $SEED -T 1
 
-#${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX{GTR{1,1,1,1,1,1}+FO,GTR{1,1,1,1,1,1}+FO}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.jc.link -seed $SEED -T 1
+#"$BUILD_DIR/iqtree3"  -s $AA_FASTA -m "MIX{GTR{1,1,1,1,1,1}+FO,GTR{1,1,1,1,1,1}+FO}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.jc.link -seed $SEED -T 1
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree --prefix $AA_NEX.constr -T 1 -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree --prefix $AA_NEX.constr -T 1 -seed $SEED
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix $AA_NEX.constr2 -T 1 -seed $SEED
+"$BUILD_DIR/iqtree3"  -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix $AA_NEX.constr2 -T 1 -seed $SEED
 
-#${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX+MF" --prefix ${WD}/turtle_aa.mixfinder -T 1 -seed $SEED # mixture finder is not supported for amino acid data
+#"$BUILD_DIR/iqtree3"  -s $AA_FASTA -m "MIX+MF" --prefix ${WD}/turtle_aa.mixfinder -T 1 -seed $SEED # mixture finder is not supported for amino acid data

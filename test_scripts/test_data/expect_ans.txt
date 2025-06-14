@@ -1,4 +1,4 @@
-#file name	key-words	value	diff-threshold| grep
+#file name	key-words	value	diff-threshold
 turtle.fa.iqtree	Log-likelihood of the tree	-5370.3729	1
 turtle.loci.iqtree	Log-likelihood of the tree	-5263.0947	1
 turtle.merge.iqtree	Log-likelihood of the tree	-5370.3728	1
