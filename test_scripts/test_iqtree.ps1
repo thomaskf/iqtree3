@@ -37,9 +37,9 @@ Get-Content test_scripts/test_data/turtle.fa.treefile, test_scripts/test_data/tu
 ## amino acid test cases
 # the data set is a subset of the turtle data set
 echo "Running amino acid test cases..."
-AA_FASTA=test_scripts/test_data/turtle_aa.fasta
-AA_NEX=test_scripts/test_data/turtle_aa.nex
-AA_prefix=test_scripts/test_data/turtle_aa
+$AA_FASTA=test_scripts/test_data/turtle_aa.fasta
+$AA_NEX=test_scripts/test_data/turtle_aa.nex
+$AA_prefix=test_scripts/test_data/turtle_aa
 
 ./build/iqtree3  -s $AA_FASTA -B 1000 -T 1 -seed $SEED
 
