@@ -38,7 +38,7 @@ Get-Content test_scripts/test_data/turtle.fa.treefile, test_scripts/test_data/tu
 # the data set is a subset of the turtle data set
 echo "Running amino acid test cases..."
 WD=test_scripts/test_data
-BUILD_DIR="build"
+BUILD_DIR="./build"
 AA_FASTA=${WD}/turtle_aa.fasta
 AA_NEX=${WD}/turtle_aa.nex
 AA_prefix=${WD}/turtle_aa
