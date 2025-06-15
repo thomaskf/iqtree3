@@ -46,9 +46,9 @@ Get-Content $input_file | ForEach-Object {
     $highest_value = $expected_value + $threshold
 
     if ($actual_value -le $highest_value) {
-        Write-Host "PASS: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Abs-diff: ${abs_diff}, Threshold: ${threshold}"
+        Write-Host "PASS: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Threshold: ${threshold}"
     } else {
-        Write-Host "FAIL: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Abs-diff: ${abs_diff}, Threshold: ${threshold}"
+        Write-Host "FAIL: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Threshold: ${threshold}"
         $fail_count++
     }
 }

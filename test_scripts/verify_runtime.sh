@@ -39,10 +39,10 @@ while IFS=$'\t' read -r iqtree_file field_name expected_value threshold || [ -n 
     result=$(echo "$report_value <= $higest_value" | bc -l)
 
     if [ "$result" -eq 1 ]; then
-        echo "PASS: $iqtree_file -- Expected: ${expected_value}, Reported: ${report_value}, Abs-diff: ${abs_diff}, Threshold: $threshold"
+        echo "PASS: $iqtree_file -- Expected: ${expected_value}, Reported: ${report_value}, Threshold: $threshold"
     else
         echo "FAIL: $iqtree_file ($field_name)"
-        echo "  Expected: ${expected_value}, Reported: ${report_value}, Abs-diff: ${abs_diff}, Threshold: $threshold"
+        echo "  Expected: ${expected_value}, Reported: ${report_value}, Threshold: $threshold"
         ((fail_count++))
     fi
 done < "$input_file"
