@@ -1,0 +1,21 @@
+#file name	key-words	value	diff-threshold
+turtle.fa.iqtree	Total CPU time used	2.615	10
+turtle.loci.iqtree	Total CPU time used	2.396	10
+turtle.merge.iqtree	Total CPU time used	2.677	10
+turtle.mix.iqtree	Total CPU time used	2.10381	10
+turtle.mix.jc.link.iqtree	Total CPU time used	0.523	10
+turtle.mix.link.iqtree	Total CPU time used	0.583	10
+turtle.mixfinder.iqtree	Total CPU time used	8.573	10
+turtle.nex.constr.iqtree	Total CPU time used	2.027	10
+turtle.nex.constr2.iqtree	Total CPU time used	2.334	10
+turtle.nex.iqtree	Total CPU time used	2.324	10
+turtle.test.iqtree	Total CPU time used	0.207	10
+turtle.wpl.iqtree	Total CPU time used	0.027	10
+turtle_aa.fasta.iqtree	Total CPU time used	36.163	10
+turtle_aa.loci.iqtree	Total CPU time used	32.985	10
+turtle_aa.merge.iqtree	Total CPU time used	38.693	10
+turtle_aa.nex.constr.iqtree	Total CPU time used	36.21	10
+turtle_aa.nex.constr2.iqtree	Total CPU time used	49.455	10
+turtle_aa.nex.iqtree	Total CPU time used	42.546	10
+turtle_aa.test.iqtree	Total CPU time used	0.974	10
+turtle_aa.wpl.iqtree	Total CPU time used	1.032	10
