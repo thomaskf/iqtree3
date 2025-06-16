@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: ["github-workflow"]
+    branches: ["github-workflow", "master"]
   pull_request:
-    branches: ["github-workflow"]
+    branches: ["github-workflow", "master"]
 
 # If a Second Commit is Pushed After, and Build is Not Complete, Cancel
 # Extremely Important with the High Computation Time and Power Required of Arm Linux Builds
