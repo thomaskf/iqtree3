@@ -880,7 +880,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
     out << endl;
 }
 
-void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
+void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, bool main_tree) {
     size_t ssize = tree.getAlnNSite();
     double epsilon = 1.0 / ssize;
     double totalLen;
@@ -888,12 +888,19 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     int df;
     size_t i;
     IQTreeMix* treemix = nullptr;
+    PhyloSuperHmm* phyloSuperHmm = nullptr;
 
     if (tree.isTreeMix() && !tree.isSuperTree()) {
         treemix = (IQTreeMix*) &tree;
         df = treemix->getNParameters();
         for (i=0; i<treemix->size(); i++) {
             totalLens.push_back(treemix->at(i)->treeLength());
+        }
+    } else if (tree.isTreeMix() && tree.isSuperTree()) {
+        df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+        phyloSuperHmm = (PhyloSuperHmm*) &tree;
+        for (i=0; i<phyloSuperHmm->getNumTrees(); i++) {
+            totalLens.push_back(phyloSuperHmm->superTreeSet[i]->treeLength());
         }
     } else {
         df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
@@ -922,8 +929,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
     out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
 
-    // mAIC report
-    if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev) {
+    if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev && !tree.isTreeMix()) {
         // compute mAIC/mBIC/mAICc if it is a partition model
         int ntrees; //mix_df;
         double mix_lh;
@@ -1001,6 +1007,14 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
                 out << " " << totalLens[i];
             }
             out << endl;
+        } else if (phyloSuperHmm != NULL) {
+            out << "Total tree lengths (sum of branch lengths):";
+            for (i = 0; i < phyloSuperHmm->getNumTrees(); i++) {
+                out << " " << totalLens[i];
+            }
+            out << endl;
+        } else {
+            out << "Total tree length (sum of branch lengths): " << totalLen << endl;
         }
     }
 
@@ -1019,7 +1033,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             out << " " << totalLenInternals[i] << " (" << totalLenInternalPs[i] << "% of tree length)";
         }
         out << endl << endl;
-    } else {
+    } else if (phyloSuperHmm == NULL) {
         double totalLenInternal = tree.treeLengthInternal(epsilon);
         double totalLenInternalP = totalLenInternal*100.0 / totalLen;
         if (tree.aln->seq_type == SEQ_POMO) {
@@ -1043,7 +1057,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         return;
     }
 
-    if (treemix != nullptr) {
+    if (treemix != nullptr || phyloSuperHmm != nullptr) {
         // out << "No drawing will be displayed for mixture of trees here" << endl;
         out << "Trees with branch lengths are provided in the file: " << params.out_prefix << ".treefile" << endl;
         out << endl;
@@ -1714,9 +1728,15 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                         it != stree->end(); it++, part++) {
                     out << "FOR PARTITION " << (*it)->aln->name
                             << ":" << endl << endl;
-                    (*it)->setRootNode(params.root);
-//                    reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
-                    reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
+                    if ((*it)->isTreeMix()) {
+                        IQTreeMix* treemix = (IQTreeMix*) (*it);
+                        treemix->setRootNode(params.root);
+                        reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
+                    } else {
+                        (*it)->setRootNode(params.root);
+                        //                    reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+                        reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
+                    }
                 }
             }
 
@@ -3523,7 +3543,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (verbose_mode >= VB_MED) {
         cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
         int model_df;
-        if (iqtree->isTreeMix()) {
+        if (iqtree->isTreeMix() && !iqtree->isSuperTree()) {
             model_df = ((IQTreeMix*) iqtree)->getNParameters();
         } else {
             model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
@@ -5139,7 +5159,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 
     tree->setCheckpoint(checkpoint);
     if (tree->isTreeMix()) {
-        ((IQTreeMix*) tree)->setMinBranchLen(params);
+        if (tree->isSuperTree())
+            ((PhyloSuperHmm*) tree)->setMinBranchLen(params);
+        else
+            ((IQTreeMix*) tree)->setMinBranchLen(params);
     } else if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
         if (!tree->isSuperTree() && tree->getAlnNSite() >= 100000) {

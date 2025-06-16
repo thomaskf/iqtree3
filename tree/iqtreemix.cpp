@@ -71,7 +71,6 @@ int getTreeMixNum(Params& params) {
     }
     if (n == 0) {
         n = k;
-        cout << "Number of input trees: " << n << endl;
     } else if (n < k) {
         cout << "Note: Only " << n << " trees are considered, although there are more than " << n << " trees in the tree file: " << params.user_file << endl;
     } else if (n > k) {
@@ -1697,33 +1696,51 @@ void IQTreeMix::restoreCheckpoint() {
     delete[] relative_weights;
 }
 
+void IQTreeMix::saveModelCheckpoint() {
+    size_t i;
+    startCheckpoint();
+    ASSERT(weights.size() == size());
+    double* relative_weights = new double[size()];
+    for (i=0; i<size(); i++) {
+        relative_weights[i]=weights[i];
+    }
+    CKP_ARRAY_SAVE(size(), relative_weights);
+    for (i=0; i<size(); i++) {
+        checkpoint->startStruct("TreeModel" + convertIntToString(i+1));
+        at(i)->getModelFactory()->saveCheckpoint();
+        checkpoint->endStruct();
+    }
+    endCheckpoint();
+    delete[] relative_weights;
+}
+
+void IQTreeMix::restoreModelCheckpoint() {
+    size_t i;
+    startCheckpoint();
+    ASSERT(weights.size() == size());
+    double* relative_weights = new double[size()];
+    if (CKP_ARRAY_RESTORE(size(), relative_weights)) {
+        for (i = 0; i < size(); i++) {
+            this->weights[i] = relative_weights[i];
+            this->weight_logs[i] = log(relative_weights[i]);
+        }
+    }
+    for (i=0; i<size(); i++) {
+        checkpoint->startStruct("TreeModel" + convertIntToString(i+1));
+        at(i)->getModelFactory()->restoreCheckpoint();
+        checkpoint->endStruct();
+    }
+    endCheckpoint();
+    clearAllPartialLH();
+    delete[] relative_weights;
+}
+
 void IQTreeMix::setMinBranchLen(Params& params) {
     size_t i;
     int num_prec;
     
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = MAST_MIN_BRANCH_LEN;
-        /*
-        if (size() > 0) {
-            if (!at(0)->isSuperTree() && at(0)->getAlnNSite() >= 100000) {
-                params.min_branch_length = MAST_MIN_BRANCH_LEN; // 0.1 / (at(0)->getAlnNSite());
-                // params.min_branch_length = 0.1 / (at(0)->getAlnNSite());
-                num_prec = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
-                for (i=0; i<size(); i++)
-                    at(i)->num_precision = num_prec;
-                cout.precision(12);
-                // cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
-                cout.precision(3);
-            }
-        }
-        // Increase the minimum branch length if PoMo is used.
-        if (aln->seq_type == SEQ_POMO) {
-            params.min_branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
-            cout.precision(12);
-            cout << "NOTE: minimal branch length is increased to " << params.min_branch_length << " because PoMo infers number of mutations and frequency shifts" << endl;
-            cout.precision(3);
-        }
-        */
     }
     cout << setprecision(7) << "Minimum branch length is set to " << params.min_branch_length << endl;
 }
@@ -1853,17 +1870,22 @@ void IQTreeMix::computeInitialTree(LikelihoodKernel kernel, istream* in) {
 
     if (size() == 0)
         outError("No tree is inputted for the tree-mixture model");
-    if (params->user_file == nullptr) {
-        outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+    
+    if (!in) {
+        if (params->user_file == NULL) {
+            outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+        }
+        fin.open(params->user_file);
+        
+        for (i=0; i<size(); i++) {
+            at(i)->computeInitialTree(kernel, &fin);
+        }
+        fin.close();
+    } else {
+        for (i=0; i<size(); i++) {
+            at(i)->computeInitialTree(kernel, in);
+        }
     }
-    
-    fin.open(params->user_file);
-    
-    for (i=0; i<size(); i++) {
-        at(i)->computeInitialTree(kernel, &fin);
-    }
-    
-    fin.close();
     
     // show trees
     // showTree();
