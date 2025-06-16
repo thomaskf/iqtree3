@@ -31,6 +31,9 @@ const int MF_IGNORED            = 2;
 const int MF_RUNNING            = 4;
 const int MF_WAITING            = 8;
 const int MF_DONE               = 16;
+const int MF_CANNOT_BE_IGNORED  = 32; // those models added by -madd cannot be filtered out
+
+enum MixtureAction {MA_NONE, MA_FIND_RATE, MA_NUMBER_CLASS, MA_FIND_CLASS, MA_ADD_CLASS};
 
 /**
     Candidate model under testing
@@ -44,14 +47,14 @@ public:
         logl = 0.0;
         df = 0;
         tree_len = 0.0;
-        aln = NULL;
+        aln = nullptr;
         AIC_score = DBL_MAX;
         AICc_score = DBL_MAX;
         BIC_score = DBL_MAX;
         this->flag = flag;
         syncChkPoint = nullptr;
         //init_first_mix = false;
-        model_selection_action = 0;
+        mixture_action = MA_NONE;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -60,7 +63,7 @@ public:
         this->aln = aln;
         syncChkPoint = nullptr;
         //init_first_mix = false;
-        model_selection_action = 0;
+        mixture_action = MA_NONE;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -68,7 +71,7 @@ public:
         getUsualModel(aln);
         syncChkPoint = nullptr;
         //init_first_mix = false;
-        model_selection_action = 0;
+        mixture_action = MA_NONE;
     }
     
     string getName() {
@@ -151,7 +154,7 @@ public:
     bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
             if ((posR = model->rate_name.find(rates[i])) != string::npos) {
                 int cat = convert_int(model->rate_name.substr(posR+2).c_str());
                 subst_name = model->subst_name;
@@ -191,8 +194,8 @@ public:
     /** the nest relationships of all candidate Q matrices */
     map<string, vector<string> > nest_network;
 
-    /** the value of the action in function runModelSelection*/
-    int model_selection_action;
+    /** the value of the action in function findMixtureComponent */
+    MixtureAction mixture_action;
 
     Alignment *aln; // associated alignment
 
@@ -273,15 +276,15 @@ public:
     int getLowerKModel(int model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = at(static_cast<size_t>(model)).rate_name.find(rates[i])) == string::npos)
                 continue;
-            int cat = convert_int(at(model).rate_name.substr(posR+2).c_str());
+            int cat = convert_int(at(static_cast<size_t>(model)).rate_name.substr(posR+2).c_str());
             for (int prev_model = model-1; prev_model >= 0; prev_model--, cat--) {
-                string name = at(model).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
-                if (at(prev_model).rate_name != name)
+                string name = at(static_cast<size_t>(model)).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
+                if (at(static_cast<size_t>(prev_model)).rate_name != name)
                     break;
-                if (!at(prev_model).hasFlag(MF_DONE))
+                if (!at(static_cast<size_t>(prev_model)).hasFlag(MF_DONE))
                     continue;
                 return prev_model;
             }
@@ -289,16 +292,16 @@ public:
         return -1;
     }
 
-    int getHigherKModel(int model) {
+    int getHigherKModel(size_t model) {
         size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
-        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+        for (size_t i = 0; i < sizeof(rates)/sizeof(char*); i++) {
             if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
                 continue;
             size_t this_posR = at(model).rate_name.find(rates[i]);
             ASSERT(this_posR != string::npos);
             int cat = convert_int(at(model).rate_name.substr(this_posR+2).c_str());
-            for (int next_model = model+1; next_model < size(); next_model++, cat++) {
+            for (size_t next_model = model+1; next_model < size(); next_model++, cat++) {
 //                if (at(next_model).name.substr(0, posR) != orig_name.substr(0, posR))
 //                    break;
                 string rate_name = at(model).rate_name.substr(posR, 2) + convertIntToString(cat+1);
@@ -419,7 +422,7 @@ public:
     void getCompatiblePairs(int num, ModelPairSet &res) {
         set<int> part_ids;
 
-        for (auto it = begin(); it != end() && res.size() < num; it++) {
+        for (auto it = begin(); it != end() && res.size() < static_cast<size_t>(num); it++) {
 
             // check for compatibility
             vector<int> overlap;
@@ -776,12 +779,13 @@ string criterionName(ModelTestCriterion mtc);
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder = false);
 
 /**
- optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+ perform MixtureFinder algorithm to find best-fit Q-Mixture model,
+ including estimation of best number of classes in the mixture
  @param params program parameters
  @param iqtree phylogenetic tree
  @param model_info (IN/OUT) information for all models considered
  */
-void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
+void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
 
 /**
  perform ModelFinderNN to find the best-fit model (uses neural network for model inference)

@@ -59,6 +59,8 @@ extern void printCopyright(ostream &out);
 #include <sstream>
 #endif
 
+using namespace std;
+
 /********************************************************
         Miscellaneous
  ********************************************************/
@@ -71,9 +73,16 @@ void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
         print_stacktrace(cerr);
 	}
+#ifndef BUILD_LIB
 	cerr << error << endl;
-    if (quit)
-    	exit(2);
+#endif
+    if (quit) {
+#ifndef BUILD_LIB
+        exit(2);
+#else
+        throw runtime_error(error);
+#endif
+    }
 }
 
 /**
@@ -277,20 +286,20 @@ int getFilesInDir(const char *path, StrVector &filenames)
     DIR *dp;
     struct dirent *ep;
     dp = opendir (path);
-    
-    if (dp != NULL)
+
+    if (dp != nullptr)
     {
-        while ((ep = readdir (dp)) != NULL) {
+        while ((ep = readdir (dp)) != nullptr) {
             if (isFile((path_name + ep->d_name).c_str()))
                 filenames.push_back(ep->d_name);
         }
-        
+
         (void) closedir (dp);
         return 1;
     }
     else
         return 0;
-    
+
     return 1;
 #else
     //TODO: FindFirstFile et cetera, et cetera, et cetera
@@ -403,7 +412,7 @@ double convert_double_with_distribution(const char *str, int &end_pos, bool non_
     // convert normal double
     char *endptr;
     double d = strtod(str, &endptr);
-    
+
     // generate a double from a distribution
     if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
         string tmp_str(str);
@@ -412,7 +421,7 @@ double convert_double_with_distribution(const char *str, int &end_pos, bool non_
             end_pos = pos;
         else
             end_pos = tmp_str.length();
-            
+
         d = random_number_from_distribution(tmp_str.substr(0, end_pos), non_negative);
     }
     else
@@ -442,17 +451,17 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, b
 {
     string tmp_str(str);
     vec.clear();
-    
+
     // extract/generate double numbers one by one
     while (tmp_str.length() > 0) {
         // extract sub-string by separator
         size_t pos = tmp_str.find(separator);
         string token = tmp_str.substr(0, pos);
-        
+
         // convert/generate a double
         double d = convert_double_with_distribution(token.c_str(), non_negative);
         vec.push_back(d);
-        
+
         // remove the current double/distribution name from tmp_str
         if(pos != std::string::npos)
             tmp_str.erase(0, pos + 1);
@@ -473,10 +482,10 @@ void convert_double_array_with_distributions(string tmp_str, double* array, int 
         // extract sub-string by separator
         size_t pos = tmp_str.find(separator);
         string token = tmp_str.substr(0, pos);
-        
+
         // convert/generate a double
         array[i] = convert_double_with_distribution(token.c_str(), non_negative);
-        
+
         // remove the current double/distribution name from tmp_str
         tmp_str.erase(0, pos + 1);
     }
@@ -621,7 +630,7 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
 )";
     istringstream instring(builtin_distributions);
     ifstream infile;
-    
+
     // read distributions from file if the user has specified a file_path
     if (filepath)
     {
@@ -632,13 +641,13 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
             outError("Error in reading "+filepath_str+": "+ ERR_READ_INPUT);
         }
     }
-    
+
     // select the appropriate source to read distributions
     istream& is = infile.is_open()?static_cast<std::istream&>(infile):instring;
-    
+
     // parse distributions from file's content
     string line;
-    
+
     // parse distributions one by one
     while (getline(is, line))
     {
@@ -653,13 +662,13 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
                 string distribution_name = line.substr(0, pos);
                 line.erase(0, pos + 1);
                 string random_numbers = line.substr(0, line.length());
-                
+
                 // extract num_rand_numbers
                 int num_rand_numbers = std::count(random_numbers.begin(), random_numbers.end(), ' ');
                 // ignore the space if it's in the last character
                 if (random_numbers[random_numbers.length()-1] == ' ')
                     num_rand_numbers--;
-                
+
                 // add the new distribution to the list of distributions
                 Distribution distribution = {random_numbers, num_rand_numbers + 1};
                 Params::getInstance().distributions.insert (std::pair<string,Distribution>(distribution_name, distribution));
@@ -668,7 +677,7 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
                 outError("Each distribution should be defined in one line as <distribution_name> <num_rand_numbers> <random_num_1> <random_num_2> ... <random_num_n>");
         }
     }
-    
+
     // close file if it's openning
     if (infile.is_open())
         infile.close();
@@ -679,10 +688,10 @@ double random_number_from_distribution(string distribution_name, bool non_negati
     // randomly generate a number from a uniform distribution
     if (distribution_name.compare("uniform") == 0)
         return random_double();
-        
+
     Distribution distribution = Params::getInstance().distributions[distribution_name];
     string random_numbers_str = distribution.random_numbers_str;
-    
+
     // check whether distribution_name could be found
     if (random_numbers_str.length() == 0)
     {
@@ -691,30 +700,30 @@ double random_number_from_distribution(string distribution_name, bool non_negati
         else
             outError("Expecting a double or a distribution name, but found an empty string");
     }
-    
+
     // attempt up to 1000 times to pick a random (positive) number from the distribution
     double random_number;
     for (int attempt = 0; attempt < 1000; ++attempt)
     {
         // convert random_numbers_str to istringstream
         istringstream iss_random_numbers(random_numbers_str);
-        
+
         // draw a random number
         int rand_index = random_int(distribution.pool_size) + 1;
-        
+
         // extract the selected number from iss_random_numbers
         for (int i = 0; i<rand_index; i++)
             iss_random_numbers >> random_number;
-        
+
         // don't need to retry if the random number meets the output requirement
         if (!non_negative || random_number >= 0)
             break;
     }
-    
+
     // validate the output number
     if (non_negative && random_number < 0)
         outError("Sorry! We failed to generate a random non-negative number from the distribution " + distribution_name + " after 1,000 attempts!");
-    
+
     return random_number;
 }
 
@@ -740,14 +749,14 @@ double convert_double_with_distribution_and_upperbound(string input, double uppe
     }
     else
         random_double = random_number_from_distribution_with_upperbound(input, upper_bound, non_negative);
-    
+
     return random_double;
 }
 
 double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative)
 {
     double random_double;
-    
+
     // limit 1000 attempts to generate a random number from user-specified distribution
     for (int i = 0; i < 1000; i++)
     {
@@ -755,10 +764,10 @@ double random_number_from_distribution_with_upperbound(string distribution_name,
         if (random_double < upper_bound && random_double >= 0)
             break;
     }
-    
+
     if (random_double >= upper_bound || random_double < 0)
         outError("Unfortunately, could not generate a random number between 0 and "+convertDoubleToString(upper_bound)+" using the list/distribution "+distribution_name+" after 1000 attempts.");
-    
+
     return random_double;
 }
 
@@ -772,11 +781,11 @@ void normalize_frequencies(double* freqs, int num_states, double total_freqs, bo
         for (int i = 0; i < num_states; i++)
             total_freqs += freqs[i];
     }
-    
+
     // normalize the freqs
     if (fabs(total_freqs) < 1e-5)
         outError("Sum of state frequencies must be greater than zero!");
-    
+
     if (fabs(total_freqs-1.0) >= 1e-7)
     {
         total_freqs = 1/total_freqs;
@@ -794,7 +803,7 @@ void normalize_frequencies_from_index(double* freqs, int num_states, int startin
     double total_freqs = 0;
     for (int i = starting_index; i < starting_index+num_states; i++)
         total_freqs += freqs[i];
-    
+
     // normalize the freqs
     if (fabs(total_freqs) < 1e-5)
         outError("Sum of state frequencies must be greater than zero!");
@@ -815,20 +824,20 @@ void random_frequencies_from_distributions(double *freqs, int num_states, string
     size_t num_comma = std::count(list_distribution_names.begin(), list_distribution_names.end(), ',');
     if (num_comma + 1 != num_states)
         outError("The number of distributions specified in "+list_distribution_names+" ("+convertIntToString(num_comma+1)+") is different from the number of states ("+convertIntToString(num_states)+"). Please check and try again!");
-    
+
     // calculate the total frequency
     double total_freq = 0;
-    for (int i = 0; i<num_states; i++)
+    for (size_t i = 0; i<num_states; i++)
     {
         // extract the name of distribution used for the current state
         int pos = list_distribution_names.find(',');
         string distribution_name = list_distribution_names.substr(0, pos);
         list_distribution_names.erase(0, pos + 1);
-        
+
         freqs[i] = random_number_from_distribution(distribution_name, true);
         total_freq += freqs[i];
     }
-    
+
     // normalize the frequencies
     for (int i = 0; i<num_states; i++)
         freqs[i] /= total_freq;
@@ -1088,9 +1097,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
+
     params.tree_gen = NONE;
-    params.user_file = NULL;
-    params.constraint_tree_file = NULL;
+    params.user_file = nullptr;
+    params.constraint_tree_file = nullptr;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
     params.opt_gammai_keep_bran = false;
@@ -1098,9 +1108,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
     params.exh_ai = false;
-    params.alpha_invar_file = NULL;
-    params.out_prefix = NULL;
-    params.out_file = NULL;
+    params.alpha_invar_file = nullptr;
+    params.out_prefix = nullptr;
+    params.out_file = nullptr;
     params.sub_size = 4;
     params.pd_proportion = 0.0;
     params.min_proportion = 0.0;
@@ -1110,20 +1120,20 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.find_all = false;
     params.run_mode = RunMode::DETECTED;
     params.detected_mode = RunMode::DETECTED;
-    params.param_file = NULL;
-    params.initial_file = NULL;
-    params.initial_area_file = NULL;
-    params.pdtaxa_file = NULL;
-    params.areas_boundary_file = NULL;
+    params.param_file = nullptr;
+    params.initial_file = nullptr;
+    params.initial_area_file = nullptr;
+    params.pdtaxa_file = nullptr;
+    params.areas_boundary_file = nullptr;
     params.boundary_modifier = 1.0;
-    params.dist_file = NULL;
+    params.dist_file = nullptr;
     params.compute_obs_dist = false;
     params.compute_jc_dist = true;
     params.experimental = true;
     params.compute_ml_dist = true;
     params.compute_ml_tree = true;
     params.compute_ml_tree_only = false;
-    params.budget_file = NULL;
+    params.budget_file = nullptr;
     params.overlap = 0;
     params.is_rooted = false;
     params.root_move_dist = 2;
@@ -1138,7 +1148,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.budget = -1;
     params.min_budget = -1;
     params.step_budget = 1;
-    params.root = NULL;
+    params.root = nullptr;
     params.num_splits = 0;
     params.min_len = 0.001;
     params.mean_len = 0.1;
@@ -1147,22 +1157,22 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.pd_limit = 100;
     params.calc_pdgain = false;
     params.multi_tree = false;
-    params.second_tree = NULL;
-    params.support_tag = NULL;
+    params.second_tree = nullptr;
+    params.support_tag = nullptr;
     params.site_concordance = 0;
     params.ancestral_site_concordance = 0;
     params.site_concordance_partition = false;
     params.print_cf_quartets = false;
     params.print_df1_trees = false;
     params.internode_certainty = 0;
-    params.tree_weight_file = NULL;
+    params.tree_weight_file = nullptr;
     params.consensus_type = CT_NONE;
     params.find_pd_min = false;
     params.branch_cluster = 0;
-    params.taxa_order_file = NULL;
+    params.taxa_order_file = nullptr;
     params.endemic_pd = false;
     params.exclusive_pd = false;
-    params.complement_area = NULL;
+    params.complement_area = nullptr;
     params.scaling_factor = -1;
     params.numeric_precision = -1;
     params.binary_programming = false;
@@ -1171,17 +1181,17 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_burnin = 0;
     params.tree_max_count = 1000000;
     params.split_threshold = 0.0;
-    params.split_threshold_str = NULL;
+    params.split_threshold_str = nullptr;
     params.split_weight_threshold = -1000;
     params.collapse_zero_branch = false;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
     params.gurobi_threads = 1;
     params.num_bootstrap_samples = 0;
-    params.bootstrap_spec = NULL;
+    params.bootstrap_spec = nullptr;
     params.transfer_bootstrap = 0;
 
-    params.aln_file = NULL;
+    params.aln_file = nullptr;
     params.phylip_sequential_format = false;
     params.symtest = SYMTEST_NONE;
     params.symtest_only = false;
@@ -1191,13 +1201,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_pcutoff = 0.05;
     params.symtest_stat = false;
     params.symtest_shuffle = 1;
-    //params.treeset_file = NULL;
+    //params.treeset_file = nullptr;
     params.topotest_replicates = 0;
     params.topotest_optimize_model = false;
     params.do_weighted_test = false;
     params.do_au_test = false;
-    params.siteLL_file = NULL; //added by MA
-    params.partition_file = NULL;
+    params.siteLL_file = nullptr; //added by MA
+    params.partition_file = nullptr;
     params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 10; // change the default from 100 to 10
     params.partfinder_rcluster_max = 0;
@@ -1205,15 +1215,15 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.merge_models = "1";
     params.merge_rates = "1";
     params.partfinder_log_rate = true;
-    
-    params.sequence_type = NULL;
-    params.aln_output = NULL;
-    params.aln_site_list = NULL;
+
+    params.sequence_type = nullptr;
+    params.aln_output = nullptr;
+    params.aln_site_list = nullptr;
     params.aln_output_format = IN_PHYLIP;
     params.output_format = FORMAT_NORMAL;
     params.newick_extended_format = false;
-    params.gap_masked_aln = NULL;
-    params.concatenate_aln = NULL;
+    params.gap_masked_aln = nullptr;
+    params.concatenate_aln = nullptr;
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
     params.print_aln_info = false;
@@ -1244,20 +1254,21 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_runs = 1;
     params.model_name = "";
     params.contain_nonrev = false;
-    params.model_name_init = NULL;
+    params.model_name_init = nullptr;
     params.model_opt_steps = 10;
     params.model_set = "ALL";
-    params.model_extra_set = NULL;
-    params.model_subset = NULL;
-    params.state_freq_set = NULL;
+    params.model_extra_set = nullptr;
+    params.model_subset = nullptr;
+    params.state_freq_set = nullptr;
     params.ratehet_set = "AUTO";
     params.score_diff_thres = 10.0;
-    params.model_def_file = NULL;
+    params.model_def_file = nullptr;
     params.modelomatic = false;
     params.model_test_again = false;
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_mixmodel_freq = false;
     params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     params.parallel_over_sites = false;
@@ -1349,23 +1360,23 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speed_conf = 1.0;
     params.whtest_simulations = 1000;
     params.mcat_type = MCAT_LOG + MCAT_PATTERN;
-    params.rate_file = NULL;
-    params.ngs_file = NULL;
-    params.ngs_mapped_reads = NULL;
+    params.rate_file = nullptr;
+    params.ngs_file = nullptr;
+    params.ngs_mapped_reads = nullptr;
     params.ngs_ignore_gaps = true;
     params.do_pars_multistate = false;
-    params.gene_pvalue_file = NULL;
+    params.gene_pvalue_file = nullptr;
     params.gene_scale_factor = -1;
     params.gene_pvalue_loga = false;
-    params.second_align = NULL;
+    params.second_align = nullptr;
     params.ncbi_taxid = 0;
-    params.ncbi_taxon_level = NULL;
-    params.ncbi_names_file = NULL;
-    params.ncbi_ignore_level = NULL;
+    params.ncbi_taxon_level = nullptr;
+    params.ncbi_names_file = nullptr;
+    params.ncbi_ignore_level = nullptr;
 
-	params.eco_dag_file  = NULL;
-	params.eco_type = NULL;
-	params.eco_detail_file = NULL;
+	params.eco_dag_file  = nullptr;
+	params.eco_type = nullptr;
+	params.eco_detail_file = nullptr;
 	params.k_percent = 0;
 	params.diet_min = 0;
 	params.diet_max = 0;
@@ -1373,12 +1384,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.eco_weighted = false;
 	params.eco_run = 0;
 
-	params.upper_bound = false;
-	params.upper_bound_NNI = false;
-	params.upper_bound_frac = 0.0;
+    params.upper_bound = false;
+    params.upper_bound_NNI = false;
+    params.upper_bound_frac = 0.0;
 
     params.gbo_replicates = 0;
-	params.ufboot_epsilon = 0.5;
+    params.ufboot_epsilon = 0.5;
     params.check_gbo_sample_size = 0;
     params.use_rell_method = true;
     params.use_elw_method = false;
@@ -1390,7 +1401,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_correlation = 0.99;
     params.step_iterations = 100;
 //    params.store_candidate_trees = false;
-	params.print_ufboot_trees = 0;
+    params.print_ufboot_trees = 0;
     params.jackknife_prop = 0.0;
     params.robust_phy_keep = 1.0;
     params.robust_median = false;
@@ -1417,7 +1428,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.treemix_eps = 0.001;
     params.treemixhmm_eps = 0.01;
     params.parbran = false;
-    params.binary_aln_file = NULL;
+    params.binary_aln_file = nullptr;
     params.maxtime = 1000000;
     params.reinsert_par = false;
     params.bestStart = true;
@@ -1435,50 +1446,50 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
-    params.sankoff_cost_file = NULL;
+    params.sankoff_cost_file = nullptr;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
-    params.bootlh_partitions = NULL;
-    params.site_freq_file = NULL;
-    params.tree_freq_file = NULL;
+    params.bootlh_partitions = nullptr;
+    params.site_freq_file = nullptr;
+    params.tree_freq_file = nullptr;
     params.num_threads = 1;
     params.num_threads_max = 10000;
     params.openmp_by_model = false;
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
-    params.root_state = NULL;
+    params.root_state = nullptr;
     params.print_bootaln = false;
     params.print_boot_site_freq = false;
-	params.print_subaln = false;
-	params.print_partition_info = false;
-	params.print_conaln = false;
-	params.count_trees = false;
+    params.print_subaln = false;
+    params.print_partition_info = false;
+    params.print_conaln = false;
+    params.count_trees = false;
     params.pomo = false;
     params.pomo_random_sampling = false;
-	// params.pomo_counts_file_flag = false;
-	params.pomo_pop_size = 9;
-	params.print_branch_lengths = false;
-	params.lh_mem_save = LM_PER_NODE; // auto detect
+    // params.pomo_counts_file_flag = false;
+    params.pomo_pop_size = 9;
+    params.print_branch_lengths = false;
+    params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
-	params.start_tree = STT_PLL_PARSIMONY;
+    params.start_tree = STT_PLL_PARSIMONY;
     params.start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
 
     params.modelfinder_ml_tree = true;
     params.final_model_opt = true;
-	params.print_splits_file = false;
+    params.print_splits_file = false;
     params.print_splits_nex_file = true;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_candidate_trees = false;
     params.write_branches = false;
-    params.freq_const_patterns = NULL;
+    params.freq_const_patterns = nullptr;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
     params.compute_seq_composition = true;
     params.lmap_num_quartets = -1;
-    params.lmap_cluster_file = NULL;
+    params.lmap_cluster_file = nullptr;
     params.print_lmap_quartet_lh = false;
     params.num_mixlen = 1;
     params.link_alpha = false;
@@ -1498,7 +1509,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_outlier = -1.0;
     params.dating_mf = false;
     params.mcmc_clock = CORRELATED;
-    params.mcmc_bds = "1,1,0.5";
+    params.mcmc_bds = "1 1 0.5";
     params.mcmc_iter = "20000, 100, 20000";
 
     // added by TD
@@ -1523,7 +1534,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.terrace_remove_m_leaves = 0;
     params.matrix_order = false;
     params.gen_all_NNI = false;
-    
+
     params.remove_empty_seq = true;
     params.terrace_aware = true;
 #ifdef IQTREE_TERRAPHAST
@@ -1531,16 +1542,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.terrace_analysis_tphast = false;
 #endif
-    
+
     // --------------------------------------------
-    
+
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
-	if (params.nni5) {
-	    params.nni_type = NNI5;
-	} else {
-	    params.nni_type = NNI1;
-	}
+    if (params.nni5) {
+        params.nni_type = NNI5;
+    } else {
+        params.nni_type = NNI1;
+    }
 
     struct timeval tv;
     struct timezone tz;
@@ -1550,11 +1561,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ran_seed = (tv.tv_usec);
     params.subsampling_seed = params.ran_seed;
     params.subsampling = 0;
-    
+
     params.suppress_list_of_sequences = false;
     params.suppress_zero_distance_warnings = false;
     params.suppress_duplicate_sequence_warnings = false;
-    
+
     params.original_params = "";
     params.alisim_active = false;
     params.multi_rstreams_used = false;
@@ -1574,11 +1585,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_fundi_proportion = 0.0;
     params.fundi_init_proportion = 0.5;
     params.fundi_init_branch_length = 0.0;
-    params.alisim_distribution_definitions = NULL;
+    params.alisim_distribution_definitions = nullptr;
     params.alisim_skip_checking_memory = false;
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
-    params.branch_distribution = NULL;
+    params.branch_distribution = nullptr;
     params.alisim_insertion_ratio = 0;
     params.alisim_deletion_ratio = 0;
     params.alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,100);
@@ -1612,11 +1623,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mutation_file = "";
     params.site_starting_index = 0;
 
+    // ----------- SPRTA ----------
+    params.compute_SPRTA = false;
+    params.SPRTA_zero_branches = false;
+    params.out_alter_spr = false;
+
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
         params.original_params = params.original_params + argv[cnt] + " ";
     }
-    
+
     for (cnt = 1; cnt < argc; cnt++) {
         try {
 
@@ -1806,7 +1822,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.is_rooted = true;
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--root-dist") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1824,7 +1840,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_test = true;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-all") == 0) {
 				params.find_all = true;
 				continue;
@@ -1980,12 +1996,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
                 string bd_params = argv[cnt];
-                
+
                 // detect the seperator
                 char delimiter = ',';
                 if (bd_params.find('/') != std::string::npos)
                     delimiter = '/';
-                
+
                 if ((bd_params[0]!='{')
                     || (bd_params[bd_params.length()-1]!='}')
                     || (bd_params.find(delimiter) == std::string::npos))
@@ -1997,7 +2013,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                     throw "<death_rate> must be non-negative and less than <birth_rate>";
-                
+
                 // normalize birth_rate & death_rate
                 double sum_rate = params.death_rate + params.birth_rate;
                 if (fabs(sum_rate-1.0) > 1e-5)
@@ -2006,7 +2022,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.death_rate /= sum_rate;
                     params.birth_rate /= sum_rate;
                 }
-                
+
                 // get #taxa
                 cnt++;
                 if (cnt >= argc)
@@ -2047,7 +2063,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "wrong --rand option";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--keep-ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
@@ -2159,7 +2175,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-sup2") == 0) {
                 outError("Deprecated -sup2 option, please use --gcf --tree FILE");
             }
-            
+
             if (strcmp(argv[cnt], "--rootstrap") == 0) {
                 params.consensus_type = CT_ROOTSTRAP;
                 cnt++;
@@ -2168,7 +2184,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.treeset_file = argv[cnt];
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--gcf") == 0) {
                 if (params.ancestral_site_concordance != 0)
                     throw "Do not specify both --gcf and --scfl";
@@ -2264,7 +2280,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
                 continue;
 			}
-            
+
             /**MINH ANH: to serve some statistics on tree*/
 			if (strcmp(argv[cnt], "-comp") == 0) {
 				cnt++;
@@ -2286,7 +2302,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				//params.run_mode = GBO;
                 continue;
 			} // MA
-            
+
 			if (strcmp(argv[cnt], "-mprob") == 0) { //compute multinomial distribution probability
 				cnt++;
 				if (cnt >= argc)
@@ -2295,7 +2311,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				//params.run_mode = MPRO;
                 continue;
 			} // MA
-            
+
 			if (strcmp(argv[cnt], "-min") == 0) {
 				params.find_pd_min = true;
 				continue;
@@ -2530,7 +2546,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.symtest = SYMTEST_MAXDIV;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--symstat") == 0) {
                 params.symtest_stat = true;
                 if (params.symtest == SYMTEST_NONE)
@@ -2620,7 +2636,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.print_splits_nex_file = false;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--edge") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2634,7 +2650,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else
                     throw "Use --edge equal|scale|unlink";
             }
-            
+
             if (strcmp(argv[cnt], "-rcluster") == 0 || strcmp(argv[cnt], "--rcluster") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2741,7 +2757,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.remove_empty_seq = false;
 				continue;
 			}
-			
+
             if (strcmp(argv[cnt], "--terrace_tphast") == 0) {
 #ifdef IQTREE_TERRAPHAST
                 params.terrace_analysis_tphast = true;
@@ -2756,30 +2772,30 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.terrace_check = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--no-terrace") == 0) {
                 params.terrace_analysis_tphast = false;
                 params.terrace_check = false;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-no_terrace") == 0) {
                 params.terrace_aware = false;
                 params.terrace_analysis_tphast = false;
                 params.terrace_check = false;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--gentrius") == 0) {
                 params.terrace_analysis = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_print") == 0) {
                 params.print_terrace_trees = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_print_lim") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2790,22 +2806,22 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_print_induced") == 0) {
                 params.print_induced_trees = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_print_m") == 0) {
                 params.print_pr_ab_matrix = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_print_m_o") == 0) {
                 params.print_m_overlap = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-pr_ab_matrix") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2813,7 +2829,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.pr_ab_matrix = argv[cnt];
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_query") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2821,7 +2837,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.terrace_query_set = argv[cnt];
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_rm_leaves") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2832,8 +2848,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
-            
-            
+
+
             if (strcmp(argv[cnt], "-g_stop_i") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2844,7 +2860,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_stop_t") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2855,7 +2871,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_stop_h") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2866,23 +2882,23 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-g_non_stop") == 0) {
                 params.terrace_non_stop = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-m_only") == 0) {
                 params.matrix_order = true;
                 params.print_pr_ab_matrix = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-gen_all_nni") == 0) {
                 params.gen_all_NNI = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "-sf") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2902,7 +2918,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use --fundi taxa_1,...,taxa_n,proportion";
                 string fundi_input = argv[cnt];
-                
+
                 // parse input taxon set
                 size_t pos = 0;
 
@@ -2910,14 +2926,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 char delimiter = ',';
                 if (fundi_input.find('/') != std::string::npos)
                     delimiter = '/';
-                
+
                 while ((pos = fundi_input.find(delimiter)) != std::string::npos) {
                     params.alisim_fundi_taxon_set.push_back(fundi_input.substr(0, pos));
                     fundi_input.erase(0, pos + 1);
                 }
                 if (params.alisim_fundi_taxon_set.size() == 0 || fundi_input.length() == 0)
                     throw "Use --fundi taxa_1,...,taxa_n,proportion";
-                
+
                 // parse proportion
                 if (fundi_input == "estimate") {
                     params.alisim_fundi_proportion = 0.0;
@@ -2926,7 +2942,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion <= 0)
                         throw "Proportion in FunDi model must be positive and not greater than 1";
                 }
-                
+
                 continue;
             }
 
@@ -2983,7 +2999,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
-                
+
                 if (option.compare("MEAN") == 0)
                     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
                 else if (option.compare("SAMPLING") == 0)
@@ -3002,7 +3018,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
-                
+
                 if (option.compare("MEAN") == 0)
                     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
                 else if (option.compare("SAMPLING") == 0)
@@ -3017,31 +3033,31 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --indel <INSERTION_RATE>,<DELETION_RATE>";
-                
+
                 string arg = argv[cnt];
                 // detect the seperator
                 char delimiter = ',';
                 if (arg.find('/') != std::string::npos)
                     delimiter = '/';
-                
+
                 // validate the input
                 size_t pos = arg.find(delimiter);
                 if (pos == std::string::npos)
                     throw "Use --indel <INSERTION_RATE>,<DELETION_RATE>";
-                
+
                 // get INSERTION_RATIO
                 params.alisim_insertion_ratio = convert_double(arg.substr(0, pos).c_str());
                 if (params.alisim_insertion_ratio < 0)
                     throw "<INSERTION_RATE> must not be negative.";
-                
+
                 // remove "<INSERTION_RATE>,"
                 arg.erase(0, pos + 1);
-                
+
                 // get DELETION_RATE
                 params.alisim_deletion_ratio = convert_double(arg.c_str());
                 if (params.alisim_deletion_ratio < 0)
                     throw "<DELETION_RATE> must not be negative.";
-                
+
                 continue;
             }
             if (strcmp(argv[cnt], "--indel-size") == 0) {
@@ -3049,19 +3065,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 string err_msg = "Use --indel-size <INS_DIS>,<DEL_DIS>. Notes: <INS_DIS>,<DEL_DIS> could be names of user-defined distributions, or GEO{<mean>}, NB{<mean>[/<variance>]}, POW{<double_a>[/<int_max>]}, LAV{<double_a>/<int_max>}, which specifies Geometric, Negative Binomial, Zipfian, and Lavalette distribution, respectively.";
                 if (cnt >= argc)
                     throw err_msg;
-                
+
                 // seek separator position
                 string arg = argv[cnt];
                 int pos = -1;
                 bool inside_bracket = false;
-                for (int i = 0; i < arg.length(); i++)
+                for (size_t i = 0; i < arg.length(); i++)
                 {
                     // detect brackets
                     if (arg[i] == '{')
                         inside_bracket = true;
                     else if (arg[i] == '}')
                         inside_bracket = false;
-                       
+
                     // only check separator outside brackets
                     if (!inside_bracket && (arg[i] == ',' || arg[i] == '/'))
                     {
@@ -3069,25 +3085,25 @@ void parseArg(int argc, char *argv[], Params &params) {
                         break;
                     }
                 }
-                
+
                 // make sure the separator is found
                 if (pos == -1)
                     throw err_msg;
-                
+
                 // get INSERTION_DISTRIBUTION
                 string input = arg.substr(0, pos);
                 if (input.length() == 0)
                     throw err_msg;
                 params.alisim_insertion_distribution = parseIndelDis(input, "Insertion");
-                
+
                 // remove "<INSERTION_DISTRIBUTION>,"
                 arg.erase(0, pos + 1);
-                
+
                 // get DELETION_DISTRIBUTION
                 if (arg.length() == 0)
                     throw err_msg;
                 params.alisim_deletion_distribution = parseIndelDis(arg, "Deletion");
-                
+
                 continue;
             }
             if (strcmp(argv[cnt], "--write-all") == 0) {
@@ -3120,7 +3136,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
-                
+
                 // handle MORPH{<#STATE>}
                 string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be between 1 and 32.";
                 string t_params = argv[cnt];
@@ -3132,24 +3148,24 @@ void parseArg(int argc, char *argv[], Params &params) {
                     if ((t_params[KEYWORD.length()]!='{')
                         ||(t_params[t_params.length()-1]!='}'))
                         throw ERR_MSG;
-                    
+
                     // remove "MORPH{"
                     t_params.erase(0, KEYWORD.length() + 1);
-                    
+
                     // remove "}"
                     t_params = t_params.substr(0, t_params.length()-1);
-                    
+
                     // extract num_states
                     params.alisim_num_states_morph = convert_int(t_params.c_str());
-                    
+
                     // validate num_states
                     if (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32)
                         throw ERR_MSG;
-                    
+
                     // set seqtype to MORPH (without {<#STATE>})
                     params.sequence_type = strcpy(new char[KEYWORD.length() + 1], KEYWORD.c_str());
                 }
-                
+
                 // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
                 // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                 //     outWarning("Setting the sampling method and population size with this flag is deprecated.");
@@ -3159,13 +3175,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 //         params.pomo_pop_size = ps;
                 //         if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
                 //             std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
-                //             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+                //             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");
                 //         }
                 //     }
                 // }
 				continue;
 			}
-            
+
 			if (strcmp(argv[cnt], "-starttree") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3230,15 +3246,33 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.inference_alg = ALG_CMAPLE;
                 continue;
             }
+            if (strcmp(argv[cnt], "--sprta") == 0 ||
+                strcmp(argv[cnt], "-sprta") == 0) {
+              params.compute_SPRTA = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--sprta-zero-branch") == 0 ||
+                strcmp(argv[cnt], "-sprta-zero-branch") == 0) {
+              params.SPRTA_zero_branches = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--sprta-other-places") == 0 ||
+                strcmp(argv[cnt], "-sprta-other-places") == 0) {
+              params.out_alter_spr = true;
+
+              continue;
+            }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
                 params.output_format = FORMAT_CSV;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--out-tsv") == 0) {
                 params.output_format = FORMAT_TSV;
                 continue;
-            }            
+            }
 
             if (strcmp(argv[cnt], "--figtree") == 0) {
                 params.newick_extended_format = true;
@@ -3342,7 +3376,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use --model <model_name>";
-                
+
                 params.model_name = argv[cnt];
 				continue;
 			}
@@ -3410,7 +3444,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--score-diff") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3421,7 +3455,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.score_diff_thres = convert_double(argv[cnt]);
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-mdef") == 0 || strcmp(argv[cnt], "--mdef") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3451,6 +3485,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0 || strcmp(argv[cnt], "--mix-opt") == 0) {
 				params.optimize_mixmodel_weight = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mfopt") == 0 || strcmp(argv[cnt], "--mfopt") == 0) {
+				params.optimize_mixmodel_freq = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
@@ -3950,7 +3988,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.remove_empty_seq = false;
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--subsample") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3958,7 +3996,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.subsampling = convert_int(argv[cnt]);
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--subsample-seed") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -4041,12 +4079,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_init_tree = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--write-branches") == 0) {
                 params.write_branches = true;
                 continue;
             }
-            
+
 //			if (strcmp(argv[cnt], "-nodup") == 0) {
 //				params.avoid_duplicated_trees = true;
 //				continue;
@@ -4084,12 +4122,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.second_tree = argv[cnt];
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--normalize-dist") == 0) {
                 params.normalize_tree_dist = true;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-aLRT") == 0) {
 				cnt++;
 				if (cnt + 1 >= argc)
@@ -4185,7 +4223,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -asr-min <probability>";
-                
+
                 params.min_ancestral_prob = convert_double(argv[cnt]);
                 if (params.min_ancestral_prob < 0 || params.min_ancestral_prob > 1)
                     throw "Minimum ancestral probability [-asr-min] must be between 0 and 1.0";
@@ -4490,7 +4528,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.store_candidate_trees = false;
 //				continue;
 //			}
-            
+
             if (strcmp(argv[cnt], "--jack-prop") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -4500,7 +4538,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Jackknife proportion must be between 0.0 and 1.0";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--robust-phy") == 0) {
                 if (params.robust_median)
                     throw "Can't couple --robust-phy with --robust-median";
@@ -4813,7 +4851,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-            
+
 			if (strcmp(argv[cnt], "-snni") == 0) {
 				params.snni = true;
 				// dont need to turn this on here
@@ -4871,7 +4909,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.nni5 = false;
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "-nni-eval") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -4891,7 +4929,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw("Positive -bl-eval expected");
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-smooth") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -5023,7 +5061,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "-ntmax") == 0 || strcmp(argv[cnt], "--threads-max") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5033,7 +5071,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "At least 1 thread please";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--thread-model") == 0) {
                 params.openmp_by_model = true;
                 continue;
@@ -5063,7 +5101,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--mpcost") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5071,7 +5109,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.sankoff_cost_file = argv[cnt];
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-no_rescale_gamma_invar") == 0) {
 				params.no_rescale_gamma_invar = true;
 				continue;
@@ -5081,12 +5119,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--no-seq-comp") == 0) {
                 params.compute_seq_composition = false;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0 || strcmp(argv[cnt], "--tree") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
                     if (params.gbo_replicates != 0) {
@@ -5106,7 +5144,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 {
 					params.start_tree = STT_RANDOM_TREE;
                     params.tree_gen = YULE_HARDING;
-                    
+
                     // <NUM_TAXA> is required if an alignment is not provided
                     if ((params.original_params.find("-s ") == std::string::npos)
                         && (params.original_params.find("--aln ") == std::string::npos))
@@ -5126,7 +5164,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                         && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
                     {
                         params.start_tree = STT_RANDOM_TREE;
-                        
+
                         // validate the input
                         if ((t_params[KEYWORD.length()]!='{')
                             ||(t_params[t_params.length()-1]!='}'))
@@ -5147,25 +5185,25 @@ void parseArg(int argc, char *argv[], Params &params) {
                             else
                                 throw ERR_MSG;
                         }
-                        
+
                         // remove "RANDOM{"
                         t_params.erase(0, KEYWORD.length() + 1);
-                        
+
                         // remove "}"
                         t_params = t_params.substr(0, t_params.length()-1);
-                        
+
                         // extract model_name & #taxa
                         // detect delimiter
                         string delimiter = ",";
                         bool inside_bracket = false;
-                        for (int i = 0; i < t_params.length(); i++)
+                        for (size_t i = 0; i < t_params.length(); i++)
                         {
                             // detect brackets
                             if (t_params[i] == '{')
                                 inside_bracket = true;
                             else if (t_params[i] == '}')
                                 inside_bracket = false;
-                               
+
                             // only check separator outside brackets
                             if (!inside_bracket && (t_params[i] == ',' || t_params[i] == '/'))
                             {
@@ -5173,12 +5211,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                                 break;
                             }
                         }
-                        
+
                         // change the delimiter to "}," in case with birth-death model
                         if ((t_params.length() > 2)
                             && (!t_params.substr(0, 2).compare("BD")))
                             delimiter = "}" + delimiter;
-                        
+
                         string model_name = t_params;
                         string num_taxa = "";
                         if (t_params.find(delimiter) != string::npos)
@@ -5188,13 +5226,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                             num_taxa = t_params;
                             num_taxa.erase(0, delimiter_index + delimiter.length());
                         }
-                        
+
                         // <NUM_TAXA> is required if an alignment is not provided
                         if ((params.original_params.find("-s ") == std::string::npos)
                             && (params.original_params.find("--aln ") == std::string::npos)
                             && num_taxa.length() == 0)
                             throw ERR_MSG;
-                        
+
                         // parse #taxa
                         if (num_taxa.length() > 0)
                         {
@@ -5205,18 +5243,18 @@ void parseArg(int argc, char *argv[], Params &params) {
                                 delimiter = ",";
                                 if (num_taxa.find('/') != std::string::npos)
                                     delimiter = "/";
-                                
+
                                 // validate the input
                                 if ((num_taxa[0]!='{')
                                     ||(num_taxa[num_taxa.length()-1]!='}'))
                                     throw ERR_MSG;
-                                
+
                                 // remove "U{"
                                 num_taxa.erase(0, 1);
-                                
+
                                 // remove "}"
                                 num_taxa = num_taxa.substr(0, num_taxa.length()-1);
-                                
+
                                 // get the list of numbers of taxa
                                 while (num_taxa.length()>0)
                                 {
@@ -5225,7 +5263,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                                     if (tmp_num <= 3)
                                         throw "<NUM_TAXA> must be greater than 3.";
                                     params.alisim_num_taxa_list.push_back(tmp_num);
-                                    
+
                                     // remove "<NUM_TAXA>,"
                                     if (num_taxa.find(delimiter) != string::npos)
                                         num_taxa.erase(0, num_taxa.find(delimiter) + delimiter.length());
@@ -5240,32 +5278,32 @@ void parseArg(int argc, char *argv[], Params &params) {
                                 delimiter = ",";
                                 if (num_taxa.find('/') != std::string::npos)
                                     delimiter = "/";
-                                
+
                                 // validate the input
                                 if ((num_taxa[1]!='{')
                                     ||(num_taxa[num_taxa.length()-1]!='}')
                                     || (num_taxa.find(delimiter) == string::npos))
                                     throw ERR_MSG;
-                                
+
                                 // remove "U{"
                                 num_taxa.erase(0, 2);
-                                
+
                                 // remove "}"
                                 num_taxa = num_taxa.substr(0, num_taxa.length()-1);
-                                
+
                                 // get the <LOWER_BOUND>
                                 params.alisim_num_taxa_uniform_start = convert_int(num_taxa.substr(0, num_taxa.find(delimiter)).c_str());
                                 if (params.alisim_num_taxa_uniform_start <= 3)
                                     throw "<LOWER_BOUND> must be greater than 3.";
-                                
+
                                 // remove "<LOWER_BOUND>,"
                                 num_taxa.erase(0, num_taxa.find(delimiter) + delimiter.length());
-                                
+
                                 // get <UPPER_BOUND>
                                 params.alisim_num_taxa_uniform_end = convert_int(num_taxa.c_str());
                                 if (params.alisim_num_taxa_uniform_start > params.alisim_num_taxa_uniform_end)
                                     throw "<UPPER_BOUND> must not be less than <LOWER_BOUND>";
-                                
+
                             }
                             // handle the case with a fixed number
                             else
@@ -5275,7 +5313,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                                     throw ERR_MSG +" <NUM_TAXA> must be greater than 3.";
                             }
                         }
-                        
+
                         transform(model_name.begin(), model_name.end(), model_name.begin(), ::toupper);
                         // parse model
                         if (model_name == "YH")
@@ -5293,37 +5331,37 @@ void parseArg(int argc, char *argv[], Params &params) {
                                 && (!model_name.substr(0, KEYWORD.length()).compare(KEYWORD)))
                             {
                                 params.tree_gen = BIRTH_DEATH;
-                                
+
                                 // detect the seperator
                                 delimiter = ",";
                                 if (model_name.find('/') != std::string::npos)
                                     delimiter = "/";
-                                
+
                                 // validate the input
                                 if ((model_name[KEYWORD.length()]!='{')
                                     ||(model_name[model_name.length()-1]!='}')
                                     ||(model_name.find(delimiter) == string::npos))
                                     throw "Use bd{<birth_rate>,<death_rate>} to specify the Birth-Death model.";
-                                
+
                                 // remove "bd{"
                                 model_name.erase(0, KEYWORD.length() + 1);
-                                
+
                                 // remove "}"
                                 model_name = model_name.substr(0, model_name.length()-1);
-                                
+
                                 // get birth_rate
                                 params.birth_rate = convert_double(model_name.substr(0, model_name.find(delimiter)).c_str());
                                 if (params.birth_rate <= 0)
                                     throw "<birth_rate> must be positive.";
-                                
+
                                 // remove "<birth_rate>,"
                                 model_name.erase(0, model_name.find(delimiter) + delimiter.length());
-                                
+
                                 // get death_rate
                                 params.death_rate = convert_double(model_name.c_str());
                                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                                     throw "<death_rate> must be non-negative and less than <birth_rate>";
-                                
+
                                 // normalize birth_rate & death_rate
                                 double sum_rate = params.death_rate + params.birth_rate;
                                 if (fabs(sum_rate-1.0) > 1e-5)
@@ -5345,12 +5383,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--no-ml-tree") == 0) {
                 params.modelfinder_ml_tree = false;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--tree-fix") == 0) {
                 if (params.gbo_replicates != 0) {
                     outError("Ultrafast bootstrap does not work with -te option");
@@ -5359,7 +5397,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.stop_condition = SC_FIXED_ITERATION;
                 continue;
             }
-                
+
             if (strcmp(argv[cnt], "-g") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5368,7 +5406,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.ignore_identical_seqs = false;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-lmap") == 0 || strcmp(argv[cnt], "--lmap") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -5388,7 +5426,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -lmclust <likelihood_mapping_cluster_file>";
 				params.lmap_cluster_file = argv[cnt];
-				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
+				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the
 				// user-given groups (HAS) - possibly obsolete in the future versions
 				params.ignore_identical_seqs = false;
                 if (params.lmap_num_quartets < 0)
@@ -5410,7 +5448,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw("-mixlen must be >= 1");
 				continue;
 			}
-            
+
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
 				continue;
@@ -5435,7 +5473,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.ignore_identical_seqs = false;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "-redo") == 0 || strcmp(argv[cnt], "--redo") == 0) {
 				params.ignore_checkpoint = true;
                 // 2020-04-27: SEMANTIC CHANGE: also redo ModelFinder
@@ -5460,12 +5498,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
-            
+
             if (strcmp(argv[cnt], "--all-checkpoint") == 0) {
                 params.print_all_checkpoints = true;
                 continue;
             }
-            
+
 			if (strcmp(argv[cnt], "--no-log") == 0) {
 				params.suppress_output_flags |= OUT_LOG;
 				continue;
@@ -5501,7 +5539,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--lie-markov") == 0) {
                 params.matrix_exp_technique = MET_LIE_MARKOV_DECOMPOSITION;
                 continue;
-            }            
+            }
 			if (strcmp(argv[cnt], "--no-uniqueseq") == 0) {
 				params.suppress_output_flags |= OUT_UNIQUESEQ;
 				continue;
@@ -5515,11 +5553,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dating_method = argv[cnt];
                 if (params.dating_method != "LSD"){
                     if (params.dating_method != "mcmctree"){
-                        throw "Currently only LSD (least-square dating) method or MCMCTree method is supported";
-                        continue;
+                        throw "Use --dating LSD or --dating mcmctree";
                     }
 
                 }
+                continue;
             }
 
             if (strcmp(argv[cnt], "--date") == 0) {
@@ -5596,7 +5634,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.date_debug = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--suppress-list-of-sequences") == 0) {
                 params.suppress_list_of_sequences = true;
                 continue;
@@ -5647,10 +5685,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.mcmc_bds = argv[cnt];
                 StrVector mcmc_bds_vec;
                 convert_string_vec(params.mcmc_bds.c_str(), mcmc_bds_vec, ',');
-                if (mcmc_bds_vec.size()!=3 || !strcmp(mcmc_bds_vec[2].c_str(), ""))
+                if (mcmc_bds_vec.size() != 3 || mcmc_bds_vec[0].empty() ||
+                    mcmc_bds_vec[1].empty() ||
+                    mcmc_bds_vec[2].empty())
                 {
-                    throw "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
+                    throw
+                        "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
                 }
+                params.mcmc_bds = mcmc_bds_vec[0] + " " + mcmc_bds_vec[1] + " " + mcmc_bds_vec[2];
                 continue;
             }
 
@@ -5659,7 +5701,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.mcmc_iter = argv[cnt];
                 StrVector mcmc_iter_vec;
                 convert_string_vec(params.mcmc_iter.c_str(), mcmc_iter_vec, ',');
-                if (mcmc_iter_vec.size()!=3  || !strcmp(mcmc_iter_vec[2].c_str(), ""))
+                if (mcmc_iter_vec.size() != 3 || mcmc_iter_vec[0].empty() ||
+                    mcmc_iter_vec[1].empty() ||
+                    mcmc_iter_vec[2].empty())
                 {
                     throw "three parameters should be set for MCMCtree dating (Burin, samplefreq and nsamples)";
                 }
@@ -5693,11 +5737,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 progress_display::setProgressDisplay(true);
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
                 params.multi_rstreams_used = true;
-                
+
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
                 {
@@ -5705,11 +5749,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "";
                 }
                 params.alisim_output_filename = argv[cnt];
-                
+
                 // set default model_name
                 if (params.model_name.empty())
                     params.model_name = "HKY";
-                
+
                 continue;
             }
 
@@ -5718,29 +5762,29 @@ void parseArg(int argc, char *argv[], Params &params) {
 
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--distribution") == 0) {
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
                     throw "Use --distribution <distribution_file>";
-                
+
                 params.alisim_distribution_definitions = argv[cnt];
 
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--no-copy-gaps") == 0) {
                 params.alisim_no_copy_gaps = true;
-                
+
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--single-output") == 0) {
                 params.alisim_single_output = true;
-                
+
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--length") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5750,7 +5794,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Positive --length please";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--rebuild-indel-history") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5760,37 +5804,37 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "<proportion> must be between 0 and 1.";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--keep-seq-order") == 0) {
                 params.keep_seq_order = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--mem-limit") == 0) {
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
                     throw "Use --mem-limit <FACTOR>";
-                
+
                 params.mem_limit_factor = convert_double(argv[cnt]);
                 if (params.mem_limit_factor <= 0 || params.mem_limit_factor > 1)
                     throw "<FACTOR> must be in range (0,1]";
 
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--delete-output") == 0) {
                 params.delete_output = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--openmp-alg") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --openmp-alg <ALG>";
-                
+
                 string openmp_algorithm = argv[cnt];
                 transform(openmp_algorithm.begin(), openmp_algorithm.end(), openmp_algorithm.begin(), ::toupper);
-                
+
                 if (openmp_algorithm == "IM")
                     params.alisim_openmp_alg = IM;
                 else if (openmp_algorithm == "EM")
@@ -5799,17 +5843,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "AliSim-OpenMP algorithm should be IM or EM.";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--no-merge") == 0) {
                 params.no_merge = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--indel-rate-variation") == 0) {
                 params.indel_rate_variation = true;
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--num-alignments") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5819,7 +5863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Positive --num-alignments please";
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--root-seq") == 0  || strcmp(argv[cnt], "--ref-seq") == 0 || strcmp(argv[cnt], "-ref") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5834,7 +5878,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_ref_seq_name = ancestral_sequence_params;
                 if (!params.root_ref_seq_aln.length() || !params.root_ref_seq_name.length())
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
-                
+
                 continue;
             }
             if (strcmp(argv[cnt], "-aln-format") == 0 || strcmp(argv[cnt], "--aln-format") == 0) {
@@ -5889,9 +5933,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 err += "\" option.";
                 throw err;
             } else {
-//                if (params.user_file == NULL)
-//                    params.user_file = argv[cnt];
-//                else
+                if (params.user_file == nullptr)
+                    params.user_file = argv[cnt];
+                else
                     params.out_file = argv[cnt];
             }
         }
@@ -5938,27 +5982,27 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
 
-    if (params.root != NULL && params.is_rooted)
+    if (params.root != nullptr && params.is_rooted)
         outError("Not allowed to specify both -o <taxon> and -root");
-    
+
     if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
         outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
-    
+
     if (params.do_au_test && params.topotest_replicates == 0)
         outError("For AU test please specify number of bootstrap replicates via -zb option");
-    
+
     if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
         outError("-mem option does not work with partition models yet");
-    
+
     if (params.gbo_replicates && params.num_bootstrap_samples)
         outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
-    
+
     if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
         outError("ModelFinder only cannot be combined with bootstrap analysis");
-    
+
     if (params.num_runs > 1 && !params.treeset_file.empty())
         outError("Can't combine --runs and -z options");
-    
+
     if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
         outError("Can't combine --runs and -lmap options");
 
@@ -5988,7 +6032,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         if (params.date_root.empty() ^ params.date_tip.empty())
             outError("Both --date-root and --date-tip must be provided when --date file is absent");
     }
-    
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -6023,14 +6067,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
-    
+
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
     // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
     // computeTransMatix has not yet implemented for ModelSet
     if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
         outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
-    
+
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
     {
@@ -6046,13 +6090,13 @@ void parseArg(int argc, char *argv[], Params &params) {
             std::string output_filepath(params.aln_file);
             output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
             output_filepath = output_filepath + params.alisim_output_filename +".treefile";
-            
+
             params.user_file = new char[output_filepath.length() + 1];
             strcpy(params.user_file, output_filepath.c_str());
         }
         params.out_prefix = params.user_file;
     }
-    
+
     // set the number of sites per state at 3 (for CODON)
     if (params.sequence_type)
     {
@@ -6135,12 +6179,6 @@ void usage(char* argv[]) {
 
     //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
     //	cout << "  -noout              Print no output file." << endl;
-    cout << endl;
-    cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  --pathogen           Apply CMAPLE tree search algorithm if sequence" << endl;
-    cout << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl;
-    cout << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl;
-    cout << "                       of sequence divergence." << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -6438,7 +6476,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
     << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl;
-    
+
     usage_alisim();
     cout
 
@@ -6457,15 +6495,21 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_print_induced     Write induced partition subtrees." << endl
     << "  -g_print_m           Write presence-absence matrix." << endl
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
-    
+
     << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
     << "  --pathogen           Apply CMAPLE tree search algorithm if sequence" << endl
     << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl
     << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl
     << "                       of sequence divergence." << endl
+    << "  --alrt <num_rep>     Specify number of replicates to compute SH-aLRT." << endl
+    << "  --sprta              Compute SPRTA (DeMaio et al., 2024) branch supports." << endl
+    << "  --sprta-zero-branch  Compute SPRTA supports for zero-length branches." << endl
+    << "  --sprta-other-places Output alternative SPRs and their SPRTA supports." << endl
+    << "  -T <num_thread>      Specify number of threads used for computing" << endl
+    << "                       branch supports (SH-aLRT or SPRTA)." << endl
 
 
-    
+
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          File containing dates of tips or ancestral nodes" << endl
@@ -6480,7 +6524,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
 #endif
     << endl;
-    
+
 
 //            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
 //            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
@@ -6548,31 +6592,32 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
-    cout << "Command-line examples (replace 'iqtree2 ...' by actual path to executable):" << endl << endl
+    cout << "Command-line examples (replace 'iqtree3 ...' by actual path to executable):" << endl << endl
          << "1. Infer maximum-likelihood tree from a sequence alignment (example.phy)" << endl
          << "   with the best-fit model automatically selected by ModelFinder:" << endl
-         << "     iqtree2 -s example.phy" << endl << endl
+         << "     iqtree3 -s example.phy" << endl << endl
          << "2. Perform ModelFinder without subsequent tree inference:" << endl
-         << "     iqtree2 -s example.phy -m MF" << endl
+         << "     iqtree3 -s example.phy -m MF" << endl
          << "   (use '-m TEST' to resemble jModelTest/ProtTest)" << endl << endl
          << "3. Combine ModelFinder, tree search, ultrafast bootstrap and SH-aLRT test:" << endl
-         << "     iqtree2 -s example.phy --alrt 1000 -B 1000" << endl << endl
+         << "     iqtree3 -s example.phy --alrt 1000 -B 1000" << endl << endl
          << "4. Perform edge-linked proportional partition model (example.nex):" << endl
-         << "     iqtree2 -s example.phy -p example.nex" << endl
+         << "     iqtree3 -s example.phy -p example.nex" << endl
          << "   (replace '-p' by '-Q' for edge-unlinked model)" << endl << endl
          << "5. Find best partition scheme by possibly merging partitions:" << endl
-         << "     iqtree2 -s example.phy -p example.nex -m MF+MERGE" << endl
+         << "     iqtree3 -s example.phy -p example.nex -m MF+MERGE" << endl
          << "   (use '-m TESTMERGEONLY' to resemble PartitionFinder)" << endl << endl
          << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
-         << "     iqtree2 -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
+         << "     iqtree3 -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
 #ifdef _OPENMP
          << "7. Use 4 CPU cores to speed up computation: add '-T 4' option" << endl << endl
 #endif
          << "8. Polymorphism-aware model with HKY nucleotide model and Gamma rate:" << endl
-         << "     iqtree2 -s counts_file.cf -m HKY+P+G" << endl << endl
-         << "9. PoMo mixture with virtual popsize 5 and weighted binomial sampling:" << endl
-         << "     iqtree2 -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
-         << "To show all available options: run 'iqtree2 -h'" << endl << endl
+         << "     iqtree3 -s counts_file.cf -m HKY+P+G" << endl << endl
+    // BQM: this example is too complicated
+//         << "9. PoMo mixture with virtual popsize 5 and weighted binomial sampling:" << endl
+//         << "     iqtree3 -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
+         << "To show all available options: run 'iqtree3 -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.iqtree.org" << endl << endl;
     exit(0);
@@ -6786,7 +6831,7 @@ double randomunitintervall()
 #undef RNMX
 
 int init_random(int seed) /* RAND4 */ {
-    //    srand((unsigned) time(NULL));
+    //    srand((unsigned) time(nullptr));
     //    if (seed < 0)
     // 	seed = rand();
     _idum = -(long) seed;
@@ -6830,7 +6875,7 @@ vector<int*> rstream_vec;
 vector<default_random_engine> generator_vec;
 
 int init_random(int seed, bool write_info, int** rstream) {
-    //    srand((unsigned) time(NULL));
+    //    srand((unsigned) time(nullptr));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
@@ -6875,12 +6920,12 @@ int init_multi_rstreams()
     #ifdef _OPENMP
     // get the number of all threads (not just physical)
     const int num_threads = countPhysicalCPUCores();
-    
+
     // initialize a vector of random seeds
     size_t ran_seed_vec_size = 2*num_threads;
     size_t i;
     vector<int64_t> ran_seed_vec(ran_seed_vec_size);
-    
+
     // generate a vector of random seeds
 //    const int MAX_INT32 = 2147483647;
 //    for (i = 0; i < ran_seed_vec_size; ++i)
@@ -6896,23 +6941,23 @@ int init_multi_rstreams()
             std::cout << " " << ran_seed_vec[i];
         std::cout << std::endl;
     }
-        
+
     // initialize the vector of random streams
     rstream_vec.resize(num_threads);
     for (i = 0; i < num_threads; ++i) {
         init_random(ran_seed_vec[i], false, &rstream_vec[i]);
     }
-        
+
     // initialize the continuous Gamma generators
     generator_vec.resize(num_threads);
     for (i = 0; i < num_threads; ++i)
         generator_vec[i].seed(ran_seed_vec[i+num_threads]);
-    
+
     #endif
 #else
     outError("Oops! Only SPRNG is now supported for the parallel version.")
 #endif
-    
+
     return rstream_vec.size();
 }
 
@@ -6921,10 +6966,10 @@ int finish_multi_rstreams()
     // finish the random streams one by one
     for (size_t i = 0; i < rstream_vec.size(); ++i)
         finish_random(rstream_vec[i]);
-    
+
     // clear the vector of random streams
     rstream_vec.clear();
-    
+
     return rstream_vec.size();
 }
 
@@ -7001,13 +7046,13 @@ int random_int_geometric_from0(double p)
 {
     if (p == 1)
         return 1;
-    
+
     // generate random number
     double dum;
     do
         dum = random_double();
     while (dum == 0.0);
-    
+
     // return random int
     return int(log(dum)/log(1-p));
 }
@@ -7054,12 +7099,12 @@ int random_int_zipf(double a, int m)
          x = floor(pow(random_double(), -1.0/(a-1.0)));
          t = pow(1.0+1.0/x, a-1.0);
         } while( random_double()*x*(t-1.0)*b > t*(b-1.0));
-        
+
         // make sure x is not greater than the maximum value if m is set
         if (m == -1 || x <= m)
             break;
     }
-    
+
     if (m != -1 && x > m)
         outError("Cannot generate a random length which is not greater than "+convertIntToString(m)+" based on the Zipfian distribution with the parameter a = "+convertDoubleToString(a)+". Please change either the parameter or the maximum value and try again!");
     return (int)x;
@@ -7080,16 +7125,16 @@ int random_int_lav(double a, int m)
         totald += pow(m*u/(m-u+1),-1*a);
         totald_vec.push_back(totald);
     }
-    
+
     // normalize totald_vec
-    for(int i = 0; i < totald_vec.size(); i++)
+    for(size_t i = 0; i < totald_vec.size(); i++)
     {
         totald_vec[i] /= totald;
     }
-    
+
     // init random int
     double random_num = random_double();
-    for(int i = 0; i < totald_vec.size(); i++)
+    for(size_t i = 0; i < totald_vec.size(); i++)
         if (random_num < totald_vec.at(i))
             return i+1;
 
@@ -7103,29 +7148,29 @@ IndelDistribution parseIndelDis(string input, string event_name)
 {
     // by default, using the user_defined distribution
     IndelDistribution indel_dis = IndelDistribution(USER_DEFINED, -1, -1, input);
-    
+
     // detect the seperator
     char delimiter = ',';
     if (input.find('/') != std::string::npos)
         delimiter = '/';
     size_t pos;
-    
+
     // parse negative binomial distribution
     if (input.rfind("nb{", 0) == 0 || input.rfind("NB{", 0) == 0)
     {
         // remove "nb{"
         input.erase(0, 3);
-        
+
         // validate the parameters
         if (input[input.length()-1]!='}')
             throw "Use NB{<mean>[/<variance>]}";
-        
+
         // remove "}"
         input = input.substr(0, input.length()-1);
-        
+
         // determine the position of the delimiter (if any)
         pos = input.find(delimiter);
-        
+
         // default value of r is 1
         int r = 1;
         // get mean and variance
@@ -7135,7 +7180,7 @@ IndelDistribution parseIndelDis(string input, string event_name)
         {
             // get mean
             mean = convert_double(input.c_str());
-            
+
             // validate mean
             if (mean < 1)
                 throw "<mean> must not less than 1";
@@ -7145,7 +7190,7 @@ IndelDistribution parseIndelDis(string input, string event_name)
         {
             // get mean
             mean = convert_double(input.substr(0, pos).c_str());
-            
+
             // validate mean
             if (mean < 1)
                 throw "<mean> must not less than 1";
@@ -7155,35 +7200,35 @@ IndelDistribution parseIndelDis(string input, string event_name)
             double variance = convert_double(input.c_str());
             if (variance <= mean - 1)
                 throw "<variance> must be greater than mean - 1";
-            
+
             // compute r = (mean-1)^2/(variance - mean + 1)
             r = round((mean-1)*(mean-1)/(variance - mean + 1));
         }
-        
+
         // compute q = (mean - 1)/(r + mean - 1)
         double q = (mean - 1)/(r + mean - 1);
-        
+
         // show infor
         Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Negative Binomial distribution with a mean of " + convertDoubleToString(mean) + " and a variance of " +convertDoubleToString((mean - 1)/(1 - q)) + ". The variance may be different from the user-defined value (if any) due to the definition of each distribution.\n";
-        
+
         // return indel_dis
         return IndelDistribution(NEG_BIN, r, q);
     }
-    
+
     // parse zipf
     if (input.rfind("pow", 0) == 0 || input.rfind("POW", 0) == 0)
     {
         // remove "pow"
         input.erase(0, 3);
-        
+
         // determine the position of the delimiter
         pos = input.find(delimiter);
-        
+
         // validate the parameters
         if ((input[0]!='{')
             || (input[input.length()-1]!='}'))
             throw "Use POW{<double_a>[/<int_max>]}";
-        
+
         // get a
         double a;
         if (pos!= std::string::npos)
@@ -7192,7 +7237,7 @@ IndelDistribution parseIndelDis(string input, string event_name)
             a = convert_double(input.substr(1, input.length() - 2).c_str());
         if (a <= 1)
             throw "<double_a> must be greater than 1";
-        
+
         // get max (if any)
         int max = -1;
         if (pos != std::string::npos)
@@ -7202,89 +7247,89 @@ IndelDistribution parseIndelDis(string input, string event_name)
             if (max <= 0)
                 throw "<int_max> must be a positive integer";
         }
-        
+
         // show infor
         string msg = "INFO: " + event_name + "-size is generated from Zipfian distribution with parameter <a> of " + convertDoubleToString(a);
         if (max != -1)
             msg += " and <max> of " + convertDoubleToString(max);
         msg += ".\n";
-        
+
         Params::getInstance().delay_msgs += msg;
-        
+
         // return indel_dis
         return IndelDistribution(ZIPF, a, max);
     }
-    
+
     // parse Lavalette distribution
     if (input.rfind("lav", 0) == 0 || input.rfind("LAV", 0) == 0)
     {
         // remove "lav"
         input.erase(0, 3);
-        
+
         // determine the position of the delimiter
         pos = input.find(delimiter);
-        
+
         // validate the parameters
         if ((input[0]!='{')
             || (input[input.length()-1]!='}')
             || (pos == std::string::npos))
             throw "Use LAV{<double_a>/<int_max>}";
-        
+
         // get a
         double a = convert_double(input.substr(1, pos - 1).c_str());
-        
+
         // get max
         input.erase(0, pos + 1);
         int max = convert_int(input.substr(0, input.length()-1).c_str());
         if (max <= 0)
             throw "<int_max> must be a positive integer";
-        
+
         // show infor
         Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Lavalette distribution with parameter <a> of " + convertDoubleToString(a) + " and <max> of " + convertDoubleToString(max) + ".\n";
-        
+
         // return indel_dis
         return IndelDistribution(LAV, a, max);
     }
-    
+
     // parse Geometric distribution
     if (input.rfind("geo{", 0) == 0 || input.rfind("GEO{", 0) == 0)
     {
         // remove "geo{"
         input.erase(0, 4);
-        
+
         // validate the parameters
         if (input[input.length()-1]!='}')
             throw "Use GEO{<mean>}";
-        
+
         // remove "}"
         input = input.substr(0, input.length()-1);
-            
+
         // determine the position of the delimiter (if any)
         pos = input.find(delimiter);
-        
+
         // show warning if users specify a variance
         if (pos != std::string::npos)
         {
             Params::getInstance().delay_msgs += "In Geometric distribution, the variance could be computed from the mean. Thus, we ignore the user-specified variance.\n";
-            
+
             // remove variance from the input
             input = input.substr(0, pos);
         }
-        
+
         // get mean
         double mean = convert_double(input.c_str());
         if (mean < 1)
             throw "<mean> must not less than 1";
         // convert mean into p (of the distribution)
         double p = 1/mean;
-        
+
         // show infor
         Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Geometric distribution with a mean of " + convertDoubleToString(mean) + " and a variance of " + convertDoubleToString((1-p)/(p*p)) + ". The variance may be different from the user-defined value (if any) due to the definition of each distribution. \n";
-        
+
         // return indel_dis
         return IndelDistribution(GEO, p);
     }
-    
+
     return indel_dis;
 }
 
@@ -7425,6 +7470,532 @@ Params& Params::getInstance() {
     return instance;
 }
 
+void Params::setDefault() {
+    tree_gen = NONE;
+    user_file = NULL;
+    constraint_tree_file = NULL;
+    opt_gammai = true;
+    opt_gammai_fast = false;
+    opt_gammai_keep_bran = false;
+    testAlphaEpsAdaptive = false;
+    randomAlpha = false;
+    testAlphaEps = 0.1;
+    exh_ai = false;
+    alpha_invar_file = NULL;
+    out_prefix = NULL;
+    out_file = NULL;
+    sub_size = 4;
+    pd_proportion = 0.0;
+    min_proportion = 0.0;
+    step_proportion = 0.01;
+    min_size = 0;
+    step_size = 1;
+    find_all = false;
+    run_mode = RunMode::DETECTED;
+    detected_mode = RunMode::DETECTED;
+    param_file = NULL;
+    initial_file = NULL;
+    initial_area_file = NULL;
+    pdtaxa_file = NULL;
+    areas_boundary_file = NULL;
+    boundary_modifier = 1.0;
+    dist_file = NULL;
+    compute_obs_dist = false;
+    compute_jc_dist = true;
+    experimental = true;
+    compute_ml_dist = true;
+    compute_ml_tree = true;
+    compute_ml_tree_only = false;
+    budget_file = NULL;
+    overlap = 0;
+    is_rooted = false;
+    root_move_dist = 2;
+    root_find = false;
+    root_test = false;
+    sample_size = -1;
+    repeated_time = 1;
+    //nr_output = 10000;
+    nr_output = 0;
+    //smode = EXHAUSTIVE;
+    intype = IN_OTHER;
+    budget = -1;
+    min_budget = -1;
+    step_budget = 1;
+    root = NULL;
+    num_splits = 0;
+    min_len = 0.001;
+    mean_len = 0.1;
+    max_len = 0.999;
+    num_zero_len = 0;
+    pd_limit = 100;
+    calc_pdgain = false;
+    multi_tree = false;
+    second_tree = NULL;
+    support_tag = NULL;
+    site_concordance = 0;
+    ancestral_site_concordance = 0;
+    site_concordance_partition = false;
+    print_cf_quartets = false;
+    print_df1_trees = false;
+    internode_certainty = 0;
+    tree_weight_file = NULL;
+    consensus_type = CT_NONE;
+    find_pd_min = false;
+    branch_cluster = 0;
+    taxa_order_file = NULL;
+    endemic_pd = false;
+    exclusive_pd = false;
+    complement_area = NULL;
+    scaling_factor = -1;
+    numeric_precision = -1;
+    binary_programming = false;
+    quad_programming = false;
+    test_input = TEST_NONE;
+    tree_burnin = 0;
+    tree_max_count = 1000000;
+    split_threshold = 0.0;
+    split_threshold_str = NULL;
+    split_weight_threshold = -1000;
+    collapse_zero_branch = false;
+    split_weight_summary = SW_SUM;
+    gurobi_format = true;
+    gurobi_threads = 1;
+    num_bootstrap_samples = 0;
+    bootstrap_spec = NULL;
+    transfer_bootstrap = 0;
+
+    aln_file = NULL;
+    phylip_sequential_format = false;
+    symtest = SYMTEST_NONE;
+    symtest_only = false;
+    symtest_remove = 0;
+    symtest_keep_zero = false;
+    symtest_type = 0;
+    symtest_pcutoff = 0.05;
+    symtest_stat = false;
+    symtest_shuffle = 1;
+    //treeset_file = NULL;
+    topotest_replicates = 0;
+    topotest_optimize_model = false;
+    do_weighted_test = false;
+    do_au_test = false;
+    siteLL_file = NULL; //added by MA
+    partition_file = NULL;
+    partition_type = BRLEN_OPTIMIZE;
+    partfinder_rcluster = 10; // change the default from 100 to 10
+    partfinder_rcluster_max = 0;
+    partition_merge = MERGE_NONE;
+    merge_models = "1";
+    merge_rates = "1";
+    partfinder_log_rate = true;
+
+    sequence_type = NULL;
+    aln_output = NULL;
+    aln_site_list = NULL;
+    aln_output_format = IN_PHYLIP;
+    output_format = FORMAT_NORMAL;
+    newick_extended_format = false;
+    gap_masked_aln = NULL;
+    concatenate_aln = NULL;
+    aln_nogaps = false;
+    aln_no_const_sites = false;
+    print_aln_info = false;
+    //    parsimony = false;
+    //    parsimony_tree = false;
+    tree_spr = false;
+    nexus_output = false;
+    k_representative = 4;
+    loglh_epsilon = 0.001;
+    numSmoothTree = 1;
+    nni5 = true;
+    nni5_num_eval = 1;
+    brlen_num_traversal = 1;
+    leastSquareBranch = false;
+    pars_branch_length = false;
+    bayes_branch_length = false;
+    manuel_analytic_approx = false;
+    leastSquareNNI = false;
+    ls_var_type = OLS;
+    maxCandidates = 20;
+    popSize = 5;
+    p_delete = -1;
+    min_iterations = -1;
+    max_iterations = 1000;
+    num_param_iterations = 100;
+    stop_condition = SC_UNSUCCESS_ITERATION;
+    stop_confidence = 0.95;
+    num_runs = 1;
+    model_name = "";
+    contain_nonrev = false;
+    model_name_init = NULL;
+    model_opt_steps = 10;
+    model_set = "ALL";
+    model_extra_set = NULL;
+    model_subset = NULL;
+    state_freq_set = NULL;
+    ratehet_set = "AUTO";
+    score_diff_thres = 10.0;
+    model_def_file = NULL;
+    modelomatic = false;
+    model_test_again = false;
+    model_test_and_tree = 0;
+    model_test_separate_rate = false;
+    optimize_mixmodel_weight = false;
+    optimize_rate_matrix = false;
+    store_trans_matrix = false;
+    parallel_over_sites = false;
+    order_by_threads = false;
+    //freq_type = FREQ_EMPIRICAL;
+    freq_type = FREQ_UNKNOWN;
+    keep_zero_freq = true;
+    min_state_freq = MIN_FREQUENCY;
+    min_rate_cats = 2;
+    num_rate_cats = 4;
+    max_rate_cats = 10;
+    min_mix_cats = 1;
+    max_mix_cats = 10;
+    start_subst = "GTR+FO";
+    opt_rhas_again = false;
+    opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    opt_qmix_pthres = 0.05;
+    check_combin_q_mat = true;
+    gamma_shape = -1.0;
+    min_gamma_shape = MIN_GAMMA_SHAPE;
+    gamma_median = false;
+    p_invar_sites = -1.0;
+    optimize_model_rate_joint = false;
+    optimize_by_newton = true;
+    optimize_alg_freerate = "2-BFGS,EM";
+    optimize_alg_mixlen = "EM";
+    optimize_alg_gammai = "EM";
+    optimize_alg_treeweight = "EM";
+    optimize_from_given_params = false;
+    optimize_alg_qmix = "BFGS";
+    estimate_init_freq = 0;
+
+    // defaults for new options -JD
+    optimize_linked_gtr = false;
+    gtr20_model = "POISSON";
+    guess_multiplier = 0.75; // change from 0.5
+    // rates_file = false;
+    reset_method = "random"; // change from const
+
+    optimize_params_use_hmm = false;
+    optimize_params_use_hmm_sm = false;
+    optimize_params_use_hmm_gm = false;
+    optimize_params_use_hmm_tm = false;
+    HMM_no_avg_brlen = false;
+    HMM_min_stran = 0.0;
+    treemix_optimize_methods = "mast"; // default is MAST
+
+    fixed_branch_length = BRLEN_OPTIMIZE;
+    min_branch_length = 0.0; // this is now adjusted later based on alignment length
+    // TODO DS: This seems inappropriate for PoMo.  It is handled in
+    // phyloanalysis::2908.
+    max_branch_length = 10.0; // Nov 22 2016: reduce from 100 to 10!
+    iqp_assess_quartet = IQP_DISTANCE;
+    iqp = false;
+    write_intermediate_trees = 0;
+    //    avoid_duplicated_trees = false;
+    writeDistImdTrees = false;
+    rf_dist_mode = 0;
+    rf_same_pair = false;
+    normalize_tree_dist = false;
+    mvh_site_rate = false;
+    rate_mh_type = true;
+    discard_saturated_site = false;
+    mean_rate = 1.0;
+    aLRT_threshold = 101;
+    aLRT_replicates = 0;
+    aLRT_test = false;
+    aBayes_test = false;
+    localbp_replicates = 0;
+#ifdef __AVX512KNL
+    SSE = LK_AVX512;
+#else
+    SSE = LK_AVX_FMA;
+#endif
+    lk_safe_scaling = false;
+    numseq_safe_scaling = 2000;
+    kernel_nonrev = false;
+    print_site_lh = WSL_NONE;
+    print_partition_lh = false;
+    print_marginal_prob = false;
+    print_site_prob = WSL_NONE;
+    print_site_state_freq = WSF_NONE;
+    print_site_rate = 0;
+    print_trees_site_posterior = 0;
+    print_ancestral_sequence = AST_NONE;
+    min_ancestral_prob = 0.0;
+    print_tree_lh = false;
+    lambda = 1;
+    speed_conf = 1.0;
+    whtest_simulations = 1000;
+    mcat_type = MCAT_LOG + MCAT_PATTERN;
+    rate_file = NULL;
+    ngs_file = NULL;
+    ngs_mapped_reads = NULL;
+    ngs_ignore_gaps = true;
+    do_pars_multistate = false;
+    gene_pvalue_file = NULL;
+    gene_scale_factor = -1;
+    gene_pvalue_loga = false;
+    second_align = NULL;
+    ncbi_taxid = 0;
+    ncbi_taxon_level = NULL;
+    ncbi_names_file = NULL;
+    ncbi_ignore_level = NULL;
+
+    eco_dag_file  = NULL;
+    eco_type = NULL;
+    eco_detail_file = NULL;
+    k_percent = 0;
+    diet_min = 0;
+    diet_max = 0;
+    diet_step = 0;
+    eco_weighted = false;
+    eco_run = 0;
+
+    upper_bound = false;
+    upper_bound_NNI = false;
+    upper_bound_frac = 0.0;
+
+    gbo_replicates = 0;
+    ufboot_epsilon = 0.5;
+    check_gbo_sample_size = 0;
+    use_rell_method = true;
+    use_elw_method = false;
+    use_weighted_bootstrap = false;
+    use_max_tree_per_bootstrap = true;
+    max_candidate_trees = 0;
+    distinct_trees = false;
+    online_bootstrap = true;
+    min_correlation = 0.99;
+    step_iterations = 100;
+    //    store_candidate_trees = false;
+    print_ufboot_trees = 0;
+    jackknife_prop = 0.0;
+    robust_phy_keep = 1.0;
+    robust_median = false;
+    //const double INF_NNI_CUTOFF = -1000000.0;
+    nni_cutoff = -1000000.0;
+    estimate_nni_cutoff = false;
+    nni_sort = false;
+    //nni_opt_5branches = false;
+    testNNI = false;
+    approximate_nni = false;
+    do_compression = false;
+
+    new_heuristic = true;
+    iteration_multiple = 1;
+    initPS = 0.5;
+#ifdef USING_PLL
+    pll = true;
+#else
+    pll = false;
+#endif
+    modelEps = 0.01;
+    fundiEps = 0.000001;
+    modelfinder_eps = 0.1;
+    treemix_eps = 0.001;
+    treemixhmm_eps = 0.01;
+    parbran = false;
+    binary_aln_file = NULL;
+    maxtime = 1000000;
+    reinsert_par = false;
+    bestStart = true;
+    snni = true; // turn on sNNI default now
+    //    autostop = true; // turn on auto stopping rule by default now
+    unsuccess_iteration = 100;
+    speednni = true; // turn on reduced hill-climbing NNI by default now
+    numInitTrees = 100;
+    fixStableSplits = false;
+    stableSplitThreshold = 0.9;
+    five_plus_five = false;
+    memCheck = false;
+    tabu = false;
+    adaptPertubation = false;
+    numSupportTrees = 20;
+    //    sprDist = 20;
+    sprDist = 6;
+    sankoff_cost_file = NULL;
+    numNNITrees = 20;
+    avh_test = 0;
+    bootlh_test = 0;
+    bootlh_partitions = NULL;
+    site_freq_file = NULL;
+    tree_freq_file = NULL;
+    num_threads = 1;
+    num_threads_max = 10000;
+    openmp_by_model = false;
+    model_test_criterion = MTC_BIC;
+    //    model_test_stop_rule = MTC_ALL;
+    model_test_sample_size = 0;
+    root_state = NULL;
+    print_bootaln = false;
+    print_boot_site_freq = false;
+    print_subaln = false;
+    print_partition_info = false;
+    print_conaln = false;
+    count_trees = false;
+    pomo = false;
+    pomo_random_sampling = false;
+    // pomo_counts_file_flag = false;
+    pomo_pop_size = 9;
+    print_branch_lengths = false;
+    lh_mem_save = LM_PER_NODE; // auto detect
+    buffer_mem_save = false;
+    start_tree = STT_PLL_PARSIMONY;
+    start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
+
+    modelfinder_ml_tree = true;
+    final_model_opt = true;
+    print_splits_file = false;
+    print_splits_nex_file = true;
+    ignore_identical_seqs = true;
+    write_init_tree = false;
+    write_candidate_trees = false;
+    write_branches = false;
+    freq_const_patterns = NULL;
+    no_rescale_gamma_invar = false;
+    compute_seq_identity_along_tree = false;
+    compute_seq_composition = true;
+    lmap_num_quartets = -1;
+    lmap_cluster_file = NULL;
+    print_lmap_quartet_lh = false;
+    num_mixlen = 1;
+    link_alpha = false;
+    link_model = false;
+    model_joint = "";
+    ignore_checkpoint = false;
+    checkpoint_dump_interval = 60;
+    force_unfinished = false;
+    print_all_checkpoints = false;
+    suppress_output_flags = 0;
+    ufboot2corr = false;
+    u2c_nni5 = false;
+    date_with_outgroup = true;
+    date_debug = false;
+    date_replicates = 0;
+    clock_stddev = -1.0;
+    date_outlier = -1.0;
+    dating_mf = false;
+    mcmc_clock = CORRELATED;
+    mcmc_bds = "1,1,0.5";
+    mcmc_iter = "20000, 100, 20000";
+
+    // added by TD
+    use_nn_model = false;
+    nn_path_model = "resnet_modelfinder.onnx";
+    nn_path_rates = "lanfear_alpha_lstm.onnx";
+
+    // ------------ Terrace variables ------------
+    terrace_check = false;
+    terrace_analysis = false;
+    print_terrace_trees = false;
+    print_induced_trees = false;
+    pr_ab_matrix = nullptr;
+    print_pr_ab_matrix = false;
+    print_m_overlap = false;
+    terrace_query_set = nullptr;
+    terrace_stop_intermediate_num = -1;
+    terrace_stop_terrace_trees_num = -1;
+    terrace_stop_time = -1;
+    terrace_non_stop = false;
+    terrace_print_lim = 0;
+    terrace_remove_m_leaves = 0;
+    matrix_order = false;
+    gen_all_NNI = false;
+
+    remove_empty_seq = true;
+    terrace_aware = true;
+#ifdef IQTREE_TERRAPHAST
+    terrace_analysis_tphast = false;
+#else
+    terrace_analysis_tphast = false;
+#endif
+
+    // --------------------------------------------
+
+    matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
+
+    if (nni5) {
+        nni_type = NNI5;
+    } else {
+        nni_type = NNI1;
+    }
+
+    struct timeval tv;
+    struct timezone tz;
+    // initialize random seed based on current time
+    gettimeofday(&tv, &tz);
+    //ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
+    ran_seed = (tv.tv_usec);
+    subsampling_seed = ran_seed;
+    subsampling = 0;
+
+    suppress_list_of_sequences = false;
+    suppress_zero_distance_warnings = false;
+    suppress_duplicate_sequence_warnings = false;
+
+    original_params = "";
+    alisim_active = false;
+    multi_rstreams_used = false;
+    alisim_inference_mode = false;
+    alisim_no_copy_gaps = false;
+    alisim_sequence_length = 1000;
+    alisim_dataset_num = 1;
+    root_ref_seq_aln = "";
+    root_ref_seq_name = "";
+    alisim_max_rate_categories_for_applying_caching = 100;
+    alisim_num_states_morph = 0;
+    alisim_num_taxa_uniform_start = -1;
+    alisim_num_taxa_uniform_end = -1;
+    alisim_length_ratio = 2;
+    birth_rate = 0.8;
+    death_rate = 0.2;
+    alisim_fundi_proportion = 0.0;
+    fundi_init_proportion = 0.5;
+    fundi_init_branch_length = 0.0;
+    alisim_distribution_definitions = NULL;
+    alisim_skip_checking_memory = false;
+    alisim_write_internal_sequences = false;
+    alisim_only_unroot_tree = false;
+    branch_distribution = NULL;
+    alisim_insertion_ratio = 0;
+    alisim_deletion_ratio = 0;
+    alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,100);
+    alisim_deletion_distribution = IndelDistribution(ZIPF,1.7,100);
+    alisim_mean_deletion_size = -1;
+    alisim_simulation_thresh = 0.001;
+    delay_msgs = "";
+    alisim_no_export_sequence_wo_gaps = false;
+    alisim_mixture_at_sub_level = false;
+    alisim_branch_scale = 1.0;
+    alisim_rate_heterogeneity = POSTERIOR_MEAN;
+    alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+    alisim_single_output = false;
+    keep_seq_order = false;
+    mem_limit_factor = 0;
+    delete_output = false;
+    indel_rate_variation = false;
+    tmp_data_filename = "tmp_data";
+    rebuild_indel_history_param = 1.0/3;
+    alisim_openmp_alg = IM;
+    no_merge = false;
+    alignment_id = 0;
+    inference_alg = ALG_IQ_TREE;
+    in_aln_format_str = "AUTO";
+    shallow_tree_search = false;
+    tree_search_type_str = "NORMAL";
+    allow_replace_input_tree = false;
+    tree_format_str = "BIN";
+    make_consistent = false;
+    include_pre_mutations = false;
+    mutation_file = "";
+    site_starting_index = 0;
+    intree_str = "";
+}
 
 int countPhysicalCPUCores() {
     #ifdef _OPENMP
@@ -7445,7 +8016,7 @@ int countPhysicalCPUCores() {
 #endif
     if (logicalcpucount < 1) logicalcpucount = 1;
     return logicalcpucount;
-    
+
     if (logicalcpucount % 2 != 0)
         return logicalcpucount;
     __asm__ __volatile__ ("cpuid " :
@@ -7456,7 +8027,7 @@ int countPhysicalCPUCores() {
                           : "a" (1), "c" (0));
 
     unsigned CPUFeatureSet = registers[3];
-    bool hyperthreading = CPUFeatureSet & (1 << 28);    
+    bool hyperthreading = CPUFeatureSet & (1 << 28);
     if (hyperthreading){
         physicalcpucount = logicalcpucount / 2;
     } else {
@@ -7621,7 +8192,7 @@ int pairInteger(int int1, int int2) {
 }
 
 /*
- * Given a model name, look in it for "+F..." and 
+ * Given a model name, look in it for "+F..." and
  * determine the StateFreqType. Returns FREQ_EMPIRICAL if
  * unable to find a good +F... specifier
  */
@@ -7734,7 +8305,7 @@ StateFreqType parseStateFreqDigits(string digits) {
 
 
 /*
- * All params in range [0,1] 
+ * All params in range [0,1]
  * returns true if base frequencies have changed as a result of this call
  */
 
@@ -7945,7 +8516,7 @@ void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type) 
     }
 }
 
-/* 
+/*
  * Given a DNA freq_type and a base frequency vector, alter the
  * base freq vector to conform with the constraints of freq_type
  */
@@ -7957,7 +8528,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     double scale;
     switch (freq_type) {
     case FREQ_EQUAL:
-        // this was already handled, thus not necessary to check here 
+        // this was already handled, thus not necessary to check here
 //        base_freq[0] = base_freq[1] = base_freq[2] = base_freq[3] = 0.25;
 //        break;
     case FREQ_USER_DEFINED:
@@ -8061,7 +8632,7 @@ int nFreqParams(StateFreqType freq_type) {
     case FREQ_DNA_2113:
     case FREQ_DNA_2131:
     case FREQ_DNA_2311:
-        return(2);   
+        return(2);
     default:
         return 0; // BQM: don't care about other cases
     }
@@ -8071,12 +8642,12 @@ int nFreqParams(StateFreqType freq_type) {
  * For freq_type, and given every base must have frequency >= min_freq, set upper
  * and lower bounds for parameters.
  */
- void setBoundsForFreqType(double *lower_bound, 
-                           double *upper_bound, 
-                           bool *bound_check, 
-                           double min_freq, 
+ void setBoundsForFreqType(double *lower_bound,
+                           double *upper_bound,
+                           bool *bound_check,
+                           double min_freq,
                            StateFreqType freq_type) {
-    // Sanity check: if min_freq==0, lower_bound=0 and upper_bound=1 
+    // Sanity check: if min_freq==0, lower_bound=0 and upper_bound=1
     // (except FREQ_ESTIMATE, which follows legacy code way of doing things.)
     switch (freq_type) {
     case FREQ_EQUAL:
@@ -8135,7 +8706,7 @@ int nFreqParams(StateFreqType freq_type) {
         throw("Unrecognized freq_type in setBoundsForFreqType - can't happen");
     }
 }
- 
+
 double binomial_coefficient_log(unsigned int N, unsigned int n) {
   static DoubleVector logv;
   if (logv.size() <= 0) {
@@ -8177,8 +8748,8 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // concatenated) and linearly scaled by SCALE.
  double frob_norm(double m[], int n, double scale) {
    double sum = 0;
-   for (int i = 0; i < n; i++) {
-     for (int j = 0; j < n; j++) {
+   for (size_t i = 0; i < n; i++) {
+     for (size_t j = 0; j < n; j++) {
        sum += m[i*n + j] * m[i*n + j] * scale * scale;
      }
    }

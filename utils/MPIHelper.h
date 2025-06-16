@@ -38,8 +38,6 @@
 #define BOOT_TREE_TAG 4 // bootstrap tree tag
 #define LOGL_CUTOFF_TAG 5 // send logl_cutoff for ultrafast bootstrap
 
-using namespace std;
-
 class MPIHelper {
 public:
     /**

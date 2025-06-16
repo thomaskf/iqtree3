@@ -12,6 +12,8 @@
 #include "modelsubst.h"
 #include "utils/tools.h"
 
+using namespace std;
+
 ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 {
 	num_states = nstates;
@@ -22,7 +24,7 @@ ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 		state_freq[i] = 1.0 / num_states;
 	freq_type = FREQ_EQUAL;
     fixed_parameters = false;
-//    linked_model = NULL;
+//    linked_model = nullptr;
 }
 
 void ModelSubst::startCheckpoint() {
@@ -35,8 +37,9 @@ void ModelSubst::saveCheckpoint() {
 //    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
 //    CKP_SAVE(freq_type);
-    if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
-        CKP_ARRAY_SAVE(num_states, state_freq);
+    // if (freq_type == FREQ_ESTIMATE && !fixed_parameters)
+    // output the frequencies in any circumstances
+    CKP_ARRAY_SAVE(num_states, state_freq);
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
@@ -186,7 +189,7 @@ void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
     double saved_state_lk[num_states];
     memcpy(saved_state_lk, state_lk, sizeof(double)*num_states);
     memset(state_lk, 0, sizeof(double)*num_states*nmixtures);
-    for (int m = 0; m < nmixtures; m++) {
+    for (size_t m = 0; m < nmixtures; m++) {
         double *inv_evec = &inv_eigenvectors[m * mnstates * num_states];
         double *this_state_lk = &state_lk[m*num_states];
         for (int i = 0; i < num_states; i++)

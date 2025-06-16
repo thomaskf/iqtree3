@@ -197,11 +197,11 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 	pattern_cat.resize(npattern);
 
 	double *lh_cat = phylo_tree->_pattern_lh_cat;
-	for (int i = 0; i < npattern; i++) {
+	for (size_t i = 0; i < npattern; i++) {
 		double sum_rate = 0.0, sum_lh = phylo_tree->ptn_invar[i];
 		int best = 0;
         double best_lh = phylo_tree->ptn_invar[i];
-		for (int c = 0; c < ncategory; c++) {
+		for (size_t c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
 			if (lh_cat[c] > best_lh || (lh_cat[c] == best_lh && random_double()<0.5)) { // break tie at random

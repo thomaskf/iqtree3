@@ -91,7 +91,7 @@ public:
         node = anode;
         length = alength;
         id = -1;
-        split = NULL;
+        split = nullptr;
     }
 
     /**
@@ -104,7 +104,7 @@ public:
         node = anode;
         length = alength;
         id = aid;
-        split = NULL;
+        split = nullptr;
     }
 
     /**
@@ -115,7 +115,7 @@ public:
         node = nei->node;
         length = nei->length;
         id = nei->id;
-        split = NULL;
+        split = nullptr;
         attributes = nei->attributes;
     }
 
@@ -160,8 +160,8 @@ public:
         @param start_pos starting position in vec to copy to
     */
     virtual void getLength(DoubleVector &vec, int start_pos) { 
-        ASSERT(start_pos < vec.size());
-        vec[start_pos] = length;
+        ASSERT(static_cast<size_t>(start_pos) < vec.size());
+        vec[static_cast<size_t>(start_pos)] = length;
     }
 
     /**
@@ -197,9 +197,9 @@ public:
         @param start_pos starting position in vec to copy from
     */
     virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
-        ASSERT(start_pos < vec.size());
+        ASSERT(static_cast<size_t>(start_pos) < vec.size());
         ASSERT(num_elem == 1);
-        length = vec[start_pos];
+        length = vec[static_cast<size_t>(start_pos)];
     }
 
     /************** attribute processing ***************/
@@ -272,7 +272,7 @@ public:
     /**
         sequence
      */
-    Sequence* sequence = NULL;
+    Sequence* sequence = nullptr;
 
     /**
         list of neighbors
@@ -301,7 +301,7 @@ public:
     Node() {
         id = -1;
         height = -1;
-        sequence = NULL;
+        sequence = nullptr;
     };
 
 
@@ -361,7 +361,7 @@ public:
         @param dad the dad of this node
         @return the leaf at the lowest level. Also modify the height, highestNei of this class.
      */
-    Node *calcHeight(Node *dad = NULL);
+    Node *calcHeight(Node *dad = nullptr);
 
 
     /**
@@ -369,7 +369,7 @@ public:
      * @param parner the other node
      * @return the distance
      */
-    int calDist(Node *parner, Node *dad = NULL, int curLen = 0);
+    int calDist(Node *parner, Node *dad = nullptr, int curLen = 0);
 
     /** calculate the longest path in the subtree (version 2: more efficient)
         @param node1 the returned node1 of the one end of the path
@@ -380,7 +380,7 @@ public:
 
     /**
         @param node the target node
-        @return the iterator to the neighbor that has the node. If not found, return NULL
+        @return the iterator to the neighbor that has the node. If not found, return nullptr
      */
     Neighbor *findNeighbor(Node *node);
 

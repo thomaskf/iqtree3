@@ -69,7 +69,7 @@ public:
     virtual int wrapperFixNegativeBranch(bool force_change);
 
     /** @return true if tree is bifurcating, false otherwise */
-    virtual bool isBifurcating(Node *node = NULL, Node *dad = NULL);
+    virtual bool isBifurcating(Node *node = nullptr, Node *dad = nullptr);
 
     /**
      Read the tree saved with Taxon IDs and branch lengths.
@@ -99,11 +99,11 @@ public:
     /**
      * save branch lengths into a vector
      */
-    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
-    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
     
     /** set the root by name
      @param my_root root node name
@@ -131,18 +131,18 @@ public:
 
     /**
      @return sum of all branch lengths
-     @param node the starting node, NULL to start from the root
+     @param node the starting node, nullptr to start from the root
      @param dad dad of the node, used to direct the search
      */
-    virtual double treeLength(Node *node = NULL, Node *dad = NULL);
+    virtual double treeLength(Node *node = nullptr, Node *dad = nullptr);
 
     
     /**
      @return sum length of all internal branches
-     @param node the starting node, NULL to start from the root
+     @param node the starting node, nullptr to start from the root
      @param dad dad of the node, used to direct the search
      */
-    virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
+    virtual double treeLengthInternal(double epsilon, Node *node = nullptr, Node *dad = nullptr);
 
     /**
      *         @brief Perform NNI search on the current tree topology
@@ -170,7 +170,7 @@ public:
      */
     virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,
                                 int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
-                                PhyloNode *node = NULL, PhyloNode *dad = NULL);
+                                PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
      test the best number of threads

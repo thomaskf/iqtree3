@@ -111,12 +111,12 @@ void ModelPoMo::init_boundary_frequencies()
         break;
     case FREQ_ESTIMATE:
         // '+FO'.  Start estimation at empirical frequencies.
-        for (int i = 0; i < 4; i++)
+        for (size_t i = 0; i < 4; i++)
             freq_boundary_states[i] = freq_boundary_states_emp[i];
         break;
     case FREQ_EMPIRICAL:
         // '+F'.
-        for (int i = 0; i < 4; i++)
+        for (size_t i = 0; i < 4; i++)
             freq_boundary_states[i] = freq_boundary_states_emp[i];
         break;
     case FREQ_USER_DEFINED:
@@ -549,7 +549,7 @@ void ModelPoMo::normalizeMutationRates() {
       cout << "theta_bm before normalization is " << theta_bm << endl;
       cout << "heterozygosity is " << heterozygosity << endl;
       for (int i = 0; i < n_alleles; i++) {
-        for (int j = i+1; j < n_alleles; j++) {
+        for (size_t j = i+1; j < n_alleles; j++) {
           // The mutation rate matrix entry is the exchangeability times the
           // target allele frequency.
           double ex = m[i*n_alleles+j] / freq_boundary_states[j];
@@ -615,8 +615,8 @@ void ModelPoMo::writeInfo(ostream &out) {
 
 // TODO: s_freqs is not used.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
-    for (int i = 0; i < n_states; i++) {
-        for (int j = 0; j < n_states; j++) {
+    for (size_t i = 0; i < n_states; i++) {
+        for (size_t j = 0; j < n_states; j++) {
             r_matrix[i][j] = rates[i*n_states+j];
         }
     }
@@ -659,7 +659,7 @@ void ModelPoMo::normalize_boundary_freqs(double * bfs) {
 void ModelPoMo::check_boundary_freqs(double * bfs) {
     // Check if boundary frequencies are within bounds.
     bool change = false;
-    for (int i = 0; i < n_alleles; i++) {
+    for (size_t i = 0; i < n_alleles; i++) {
         if (bfs[i] < POMO_MIN_BOUNDARY_FREQ) {
             bfs[i] = POMO_MIN_BOUNDARY_FREQ;
             outWarning("A boundary state has very low frequency.");
@@ -702,7 +702,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
         for (int i = 0; i < n_alleles; i++) {
             tot_sum += sum[i];
         }
-        for (int i = 0; i < n_alleles; i++) {
+        for (size_t i = 0; i < n_alleles; i++) {
             freq_boundary_states[i] = (double) sum[i]/tot_sum;
         }
         // Output vector if verbose mode.
@@ -828,9 +828,9 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
 
   // Report rates.
   // Mutation rates.
-  double *rs = NULL;
+  double *rs = nullptr;
   // Exchangeabilities.
-  double *es = NULL;
+  double *es = nullptr;
   if (is_reversible) {
     rs = new double[n_connections];
     es = new double[n_connections];
@@ -864,7 +864,7 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     memcpy(e, mutation_rate_matrix, n_alleles*n_alleles * sizeof (double));
     double * pi = freq_boundary_states;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
+      for (size_t j = 0; j < n; j++) {
         e[i*n+j] /= pi[j];
       }
     }
@@ -874,14 +874,14 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     double * f = new double[n_alleles*n_alleles];
     memset(r, 0, n_alleles*n_alleles*sizeof(double));
     memset(f, 0, n_alleles*n_alleles*sizeof(double));
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
+    for (size_t i = 0; i < n; i++) {
+      for (size_t j = 0; j < n; j++) {
         r[i*n+j] = e[i*n+j] + e[j*n+i];
         r[i*n+j] /= 2.0;
       }
     }
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
+    for (size_t i = 0; i < n; i++) {
+      for (size_t j = 0; j < n; j++) {
         if (i==j)
           f[i*n+j] = 0;
         else {
@@ -937,14 +937,14 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
 void ModelPoMo::rate_matrix_to_exchangeabilities(double *m, double *r) {
   int c = 0;
   for (int i = 0; i < n_alleles; i++) {
-    for (int j = i+1; j < n_alleles; j++) {
+    for (size_t j = i+1; j < n_alleles; j++) {
       r[c] = m[i*n_alleles+j] / freq_boundary_states[j];
       c++;
     }
   }
   if (!is_reversible) {
     for (int i = 0; i < n_alleles; i++) {
-      for (int j = 0; j < i; j++) {
+      for (size_t j = 0; j < i; j++) {
         r[c] = m[i*n_alleles+j] / freq_boundary_states[j];
         c++;
       }
@@ -971,7 +971,7 @@ void ModelPoMo::rate_matrix_to_rates(double *m, double *r) {
 }
 
 void ModelPoMo::report(ostream &out) {
-  ios  state(NULL);
+  ios  state(nullptr);
   out << this->full_name << endl;
   out << endl;
 
@@ -1126,7 +1126,7 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
     if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
 			for (i = 0; i < num_states; i++) {
         double row_sum = 0.0;
-        for (int j = 0; j < num_states; j++) {
+        for (size_t j = 0; j < num_states; j++) {
 					trans_matrix[i*num_states+j] = res(j, i).real();
 					ASSERT(fabs(res(j,i).imag()) < 1e-6);
 					ASSERT(trans_matrix[i*num_states+j] >= -0.000001);

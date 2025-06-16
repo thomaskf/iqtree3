@@ -4,8 +4,6 @@
 #include "utils/tools.h"
 #include "tree/genometree.h"
 
-using namespace std;
-
 class Sequence {
 public:
     

@@ -43,17 +43,17 @@ PDNetwork::PDNetwork(Params &params) : SplitGraph(params) {
 		readRootNode(ROOT_NAME);
 
 	// read the parameter file
-	if (params.param_file != NULL) 
+	if (params.param_file != nullptr) 
 		readParams(params);
 
-	if (params.budget_file != NULL) {
+	if (params.budget_file != nullptr) {
 		if (isPDArea())
 			pda->readBudgetAreaFile(params);
 		else
 			pda->readBudgetFile(params);
 	}
 	// identify the root
-	if (params.root != NULL) 
+	if (params.root != nullptr) 
 		readRootNode(params.root);
 
 	// initial PD min
@@ -61,13 +61,13 @@ PDNetwork::PDNetwork(Params &params) : SplitGraph(params) {
 		initPDMin();
 
 	// read the initial set of taxa, incoporate info into the split system
-	if (params.initial_file != NULL && params.eco_dag_file == NULL)
+	if (params.initial_file != nullptr && params.eco_dag_file == nullptr)
 		readInitialSet(params);
 
 	if (!initialset.empty() && !isPDArea())
 		proceedInitialSet();
 
-	if (params.initial_area_file != NULL)
+	if (params.initial_area_file != nullptr)
 		readInitialAreas(params);
 
 
@@ -104,7 +104,7 @@ void PDNetwork::readParams(Params &params) {
 
 	// now convert the weights
 	tax_weight.resize(ntaxa, 0);
-	for (int i = 0; i < tax_name.size(); i++) {	
+	for (size_t i = 0; i < tax_name.size(); i++) {
 		int id = -1;
 		try {
 			string name = "";
@@ -374,7 +374,7 @@ void PDNetwork::enterFindPD(Params &params) {
 		} else {
 			int min_accepted = !isPDArea() + 1;
 			int sub_size = (params.sub_size >= min_accepted) ? params.sub_size : pda->getSubSize();
-			if (sub_size < min_accepted && params.pdtaxa_file == NULL) {
+			if (sub_size < min_accepted && params.pdtaxa_file == nullptr) {
 				outError(ERR_NO_K);
 			}
 			
@@ -553,7 +553,7 @@ double PDNetwork::exhaustPDBudget(int cur_budget, int cur_tax, Split &curset,
 {
 	int ntaxa = getNTaxa();
 	double saved_score = curset.weight;
-	for (int tax = cur_tax+1; tax < ntaxa; tax ++) 
+	for (size_t tax = cur_tax+1; tax < ntaxa; tax ++)
 	if (pda->costs[taxa_order[tax]] <= cur_budget)
 	{
 		curset.addTaxon(taxa_order[tax]);

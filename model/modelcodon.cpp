@@ -9,9 +9,6 @@
 #include <string>
 
 
-const double MIN_OMEGA_KAPPA = 0.001;
-const double MAX_OMEGA_KAPPA = 50.0;
-
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
 "11.192024 \
@@ -235,13 +232,13 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
     codon_freq_style = CF_TARGET_CODON;
     codon_kappa_style = CK_ONE_KAPPA;
 	ntfreq = new double[12];
-	empirical_rates = NULL;
+	empirical_rates = nullptr;
 	int nrates = getNumRateEntries();
     delete [] rates;
     rates = new double[nrates];
     empirical_rates = new double [nrates];
 
-    rate_attr = NULL;
+    rate_attr = nullptr;
     computeRateAttributes();
 
    	init(model_name, model_params, freq, freq_params);
@@ -257,15 +254,15 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
 ModelCodon::~ModelCodon() {
 	if (rate_attr) {
 		delete [] rate_attr;
-		rate_attr = NULL;
+		rate_attr = nullptr;
 	}
 	if (empirical_rates) {
 		delete [] empirical_rates;
-		empirical_rates = NULL;
+		empirical_rates = nullptr;
 	}
 	if (ntfreq) {
 		delete [] ntfreq;
-		ntfreq = NULL;
+		ntfreq = nullptr;
 	}
 }
 
@@ -396,6 +393,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     size_t pos;
 	if ((pos=name.find('_')) == string::npos) {
 		def_freq = initCodon(model_name, freq, true, freq_params);
+        if (freq == FREQ_USER_DEFINED && def_freq != FREQ_USER_DEFINED) // mechanistic model
+            freq = def_freq;
 	} else {
 		def_freq = initCodon(name.substr(0, pos).c_str(), freq, false, freq_params);
 		if (def_freq != FREQ_USER_DEFINED)
@@ -427,12 +426,23 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             outError("Sorry! Omega is not existed or unable to be set in the model "+model_name_str);
         }
         size_t pos = model_params.find(delimiter);
-        omega = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
-        if (omega < 0)
-            outError("Omega cannot be negative!");
-        if (!Params::getInstance().optimize_from_given_params)
-            fix_omega = true;
         
+        string model_params_str = model_params.substr(0, pos);
+        if (model_params_str.substr(0,1) == ">") {
+            min_omega = convert_double(model_params_str.substr(1).c_str());
+            if (omega < min_omega)
+                omega = min(min_omega + omega, max_omega);
+        } else if (model_params_str.substr(0,1) == "<") {
+            max_omega = convert_double(model_params_str.substr(1).c_str());
+            if (omega > max_omega)
+                omega = max(min_omega, max_omega/2);
+        } else {
+            omega = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
+            if (omega < 0)
+                outError("Omega cannot be negative!");
+            if (!Params::getInstance().optimize_from_given_params)
+                fix_omega = true;
+        }
         // delete omega from model_params
         if (pos!= std::string::npos)
             model_params.erase(0, pos + 1);
@@ -442,19 +452,17 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         // parse kappa
         if (model_params.length() > 0)
         {
-            // check if the model allow users to specify this parameter or not?
-            if (fix_kappa)
-            {
-                std::string model_name_str(model_name);
-                outError("Sorry! Kappa is not existed or unable to be set in the model "+model_name_str);
-            }
-            
             pos = model_params.find(delimiter);
-            kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
-            if (kappa < 0)
-                outError("Kappa cannot be negative!");
-            if (!Params::getInstance().optimize_from_given_params)
-                fix_kappa = true;
+            // check if the model allow users to specify this parameter or not?
+            // skip the kappa information if the kappa is predefined (for example, GY0K model).
+            if (!fix_kappa)
+            {
+                kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
+                if (kappa < 0)
+                    outError("Kappa cannot be negative!");
+                if (!Params::getInstance().optimize_from_given_params)
+                    fix_kappa = true;
+            }
             
             // delete kappa from model_params
             if (pos!= std::string::npos)
@@ -643,7 +651,7 @@ void ModelCodon::computeRateAttributes() {
     if (verbose_mode >= VB_MAX) {
 
         // make cost matrix fulfill triangular inequality
-        for (int k = 0; k < 20; k++)
+        for (size_t k = 0; k < 20; k++)
             for (i = 0; i < 20; i++)
                 for (j = 0; j < 20; j++)
                     if (aa_cost_change[i*20+j] > aa_cost_change[i*20+k] + aa_cost_change[k*20+j])
@@ -1095,8 +1103,16 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound
 
 	for (i = 1; i <= ndim; i++) {
 		//cout << variables[i] << endl;
-		lower_bound[i] = MIN_OMEGA_KAPPA;
-		upper_bound[i] = MAX_OMEGA_KAPPA;
+        if (i == 1 && !fix_omega) {
+            // setting omega
+            lower_bound[i] = min_omega;
+            upper_bound[i] = max_omega;
+            //ASSERT(lower_bound[i] <= omega && omega <= upper_bound[i]);
+        } else {
+            // setting kappa
+            lower_bound[i] = MIN_OMEGA_KAPPA;
+            upper_bound[i] = MAX_OMEGA_KAPPA;
+        }
 		bound_check[i] = false;
 	}
 

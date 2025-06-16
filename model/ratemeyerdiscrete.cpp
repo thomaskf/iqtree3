@@ -120,7 +120,7 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *cent
 	//exit(1);
 	
 	sumA[0] = 0; sumAsquare[0] =0; sumW[0] = 0;
-	for (int i=1; i<=n; i++) {
+	for (size_t i=1; i<=n; i++) {
 		/*sumA[i] = sumA[i-1] + points[i-1];
 		sumAsquare[i] = sumAsquare[i-1] + points[i-1]*points[i-1];*/
 		sumA[i] = sumA[i-1] + points[i-1] * weights[i-1];
@@ -129,13 +129,13 @@ double RunKMeans1D(int n, int k, double *points_orig, int *weights, double *cent
 	}
 	
 	Cost[0][0] = 0;
-	for (int i=1; i<=n; i++) {
+	for (size_t i=1; i<=n; i++) {
 		Cost[i][1] = mean_sum(1, i, sumA, sumAsquare, sumW);
 		trace[i][1] = 0;
-		for (int j=2; j<=(i<=k?i:k); j++) {
+		for (size_t j=2; j<=(i<=k?i:k); j++) {
 			Cost[i][j] = Cost[j-1][j-1]+ mean_sum(j, i, sumA, sumAsquare, sumW);
 			trace[i][j] = j-1;
-			for (int _k=j; _k<=i-1; _k++) {
+			for (size_t _k=j; _k<=i-1; _k++) {
 				double temp = mean_sum(_k+1, i, sumA, sumAsquare, sumW);
 				if (Cost[i][j] >= Cost[_k][j-1]+ temp) {
 					Cost[i][j] = Cost[_k][j-1]+ temp;			
@@ -180,8 +180,8 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, Ph
  : RateMeyerHaeseler(file_name, tree, rate_type)
 {
 	ncategory = ncat;
-	rates = NULL;
-	ptn_cat = NULL;
+	rates = nullptr;
+	ptn_cat = nullptr;
 	is_categorized = false;
 	mcat_type = cat_type;
 	if (ncat > 0) {
@@ -197,11 +197,11 @@ RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type, char *file_name, Ph
 
 RateMeyerDiscrete::RateMeyerDiscrete() {
 	ncategory = 0;
-	rates = NULL;
-	ptn_cat = NULL;
+	rates = nullptr;
+	ptn_cat = nullptr;
 	is_categorized = false;
 	mcat_type = 0;
-	rates = NULL;
+	rates = nullptr;
 	name = full_name = "";
 	rate_mh = true;
 }
@@ -478,7 +478,7 @@ void RateMeyerDiscrete::normalizeRates() {
     if (fabs(sum - ok) > 1e-3) {
         //cout << "Normalizing rates " << sum << " / " << ok << endl;
         double scale_f = ok / sum;
-        for (int i = 0; i < ncategory; i++) {
+        for (size_t i = 0; i < ncategory; i++) {
             if (rates[i] > 2*MIN_SITE_RATE && rates[i] < MAX_SITE_RATE) {
                 rates[i] *= scale_f;
             }

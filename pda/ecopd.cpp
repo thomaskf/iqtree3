@@ -52,7 +52,7 @@ void ECOpd::readInitialTaxa(istream &in){
 
 bool ECOpd::OUT_tree(int i){
 	bool check=false;
-	for(int j=0;j<OUTtreeTaxa.size();j++)
+	for(size_t j=0;j<OUTtreeTaxa.size();j++)
 		if(OUTtreeTaxa[j]==i){
 			check=true;
 			//cout<<"Taxon "<<i<<" is not present in the tree."<<endl;
@@ -300,7 +300,7 @@ void ECOpd::readDAG(istream &in) {
  * Filling out taxaDAG vector: node corresponds to taxa, neighbors to preys, length (node-neighbor) to weight
  * ---------------------------------------------------------------------------------------------------------*/
  	vector<int> vec2;//the value of vec[j] is the height of the species in the DAG
-	taxaDAG.resize(nvar,NULL);
+	taxaDAG.resize(nvar,nullptr);
 	for(j=0;j<nvar;j++){
 		taxaDAG[j] = newNode(j,j);
 		//cout<<"taxonDAG[j="<<j+1<<"]->id="<<taxaDAG[j]->id<<endl;
@@ -1074,7 +1074,7 @@ int ECOpd::findPhyloID(string name){
 
 
 int ECOpd::findFoodWebID(int id){
-	for(int i=0; i<phylo_order.size();i++){
+	for(size_t i=0; i<phylo_order.size();i++){
 		if(phylo_order[i] == id) return i;
 	}
 	return(-1);
@@ -1085,7 +1085,7 @@ void ECOpd::randomBranLenTrees(Params &params){
 	//Trees with random branch length---------------------------------------------------------------------
 	NodeVector nodes_1,nodes_2;
 	tree.getBranchOrdered(nodes_1,nodes_2);
-	for(int i=0;i<tree.branchNum;i++){
+	for(size_t i=0;i<tree.branchNum;i++){
 		if(nodes_1[i]!=tree.root && nodes_2[i]!=tree.root){
 			nodes_1[i]->findNeighbor(nodes_2[i])->id=i;
 			nodes_2[i]->findNeighbor(nodes_1[i])->id=i;

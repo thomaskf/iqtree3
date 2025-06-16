@@ -252,6 +252,9 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+// to check how many classes from the model string
+int getClassNum(string model_str);
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -322,7 +325,7 @@ double CandidateModel::getScore() {
 int CandidateModelSet::getBestModelID(ModelTestCriterion mtc) {
     double best_score = DBL_MAX;
     int best_model = -1;
-    for (int model = 0; model < size(); model++)
+    for (size_t model = 0; model < size(); model++)
         if (at(model).hasFlag(MF_DONE) && best_score > at(model).getScore(mtc)) {
             best_score = at(model).getScore(mtc);
             best_model = model;
@@ -351,7 +354,7 @@ bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &order
     if (tree->isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)tree;
         ordered_models.clear();
-        for (int part = 0; part != stree->size(); part++) {
+        for (size_t part = 0; part != stree->size(); part++) {
             startStruct(stree->at(part)->aln->name);
             CandidateModel info;
             if (!getBestModel(info.subst_name)) return false;
@@ -402,7 +405,7 @@ bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &order
  */
 void copyCString(const char **cvec, int n, StrVector &strvec, bool touppercase = false) {
 	strvec.resize(n);
-	for (int i = 0; i < n; i++) {
+	for (size_t i = 0; i < n; i++) {
 		strvec[i] = cvec[i];
         if (touppercase)
             std::transform(strvec[i].begin(), strvec[i].end(), strvec[i].begin(), ::toupper);
@@ -698,7 +701,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     string concat_tree;
 
-    IQTree *iqtree = NULL;
+    IQTree *iqtree = nullptr;
 
     StrVector saved_model_names;
 
@@ -710,7 +713,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
             iqtree = new PhyloSuperTree(saln);
         else
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
-        for (int part = 0; part != subst_names.size(); part++) {
+        for (size_t part = 0; part != subst_names.size(); part++) {
             saved_model_names.push_back(saln->partitions[part]->model_name);
             saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
         }
@@ -839,7 +842,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
         }
         SuperAlignment *saln = (SuperAlignment*)aln;
         // restore model_names
-        for (int i = 0; i < saln->partitions.size(); i++)
+        for (size_t i = 0; i < saln->partitions.size(); i++)
             saln->partitions[i]->model_name = saved_model_names[i];
     } else {
         iqtree->saveCheckpoint();
@@ -1292,6 +1295,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         return;
     }
 
+    if (params.model_name == "MIX+MF" || params.model_name == "MIX+MFP" || params.model_name == "MF+MIX" || params.model_name == "MFP+MIX") {
+        // mixture finder
+        return;
+    }
+
     if (nest_network.size() == 0 && iqtree.aln->seq_type == SEQ_DNA) {
         // build the nest relationship between the models
         // we will use the optimized parameters of the last model which is nested by this model
@@ -1327,6 +1335,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     // Model already specifed, nothing to do here
     if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
         return;
+    
+    // update the flag: ModelFinder is run
+    params.dating_mf = true;
+    
     // if (MPIHelper::getInstance().getNumProcesses() > 1)
     //    outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     // TODO: check if necessary
@@ -1482,6 +1494,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             iqtree.aln->model_name = best_model.getName();
             best_subst_name = best_model.subst_name;
             best_rate_name = best_model.rate_name;
+            string best_orig_rate_name = best_model.orig_rate_name;
+            if (under_mix_finder)
+                CKP_SAVE(best_orig_rate_name); // for mixture finder
             // Checkpoint *checkpoint = &model_info;
             string best_model_AIC, best_model_AICc, best_model_BIC;
             CKP_RESTORE(best_model_AIC);
@@ -1497,9 +1512,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         }
 #endif
     }
-
-    // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
-    iqtree.getCheckpoint()->eraseKeyPrefix("OptModel");
 
     delete models_block;
 
@@ -1651,7 +1663,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         StrVector extra_model_names;
         convert_string_vec(params.model_extra_set, extra_model_names);
         for (auto s : extra_model_names)
-            push_back(CandidateModel(s, "", aln));
+            push_back(CandidateModel(s, "", aln, MF_CANNOT_BE_IGNORED));
     }
     return max_cats;
 }
@@ -1745,7 +1757,7 @@ void transferModelParameters(PhyloSuperTree *super_tree, ModelCheckpoint &model_
                 if (part_model_info.getVector(std::get<2>(info), value))
                     continue; // value already exist
                 value.reserve(value1.size());
-                for (int i = 0; i < value1.size(); i++)
+                for (size_t i = 0; i < value1.size(); i++)
                 switch (std::get<1>(info)) {
                     case ARIT_MEAN:
                         value.push_back(weight1*value1[i] + weight2*value2[i]);
@@ -1797,9 +1809,9 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
                 }
 			}
 		}
-		info.cur_ptnlh = NULL;
-		info.nniMoves[0].ptnlh = NULL;
-		info.nniMoves[1].ptnlh = NULL;
+		info.cur_ptnlh = nullptr;
+		info.nniMoves[0].ptnlh = nullptr;
+		info.nniMoves[1].ptnlh = nullptr;
 		part_info.push_back(info);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
         tree->setParams(super_tree->params);
@@ -1853,7 +1865,7 @@ string CandidateModel::evaluate(Params &params,
 {
     //string model_name = name;
     Alignment *in_aln = aln;
-    IQTree *iqtree = NULL;
+    IQTree *iqtree = nullptr;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
         if (params.partition_type == BRLEN_OPTIMIZE)
@@ -1865,7 +1877,7 @@ string CandidateModel::evaluate(Params &params,
         convert_string_vec(subst_name.c_str(), subst_names);
         convert_string_vec(rate_name.c_str(), rate_names);
         ASSERT(subst_names.size() == rate_names.size());
-        for (int part = 0; part != subst_names.size(); part++)
+        for (size_t part = 0; part != subst_names.size(); part++)
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
     } else if (posRateHeterotachy(getName()) != string::npos)
         iqtree = new PhyloTreeMixlen(in_aln, 0);
@@ -1883,10 +1895,10 @@ string CandidateModel::evaluate(Params &params,
     iqtree->restoreCheckpoint();
     ASSERT(iqtree->root);
     iqtree->initializeModel(params, getName(), models_block);
-    // if (!iqtree->getModel()->isMixture() || in_aln->seq_type == SEQ_POMO) {
+    if (!iqtree->getModel()->isMixture() || in_aln->seq_type == SEQ_POMO || mixture_action != MA_NONE) {
         subst_name = iqtree->getSubstName();
         rate_name = iqtree->getRateName();
-    // }
+    }
 
 
     if (restoreCheckpoint(&in_model_info)) {
@@ -1965,9 +1977,9 @@ string CandidateModel::evaluate(Params &params,
 
         if (!prev_rate_present){
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-            //iqtree->setCheckpoint(&in_model_info);
+            iqtree->setCheckpoint(&in_model_info);
             bool init_success;
-            if (model_selection_action != 1 && iqtree->aln->seq_type == SEQ_DNA) {
+            if (mixture_action != MA_FIND_RATE && iqtree->aln->seq_type == SEQ_DNA) {
                 init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
             } else {
                 //reestimating RHAS model
@@ -1980,8 +1992,10 @@ string CandidateModel::evaluate(Params &params,
 
                 // obtain the likelihood value from the (k-1)-class mixture model
                 string criteria_str = criterionName(params.model_test_criterion);
-                string best_model = in_model_info["best_model_" + criteria_str];
-                string best_model_logl_df = in_model_info[best_model];
+                string best_model;
+                ASSERT(in_model_info.getString("best_model_" + criteria_str, best_model));
+                string best_model_logl_df;
+                ASSERT(in_model_info.getString(best_model, best_model_logl_df));
                 stringstream ss (best_model_logl_df);
                 double pre_logl;
                 ss >> pre_logl;
@@ -2062,7 +2076,6 @@ string CandidateModel::evaluate(Params &params,
     logl += new_logl;
     string tree_string = iqtree->getTreeString();
 
-    //cout << "[optimized] " << iqtree->getModelFactory()->model->getNameParams(false) << endl;
 
     if (syncChkPoint != nullptr)
         iqtree->getModelFactory()->syncChkPoint = nullptr;
@@ -2094,7 +2107,7 @@ string CandidateModel::evaluateConcatenation(Params &params, SuperAlignment *sup
     computeICScores(ssize);
 
     delete aln;
-    aln = NULL;
+    aln = nullptr;
     return concat_tree;
 }
 
@@ -2235,8 +2248,8 @@ bool compareJob(const pair<int,double> &a, const pair<int, double> &b) {
 void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec, vector<set<int> > &gene_sets,
                       double log_transform, vector<SubsetPair> &closest_pairs) {
 
-    for (int part1 = 0; part1 < lenvec.size()-1; part1++)
-        for (int part2 = part1+1; part2 < lenvec.size(); part2++)
+    for (size_t part1 = 0; part1 < lenvec.size()-1; part1++)
+        for (size_t part2 = part1+1; part2 < lenvec.size(); part2++)
             if (super_aln->partitions[*gene_sets[part1].begin()]->seq_type == super_aln->partitions[*gene_sets[part2].begin()]->seq_type &&
                 super_aln->partitions[*gene_sets[part1].begin()]->genetic_code == super_aln->partitions[*gene_sets[part2].begin()]->genetic_code) {
                 // only merge partitions of the same data type
@@ -2828,7 +2841,7 @@ void CandidateModelSet::filterRates(int finished_model) {
             ok_rates.insert(rate_name);
         }
     for (model = finished_model+1; model < size(); model++)
-        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end())
+        if (ok_rates.find(at(model).orig_rate_name) == ok_rates.end() && !at(model).hasFlag(MF_CANNOT_BE_IGNORED))
             at(model).setFlag(MF_IGNORED);
 }
 
@@ -2850,11 +2863,11 @@ void CandidateModelSet::filterSubst(int finished_model) {
         if (at(model).getScore() <= ok_score) {
             string subst_name = at(model).orig_subst_name;
             ok_model.insert(subst_name);
-        } else
+        } else if (!at(model).hasFlag(MF_CANNOT_BE_IGNORED))
             at(model).setFlag(MF_IGNORED);
     }
     for (model = finished_model+1; model < size(); model++)
-        if (ok_model.find(at(model).orig_subst_name) == ok_model.end())
+        if (ok_model.find(at(model).orig_subst_name) == ok_model.end() && !at(model).hasFlag(MF_CANNOT_BE_IGNORED))
             at(model).setFlag(MF_IGNORED);
 }
 
@@ -2870,8 +2883,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 	    in_tree->params = &params;
     
     // for ModelOMatic
-    Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
+    Alignment *prot_aln = nullptr;
+    Alignment *dna_aln = nullptr;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (generate_candidates) {
         if (in_model_name.empty()) {
@@ -3151,7 +3164,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         model_info.endStruct();
 
         if (under_mix_finder && is_better_model) {
-            model_info.putSubCheckpoint(&out_model_info, "BestOfTheKClass");
+            int k = getClassNum(at(model).getName());
+            model_info.putSubCheckpoint(&out_model_info, "BestOfThe" + convertIntToString(k) + "Class");
         }
 
         switch (params.model_test_criterion) {
@@ -3242,6 +3256,10 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     CKP_SAVE(best_score_AIC);
     CKP_SAVE(best_score_AICc);
     CKP_SAVE(best_score_BIC);
+    
+    // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
+    model_info.eraseKeyPrefix("OptModel");
+    
     checkpoint->dump();
 
 	delete [] model_rank;
@@ -3251,9 +3269,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         delete in_tree->aln;
         in_tree->aln = best_aln;
         if (best_aln == prot_aln)
-            prot_aln = NULL;
+            prot_aln = nullptr;
         else
-            dna_aln = NULL;
+            dna_aln = nullptr;
     }
 
     if (dna_aln)
@@ -3291,13 +3309,13 @@ int64_t CandidateModelSet::getNextModel() {
             }
         }
     }
-    }
     if (next_model != current_model) {
         current_model = next_model;
         at(next_model).setFlag(MF_RUNNING);
-        return next_model;
     } else
-        return -1;
+        next_model = -1;
+    }
+    return next_model;
 }
 
 CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
@@ -3308,8 +3326,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     in_tree->params = &params;
     
-    Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
+    Alignment *prot_aln = nullptr;
+    Alignment *dna_aln = nullptr;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     
     
@@ -3479,9 +3497,9 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         delete in_tree->aln;
         in_tree->aln = at(best_model).aln;
         if (in_tree->aln == prot_aln)
-            prot_aln = NULL;
+            prot_aln = nullptr;
         else
-            dna_aln = NULL;
+            dna_aln = nullptr;
     }
     
     if (dna_aln)
@@ -3528,7 +3546,7 @@ PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, Model
 PartitionFinder::~PartitionFinder() {
 #ifdef _IQTREE_MPI
     // clear any remaining jobs (for MPI)
-    for (int k=0; k<remain_mergejobs.size(); k++) {
+    for (size_t k=0; k<remain_mergejobs.size(); k++) {
         delete(remain_mergejobs[k]);
     }
     remain_mergejobs.clear();
@@ -3947,7 +3965,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
     vector<char> to_delete;
     if (job_type == 2) {
         // for merging partitions
-        for (int j = 0; j < jobs.size(); j++) {
+        for (size_t j = 0; j < jobs.size(); j++) {
             CandidateModel best_model;
             ModelPair cur_pair;
             double lhnew;
@@ -3997,7 +4015,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
     if (to_delete.size() == jobs.size()) {
         // remove the finished jobs from the list
         int k = 0;
-        for (int j = 0; j < jobs.size(); j++) {
+        for (size_t j = 0; j < jobs.size(); j++) {
             if (!to_delete[j]) {
                 if (j > k) {
                     jobs[k] = jobs[j];
@@ -4041,7 +4059,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jo
     parallel_job = (jobs.size() > 1);
 #pragma omp parallel for schedule(dynamic) if(parallel_job)
 #endif
-    for (int i=0; i<jobs.size(); i++) {
+    for (size_t i=0; i<jobs.size(); i++) {
         SyncChkPoint syncChkPt(this, i);
         int next_job_id = jobs[i];
         bool need_next_jobID = true;
@@ -4112,7 +4130,7 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
     parallel_job = (jobs.size() > 1);
 #pragma omp parallel for schedule(dynamic) if(parallel_job)
 #endif
-    for (int i=0; i<jobs.size(); i++) {
+    for (size_t i=0; i<jobs.size(); i++) {
         SyncChkPoint syncChkPt(this, i);
         MergeJob* curr_job = jobs[i];
         bool need_next_jobID = false;
@@ -4166,7 +4184,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
 #endif
-    for (int j = 0; j < jobs.size(); j++) {
+    for (size_t j = 0; j < jobs.size(); j++) {
         int tree_id = jobs[j].first;
         PhyloTree *this_tree = in_tree->at(tree_id);
         // scan through models for this partition, assuming the information occurs consecutively
@@ -4238,7 +4256,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
     parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
 #pragma omp parallel for schedule(dynamic) if (parallel_job)
 #endif
-    for (int j = 0; j < jobs.size(); j++) {
+    for (size_t j = 0; j < jobs.size(); j++) {
         // information of current partitions pair
         int pair = jobs[j].first;
         ModelPair cur_pair;
@@ -4481,14 +4499,14 @@ void PartitionFinder::getBestModel(int job_type) {
         if (MPIHelper::getInstance().isMaster() && tot_job_num > 0) {
             cout << endl;
             cout << "\tproc\tthres\trun time\twait time\tfinal-step time\tnumber-parts" << endl;
-            for (int w=0; w<num_processes; w++) {
-                for (int t=0; t<num_job_arrays[w]; t++) {
+            for (size_t w=0; w<num_processes; w++) {
+                for (size_t t=0; t<num_job_arrays[w]; t++) {
                     cout << "\t" << w << "\t" << t << "\t" << run_time_arrays[w*num_threads+t] << "\t" << wait_time_arrays[w*num_threads+t] << "\t" << fstep_time_arrays[w*num_threads+t] << "\t" << num_part_arrays[w*num_threads+t]<< endl;
                 }
             }
             cout << endl;
             cout << "\tproc\tcpu_time\twall_time"<<endl;
-            for (int w=0; w<num_processes; w++) {
+            for (size_t w=0; w<num_processes; w++) {
                 cout << "\t" << w << "\t" <<  cpu_time_array[w] << "\t" << wall_time_array[w] << endl;
             }
             cout << endl;
@@ -4601,7 +4619,7 @@ void PartitionFinder::consolidPartitionResults() {
         string partial_key = "";
         model_info->putSubCheckpoint(&mfchkpt, partial_key);
         // update the best model for each tree
-        for (int i = 0; i < in_tree->size(); i++) {
+        for (size_t i = 0; i < in_tree->size(); i++) {
             PhyloTree *this_tree = in_tree->at(i);
             string bestTree_key = this_tree->aln->name + CKP_SEP + "best_tree_" + criterion_name;
             string bestTree;
@@ -4784,7 +4802,7 @@ void PartitionFinder::test_PartitionModel() {
         	string partial_key = "";
         	model_info->putSubCheckpoint(&mfchkpt, partial_key);
         	// update the best model for each tree
-        	for (int i = 0; i < in_tree->size(); i++) {
+        	for (size_t i = 0; i < in_tree->size(); i++) {
             	PhyloTree *this_tree = in_tree->at(i);
             	string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             	string bestModel;
@@ -5041,7 +5059,7 @@ void PartitionFinder::test_PartitionModel() {
         string partial_key = "";
         model_info->putSubCheckpoint(&mfchkpt, partial_key);
         // update the best model for each tree
-        for (int i = 0; i < in_tree->size(); i++) {
+        for (size_t i = 0; i < in_tree->size(); i++) {
             PhyloTree *this_tree = in_tree->at(i);
             string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             string bestModel;
@@ -5074,14 +5092,14 @@ void PartitionFinder::initialMPIShareMemory() {
 #ifdef ONESIDE_COMM
     if (MPIHelper::getInstance().getProcessID()==PROC_MASTER) {
         val_ptr = (int*) malloc(sizeof(int));
-        MPI_Win_create(val_ptr, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+        MPI_Win_create(val_ptr, sizeof(int), sizeof(int), MPI_INFO_nullptr, MPI_COMM_WORLD, &win);
     } else {
-        val_ptr = NULL;
-        MPI_Win_create(val_ptr, 0, sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+        val_ptr = nullptr;
+        MPI_Win_create(val_ptr, 0, sizeof(int), MPI_INFO_nullptr, MPI_COMM_WORLD, &win);
     }
 #else
-    win = NULL;
-    val_ptr = NULL;
+    win = nullptr;
+    val_ptr = nullptr;
 #endif // ONESIDE_COMM
 }
 
@@ -5220,11 +5238,11 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     int n = num_processes * num_threads;
     int* scounts = new int[num_processes];
     int* displs = new int[num_processes];
-    int* alljoblens = NULL;
+    int* alljoblens = nullptr;
     int* joblens = new int[num_threads];
     int pid;
-    char* sendbuf = NULL;
-    char* recvbuf = NULL;
+    char* sendbuf = nullptr;
+    char* recvbuf = nullptr;
     int recvlen;
     if (MPIHelper::getInstance().isMaster()) {
         // assign one job to every thread
@@ -5290,9 +5308,9 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     delete[] displs;
     delete[] joblens;
     delete[] recvbuf;
-    if (sendbuf != NULL)
+    if (sendbuf != nullptr)
         delete[] sendbuf;
-    if (alljoblens != NULL)
+    if (alljoblens != nullptr)
         delete[] alljoblens;
     return currJobs.size();
 }
@@ -5893,7 +5911,7 @@ int* SyncChkPoint::toIntArr(vector<set<int> >& gene_sets, int& buffsize) {
     int i,k;
 
     buffsize = gene_sets.size();
-    for (int i=0; i<gene_sets.size(); i++)
+    for (size_t i=0; i<gene_sets.size(); i++)
         buffsize += gene_sets[i].size();
 
     int* buff = new int[buffsize];
@@ -5937,7 +5955,7 @@ void SyncChkPoint::loadFrIntArr(vector<set<int> >& gene_sets, int* buff, int buf
 
 char* SyncChkPoint::toCharArr(vector<string>& model_names, int& buffsize) {
     string buff_str = "";
-    char* buff = NULL;
+    char* buff = nullptr;
     int i;
     for (i = 0; i < model_names.size(); i++) {
         buff_str.append(model_names[i]);
@@ -5954,7 +5972,7 @@ char* SyncChkPoint::toCharArr(vector<string>& model_names, int& buffsize) {
 
 void SyncChkPoint::loadFrCharArr(vector<string>& model_names, char* buff) {
     model_names.clear();
-    if (buff == NULL)
+    if (buff == nullptr)
         return;
     string buff_str = string(buff);
     int start_pos = 0;
@@ -5973,7 +5991,7 @@ void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
     // broadcast vector<set<int> > object to all workers
     set<int>::iterator itr;
     int buffsize;
-    int* buff = NULL;
+    int* buff = nullptr;
 
     // broadcast the buffsize to workers
     if (MPIHelper::getInstance().isMaster())
@@ -5993,13 +6011,13 @@ void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
             loadFrIntArr(gene_sets, buff, buffsize);
     }
 
-    if (buff != NULL)
+    if (buff != nullptr)
         delete[] buff;
 }
 
 void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
     int buffsize;
-    char* buff = NULL;
+    char* buff = nullptr;
 
     // for Master, build the long string
     if (MPIHelper::getInstance().isMaster()) {
@@ -6021,7 +6039,7 @@ void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
         }
     }
 
-    if (buff != NULL)
+    if (buff != nullptr)
         delete[] buff;
 }
 
@@ -6203,12 +6221,21 @@ void addModel(string model_str, string& new_model_str, string new_subst) {
     }
 }
 
-// This function is similar to runModelFinder, but it is designed for optimisation of Q-Mixture model
-// action: 1 - estimate the RHAS model
-//         2 - estimate the number of classes in a mixture model
-//         3 - estimate the k-th substitution matrix
-//         4 - estimate an additional substitution matrix
-CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, int action, bool do_init_tree, string model_str, string& best_subst_name, string& best_rate_name, map<string, vector<string> > nest_network, int class_k = 0)
+/**
+ @brief Find the best component of a Q-mixture model while fixing other components
+ @note This function is similar to runModelFinder, but it is adapted for optimisation of Q-Mixture model
+ @param[in] params program parameters
+ @param[in] iqtree phylogenetic tree
+ @param[in,out] model_info information for all models considered
+ @param[in] mixture_action MA_ADD_CLASS to add Q to the mixture, MA_FIND_RATE to find the rate-heterogeneity
+ @param[in] do_init_tree whether or not to intialise the tree
+ @param[in] model_str name of the current mixture model, for example, MIX{HKY,GTR}+G
+ @param[out] best_subst_name name of the best Q model to be added to model_str, e.g., MIX{HKY,GTR,TN}
+ @param[out] best_rate_name name of the best rate model, e.g., +R5
+ @param[in] nest_network relationship between nested models
+ @param[in] class_k index (between 0 and #classes-1) of the class in the mixture for action MA_FIND_CLASS to find the best-fit k-th class model
+ */
+CandidateModel findMixtureComponent(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, MixtureAction mixture_action, bool do_init_tree, string model_str, string& best_subst_name, string& best_rate_name, map<string, vector<string> > nest_network, int class_k = 0)
 {
     double cpu_time;
     double real_time;
@@ -6268,7 +6295,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     }
     
     max_cats = getClassNum(model_str) * params.max_rate_cats;
-    if (action != 1) {
+    if (mixture_action != MA_FIND_RATE) {
         n_class = getClassNum(model_str) + 1;
     } else {
         n_class = getClassNum(model_str);
@@ -6290,13 +6317,13 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     orig_ratehet_set = params.ratehet_set;
     orig_model_set = params.model_set;
 
-    // params.model_extra_set = NULL;
-    // params.model_subset = NULL;
-    // params.state_freq_set = NULL;
+    // params.model_extra_set = nullptr;
+    // params.model_subset = nullptr;
+    // params.state_freq_set = nullptr;
     generate_candidates = false;
     candidate_models.nest_network = nest_network;
 
-    if (action == 1) {
+    if (mixture_action == MA_FIND_RATE) {
         params.model_set = model_str;
         getRateHet(iqtree.aln->seq_type, params.model_name, iqtree.aln->frac_invariant_sites, params.ratehet_set, ratehet);
 
@@ -6324,7 +6351,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         }
 
         skip_all_when_drop = false;
-    } else if (action == 2) {
+    } else if (mixture_action == MA_NUMBER_CLASS) {
         params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
         // generate candidate models for the possible mixture models
         multi_class_str = "";
@@ -6342,7 +6369,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
             }
         }
         skip_all_when_drop = true;
-    } else if (action == 3) {
+    } else if (mixture_action == MA_FIND_CLASS) {
         char init_state_freq_set[] = "FO";
         if (!params.state_freq_set) {
             params.state_freq_set = init_state_freq_set;
@@ -6433,8 +6460,8 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         //}
     }
     if (candidate_models.size() > 0) {
-        for (int i = 0; i < candidate_models.size(); i++) {
-            candidate_models.at(i).model_selection_action = action;
+        for (size_t i = 0; i < candidate_models.size(); i++) {
+            candidate_models.at(i).mixture_action = mixture_action;
         }
     }
 
@@ -6459,15 +6486,11 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         << criterionName(params.model_test_criterion) << endl;
 
     // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
-    iqtree.getCheckpoint()->eraseKeyPrefix("OptModel");
+    model_info.eraseKeyPrefix(model_info.getStructName() + "OptModel");
 
     delete models_block;
 
-    // force to dump all checkpointing information
-    model_info.dump(true);
-
-    // transfer models parameters
-    transferModelFinderParameters(&iqtree, orig_checkpoint);
+    model_info.dump();
     iqtree.setCheckpoint(orig_checkpoint);
 
     params.model_set = orig_model_set;
@@ -6484,14 +6507,19 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     return best_model;
 }
 
-// Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-// Method updated
-void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
+/**
+ @brief the main function to perform MixtureFinder to find the best-fit Q mixture model
+ @param[in] params program parameters
+ @param[in] iqtree phylogenetic tree
+ @param[in,out] model_info (IN/OUT) information for all models considered
+ @param[out] model_str name of the best-fit Q mixture model
+ */
+void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
 
     bool do_init_tree;
     string best_subst_name;
     string best_rate_name;
-    int action, best_class_num, i;
+    int best_class_num, i;
     set<string> skip_models;
     string model_str1, model_i;
     ModelsBlock *models_block;
@@ -6533,24 +6561,28 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     params.model_name = "";
     bool under_mix_finder = true;
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network, under_mix_finder);
+    string best_orig_rate_name;
+    ASSERT(model_info.getString("best_orig_rate_name", best_orig_rate_name));
 
     // (cancel) Step 2: do tree search for this single-class model
     // runTreeReconstruction(params, iqtree);
     // curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     // curr_loglike = iqtree->getCurScore();
     // curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
-    string best_model_logl_df = model_info[best_subst_name+best_rate_name];
+    string best_model_logl_df;
+    ASSERT(model_info.getString(best_subst_name+best_rate_name, best_model_logl_df));
     stringstream ss (best_model_logl_df);
     ss >> curr_loglike >> curr_df;
-    string best_score = model_info["best_score_" + criteria_str];
+    string best_score;
+    ASSERT(model_info.getString("best_score_" + criteria_str, best_score));
     curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
 
-    model_info.getString("best_model_AIC", best_model_pre_AIC);
-    model_info.getString("best_model_AICc", best_model_pre_AICc);
-    model_info.getString("best_model_BIC", best_model_pre_BIC);
-    model_info.getString("best_model_list_" + criteria_str, best_model_pre_list);
+    ASSERT(model_info.getString("best_model_AIC", best_model_pre_AIC));
+    ASSERT(model_info.getString("best_model_AICc", best_model_pre_AICc));
+    ASSERT(model_info.getString("best_model_BIC", best_model_pre_BIC));
+    ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_pre_list));
 
     // Step 3: keep adding a new class until no further improvement
     if (params.opt_qmix_criteria == 1) {
@@ -6558,11 +6590,12 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     } else {
         cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
     }
-    action = 4;
     do_init_tree = false;
     model_str = best_subst_name;
     do {
-        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
+        if (params.optimize_from_given_params == false)
+            best_rate_name = best_orig_rate_name;
+        best_model = findMixtureComponent(params, *iqtree, model_info, MA_ADD_CLASS, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
         cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
         if (params.opt_qmix_criteria == 1) {
             LR = 2.0 * (best_model.logl - curr_loglike);
@@ -6581,10 +6614,10 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
             curr_score = best_model.getScore();
             model_str = best_subst_name;
 
-            model_info.getString("best_model_AIC", best_model_pre_AIC);
-            model_info.getString("best_model_AICc", best_model_pre_AICc);
-            model_info.getString("best_model_BIC", best_model_pre_BIC);
-            model_info.getString("best_model_list_" + criteria_str, best_model_pre_list);
+            ASSERT(model_info.getString("best_model_AIC", best_model_pre_AIC));
+            ASSERT(model_info.getString("best_model_AICc", best_model_pre_AICc));
+            ASSERT(model_info.getString("best_model_BIC", best_model_pre_BIC));
+            ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_pre_list));
 
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
@@ -6593,9 +6626,24 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     model_info.put("best_model_AIC", best_model_pre_AIC);
     model_info.put("best_model_AICc", best_model_pre_AICc);
     model_info.put("best_model_BIC", best_model_pre_BIC);
-
+    
     best_subst_name = model_str;
+    if (params.optimize_from_given_params == false)
+        best_rate_name = best_orig_rate_name;
     int n_class = getClassNum(model_str);
+    ASSERT(n_class >= 1);
+
+    // overwrite the checkpoint by the best K models
+    ModelCheckpoint best_model_info;
+    model_info.getSubCheckpoint(&best_model_info, model_info.getStructName() + "BestOfThe" + convertIntToString(n_class) + "Class");
+    model_info.putSubCheckpoint(&best_model_info, "");
+    
+    // update the tree to the best tree
+    Checkpoint* orig_tree_chkpt = iqtree->getCheckpoint();
+    iqtree->setCheckpoint(&model_info);
+    iqtree->restoreCheckpoint();
+    iqtree->setCheckpoint(orig_tree_chkpt);
+    
     if (params.opt_rhas_again) {
         if (n_class == 1) {
             cout << endl;
@@ -6603,10 +6651,9 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
             cout << endl;
         } else {
             // Step 4: estimate the RHAS model again
-            action = 1; // estimating the RHAS model
             do_init_tree = false;
             model_str = best_subst_name;
-            best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
+            best_model = findMixtureComponent(params, *iqtree, model_info, MA_FIND_RATE, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
             curr_df = best_model.df;
             curr_loglike = best_model.logl;
             curr_score = best_model.getScore();
@@ -6614,64 +6661,52 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     }
 
     model_str = best_subst_name+best_rate_name;
+    
+    // force to dump all checkpointing information
+    model_info.dump(true);
 }
 
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
+void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
 
     IQTree* new_iqtree;
     string model_str;
+    Alignment* aln;
 
-    if (params.model_name.substr(0,6) != "MIX+MF")
+    bool mix_finder_mode = (params.model_name == "MIX+MF" || params.model_name == "MIX+MFP" || params.model_name == "MF+MIX" || params.model_name == "MFP+MIX");
+    
+    if (!mix_finder_mode)
         return;
     
-    bool test_only = (params.model_name == "MIX+MF");
-    params.model_name = "";
+    string orig_model_name = params.model_name;
+    bool test_only = (params.model_name == "MIX+MF" || params.model_name == "MF+MIX");
     
     if (MPIHelper::getInstance().getNumProcesses() > 1)
         outError("Error! The option -m '" + params.model_name + "' does not support MPI parallelization");
     
-    if (iqtree->isSuperTree())
-        outError("Error! The option -m '" + params.model_name + "' cannot work on data set with partitions");
+    if (iqtree->isSuperTree()) {
+        SuperAlignment* saln = (SuperAlignment*)iqtree->aln;
+        if (saln->partitions.size() == 1) {
+            aln = saln->partitions[0];
+            model_info.startStruct(aln->name);
+        } else
+            outError("Error! The option -m '" + params.model_name + "' cannot work on data set with more than one partition");
+    } else {
+        aln = iqtree->aln;
+    }
     
-    if (iqtree->aln->seq_type != SEQ_DNA)
+    if (aln->seq_type != SEQ_DNA)
         outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
-
-    cout << "--------------------------------------------------------------------" << endl;
-    cout << "|                Optimizing Q-mixture model                        |" << endl;
-    cout << "--------------------------------------------------------------------" << endl;
-
-    // disable the bootstrapping
-    int orig_gbo_replicates = params.gbo_replicates;
-    ConsensusType orig_consensus_type = params.consensus_type;
-    STOP_CONDITION orig_stop_condition = params.stop_condition;
-    params.gbo_replicates = 0;
-    params.consensus_type = CT_NONE;
-    params.stop_condition = SC_UNSUCCESS_ITERATION;
-
-    optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
-    
-    // restore the original values
-    params.gbo_replicates = orig_gbo_replicates;
-    params.consensus_type = orig_consensus_type;
-    params.stop_condition = orig_stop_condition;
-
-    cout << "-------------------------------------------------------" << endl;
-    cout << "  Best-fit Q-Mixture model: " << model_str << endl;
-    cout << "-------------------------------------------------------" << endl;
-
-    params.model_name = model_str;
-    iqtree->aln->model_name = model_str;
 
     // create a new IQTree object for this mixture model
     // allocate heterotachy tree if neccessary
-    int pos = posRateHeterotachy(iqtree->aln->model_name);
+    int pos = posRateHeterotachy(aln->model_name);
     if (params.num_mixlen > 1) {
-        new_iqtree = new PhyloTreeMixlen(iqtree->aln, params.num_mixlen);
+        new_iqtree = new PhyloTreeMixlen(aln, params.num_mixlen);
     } else if (pos != string::npos) {
-        new_iqtree = new PhyloTreeMixlen(iqtree->aln, 0);
+        new_iqtree = new PhyloTreeMixlen(aln, 0);
     } else {
-        new_iqtree = new IQTree(iqtree->aln);
+        new_iqtree = new IQTree(aln);
     }
     new_iqtree->setCheckpoint(iqtree->getCheckpoint());
     if (!iqtree->constraintTree.empty())
@@ -6683,9 +6718,73 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
         new_iqtree->initializePLL(params);
     }
     new_iqtree->setParams(&params);
-    new_iqtree->copyPhyloTree(iqtree, false);
-    delete(iqtree);
-    iqtree = new_iqtree;
+
+    cout << "--------------------------------------------------------------------" << endl;
+    cout << "|                Running MixtureFinder                             |" << endl;
+    cout << "--------------------------------------------------------------------" << endl;
+
+    // disable the bootstrapping
+    int orig_gbo_replicates = params.gbo_replicates;
+    ConsensusType orig_consensus_type = params.consensus_type;
+    STOP_CONDITION orig_stop_condition = params.stop_condition;
+    params.gbo_replicates = 0;
+    params.consensus_type = CT_NONE;
+    params.stop_condition = SC_UNSUCCESS_ITERATION;
+    params.model_name = "";
+
+    runMixtureFinderMain(params, new_iqtree, model_info, model_str);
+    
+    // transfer models parameters
+    Checkpoint *iqtree_chkpt = iqtree->getCheckpoint();
+    if (iqtree->isSuperTree()) {
+        string partmodel_name;
+        if (params.partition_type == BRLEN_SCALE || params.partition_type == BRLEN_FIX)
+            partmodel_name = "PartitionModelPlen";
+        else
+            partmodel_name = "PartitionModel";
+        iqtree_chkpt->startStruct(partmodel_name);
+    }
+    string structname = model_info.getStructName();
+    model_info.transferSubCheckpoint(iqtree_chkpt, structname + "Model", true);
+    model_info.transferSubCheckpoint(iqtree_chkpt, structname + "Rate", true);
+    model_info.transferSubCheckpoint(iqtree_chkpt, structname + "PhyloTree", true);
+    model_info.transferSubCheckpoint(iqtree_chkpt, structname + "best_model_", true);
+    model_info.transferSubCheckpoint(iqtree_chkpt, structname + "best_score_", true);
+    if (iqtree->isSuperTree()) {
+        iqtree_chkpt->endStruct();
+    }
+
+    // restore the original values
+    params.gbo_replicates = orig_gbo_replicates;
+    params.consensus_type = orig_consensus_type;
+    params.stop_condition = orig_stop_condition;
+
+    cout << "-------------------------------------------------------" << endl;
+    cout << "  Best-fit Q-Mixture model: " << model_str << endl;
+    cout << "-------------------------------------------------------" << endl;
+
+    iqtree->aln->model_name = model_str;
+    if (!iqtree->isSuperTree()) {
+        // alignment with no partition
+        iqtree->readTreeString(new_iqtree->getTreeString());
+    } else {
+        // partitioned alignment
+        ((PhyloSuperTree*)iqtree)->at(0)->aln->model_name = model_str;
+        // ((PhyloSuperTree*)iqtree)->at(0)->readTreeString(new_iqtree->getTreeString());
+        if (params.partition_type == BRLEN_SCALE || params.partition_type == BRLEN_FIX)
+            ((PhyloSuperTree*)iqtree)->readTreeString(new_iqtree->getTreeString());
+        else
+            ((PhyloSuperTreeUnlinked*)iqtree)->readTreeString(new_iqtree->getTreeString()+new_iqtree->getTreeString());
+        model_info.endStruct();
+        
+        ((SuperAlignment*)iqtree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+        ((SuperAlignment*)iqtree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+    }
+    
+    params.model_name = orig_model_name;
+    iqtree->saveCheckpoint();
+    
+    delete(new_iqtree);
 
     if (test_only) {
         params.min_iterations = 0;
@@ -6758,8 +6857,8 @@ bool isRateTypeNested(string rate_type1, string rate_type2) {
         outError("Incorrect DNA model rate type code: " + rate_type2);
     }
 
-    for (int i = 0; i < 5; i++) {
-        for (int j = i; j < 6; j++ ){
+    for (size_t i = 0; i < 5; i++) {
+        for (size_t j = i; j < 6; j++ ){
             if (rate_type1[i] == rate_type1[j] && rate_type2[i] != rate_type2[j]){
                 return false;
             }

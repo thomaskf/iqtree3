@@ -149,7 +149,7 @@ void Terrace::get_part_trees(){
     
     getTaxa(taxa_nodes);
     int leafNum_part_tree = 0;
-    for(int part=0; part<part_num; part++){
+    for(size_t part=0; part<part_num; part++){
         leafNum_part_tree = 0;
         TerraceTree* induced_tree = new TerraceTree();
         for(it2=taxa_nodes.begin();it2!=taxa_nodes.end();it2++){
@@ -161,9 +161,9 @@ void Terrace::get_part_trees(){
                 assert(id != -1 && "Not all of the taxa appear in the pr_ab_matrix!");
             }
             
-            check_int[(*it2)->id] = matrix->pr_ab_matrix[id][part];
+            check_int[static_cast<size_t>((*it2)->id)] = static_cast<unsigned int>(matrix->pr_ab_matrix[static_cast<size_t>(id)][part]);
             //cout<<"Taxon["<<(*it2)->name<<"|"<<(*it2)->id<<"|"<<id<<"] in partition "<<part<<" is "<<check_int[(*it2)->id]<<"||MATRIX_INFO:"<<matrix->taxa_names[id]<<"-"<<matrix->pr_ab_matrix[id][part]<<"\n";
-            if(check_int[(*it2)->id]==1){
+            if(check_int[static_cast<size_t>((*it2)->id)]==1){
                 leafNum_part_tree+=1;
             }
         }
@@ -175,7 +175,7 @@ void Terrace::get_part_trees(){
             induced_tree->leafNum = leafNum_part_tree;
         } else if(leafNum_part_tree==1){
             for(k=0; k<taxa_num; k++){
-                if(check_int[taxa_nodes[k]->id]==1){
+                if(check_int[static_cast<size_t>(taxa_nodes[k]->id)]==1){
                     taxon_name=taxa_nodes[k]->name;
                     break;
                 }
@@ -197,7 +197,7 @@ void Terrace::get_part_trees(){
 
 void Terrace::set_part_trees(vector<TerraceTree*> input_induced_trees){
     
-    for(int i=0; i<input_induced_trees.size(); i++){
+    for(size_t i=0; i<input_induced_trees.size(); i++){
         induced_trees.push_back(input_induced_trees[i]);
     }
     
@@ -238,7 +238,7 @@ void Terrace::printInfo(ostream &out){
 void Terrace::linkTrees(bool back_branch_map, bool back_taxon_map){
     NodeVector part_taxa;
     
-    for(int part=0; part<part_num; part++){
+    for(size_t part=0; part<part_num; part++){
         if(induced_trees[part]->leafNum>2){
             //part_taxa.clear();
             //matrix->getPartTaxa(part, this, induced_trees[part], part_taxa);
@@ -248,7 +248,7 @@ void Terrace::linkTrees(bool back_branch_map, bool back_taxon_map){
     
 }
 
-void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad){
+void Terrace::linkTree(size_t part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad){
     
     // SEHR WICHTIG! WARNING: do not mix mapping from the parent tree and upper level induced partition trees, because empty branches and empty taxa will be messed up on partition trees.
     
@@ -261,15 +261,15 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
         if (node->isLeaf()) // two-taxa parent tree
             dad = (TerraceNode*)node->neighbors[0]->node;
     }
-    TerraceNeighbor *nei = NULL;
-    TerraceNeighbor *dad_nei = NULL;
+    TerraceNeighbor *nei = nullptr;
+    TerraceNeighbor *dad_nei = nullptr;
     if (dad) {
         nei = (TerraceNeighbor*)node->findNeighbor(dad);
         dad_nei = (TerraceNeighbor*)dad->findNeighbor(node);
-        if (nei->link_neighbors.empty()) nei->link_neighbors.resize(part_num);
-        if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(part_num);
-        nei->link_neighbors[part] = NULL;
-        dad_nei->link_neighbors[part] = NULL;
+        if (nei->link_neighbors.empty()) nei->link_neighbors.resize(static_cast<size_t>(part_num));
+        if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(static_cast<size_t>(part_num));
+        nei->link_neighbors[part] = nullptr;
+        dad_nei->link_neighbors[part] = nullptr;
     }
     if (node->isLeaf()) {
         ASSERT(dad);
@@ -322,11 +322,11 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
         // Check, if the final dad has empty_branches and map them to branch, which is available.
         // Note, that if there are some empty branches/taxa, there will be exactly one branch available for mapping.
         if(!node->empty_br_node_nei.empty()){
-            FOR_NEIGHBOR_DECLARE(node, NULL, it) {
+            FOR_NEIGHBOR_DECLARE(node, nullptr, it) {
                 if(((TerraceNeighbor*)(*it))->link_neighbors[part]){
                     TerraceNeighbor* node_nei_part = (TerraceNeighbor*)((TerraceNeighbor*)(*it))->link_neighbors[part];
                     TerraceNeighbor* dad_nei_part = (TerraceNeighbor*)((TerraceNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part];
-                    int i;
+                    size_t i;
                     for(i=0; i<node->empty_br_dad_nei.size(); i++){
                         ((TerraceNeighbor*)node->empty_br_node_nei[i])->link_neighbors[part] = node_nei_part;
                         ((TerraceNeighbor*)node->empty_br_dad_nei[i])->link_neighbors[part] = dad_nei_part;
@@ -354,12 +354,12 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
     linkBranch(part, nei, dad_nei, back_branch_map, back_taxon_map);
 }
 
-void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_nei, bool back_branch_map, bool back_taxon_map) {
+void Terrace::linkBranch(size_t part, TerraceNeighbor *nei, TerraceNeighbor *dad_nei, bool back_branch_map, bool back_taxon_map) {
     
     TerraceNode *node = (TerraceNode*)dad_nei->node;
     TerraceNode *dad = (TerraceNode*)nei->node;
-    nei->link_neighbors[part] = NULL;
-    dad_nei->link_neighbors[part] = NULL;
+    nei->link_neighbors[part] = nullptr;
+    dad_nei->link_neighbors[part] = nullptr;
     vector<TerraceNeighbor*> part_vec;
     vector<TerraceNeighbor*> child_part_vec;
     
@@ -384,8 +384,8 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
                 part_vec[1]=child_part_vec[1];
                 child_part_vec[1]=nei_aux;
             }else{
-                for(int i=0; i<part_vec.size(); i++){
-                    for(int j=0; j<child_part_vec.size(); j++){
+                for(size_t i=0; i<part_vec.size(); i++){
+                    for(size_t j=0; j<child_part_vec.size(); j++){
                         if(part_vec[i]->node == child_part_vec[j]->node and part_vec[1-i]->node != child_part_vec[1-j]->node){
                             nei_aux = part_vec[i];
                             part_vec[i] = child_part_vec[1-j];
@@ -403,7 +403,7 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
     // So at the moment you need only empty branches of node and the dad will be mapped at the final state (i.e. final node - the start of the tree traversal)
     
     if (part_vec.empty()){
-        int i=0;
+        size_t i=0;
         //cout<<"CASE 0: CHILDREN DO NOT HAVE IMAGE"<<"\n"<<"\n";
         if(!node->empty_br_dad_nei.empty()){
             for(i=0; i<node->empty_br_dad_nei.size(); i++){
@@ -421,12 +421,12 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
         return;
     }
     
-    int i=0;
+    size_t i=0;
     if (part_vec.size() == 1) {
         
         //cout<<"CASE 1: ONE CHILD HAS IMAGE"<<"\n"<<"\n";
-        nei->link_neighbors[part] = child_part_vec[0];
-        dad_nei->link_neighbors[part] = part_vec[0];
+        nei->link_neighbors[static_cast<size_t>(part)] = child_part_vec[0];
+        dad_nei->link_neighbors[static_cast<size_t>(part)] = part_vec[0];
         
         if(back_branch_map){
             child_part_vec[0]->link_neighbors.push_back(nei);
@@ -512,7 +512,7 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
     //cout<<"CASE 2: TWO CHILDREN HAVE IMAGEs AND THEY ARE DIFFERENT"<<"\n"<<"\n";
     TerraceNode *node_part = (TerraceNode*) child_part_vec[0]->node;
     TerraceNode *dad_part = nullptr;
-    FOR_NEIGHBOR(node_part, NULL, it) {
+    FOR_NEIGHBOR(node_part, nullptr, it) {
         bool appear = false;
         for (vector<TerraceNeighbor*>::iterator it2 = part_vec.begin(); it2 != part_vec.end(); it2++){
             if ((*it2) == (*it)) {
@@ -539,7 +539,7 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
     }
 }
 
-void Terrace::update_map(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad){
+void Terrace::update_map(size_t part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad){
     
     if (node->isLeaf()){
         if(!dad){
@@ -559,11 +559,11 @@ void Terrace::update_map(int part, NodeVector &part_taxa, bool back_branch_map, 
         // Check, if the final dad has empty_branches and map them to branch, which is available.
         // Note, that if there are some empty branches/taxa, there will be exactly one branch available for mapping.
         if(!node->empty_br_node_nei.empty()){
-            FOR_NEIGHBOR_DECLARE(node, NULL, it) {
+            FOR_NEIGHBOR_DECLARE(node, nullptr, it) {
                 if(((TerraceNeighbor*)(*it))->link_neighbors[part]){
                     TerraceNeighbor* node_nei_part = (TerraceNeighbor*)((TerraceNeighbor*)(*it))->link_neighbors[part];
                     TerraceNeighbor* dad_nei_part = (TerraceNeighbor*)((TerraceNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part];
-                    int i;
+                    size_t i;
                     for(i=0; i<node->empty_br_dad_nei.size(); i++){
                         ((TerraceNeighbor*)node->empty_br_node_nei[i])->link_neighbors[part] = node_nei_part;
                         ((TerraceNeighbor*)node->empty_br_dad_nei[i])->link_neighbors[part] = dad_nei_part;
@@ -653,7 +653,7 @@ void Terrace::printMapInfo(int partition){
     cout<<"Mapping info"<<"\n"<<"\n";
     NodeVector nodes1, nodes2;
     getBranches(nodes1, nodes2);
-    int part = 0;
+    size_t part = 0;
     drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
     if(partition==-1){
         for (vector<TerraceTree*>::iterator it = induced_trees.begin(); it != induced_trees.end(); it++, part++) {
@@ -662,7 +662,7 @@ void Terrace::printMapInfo(int partition){
             if((*it)->leafNum>2){
                 (*it)->drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE );
             }
-            for (int i = 0; i < nodes1.size(); i++) {
+            for (size_t i = 0; i < nodes1.size(); i++) {
                 if(((TerraceNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors.size()>0){
                     Neighbor *nei1 = ((TerraceNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
                     Neighbor *nei2 = ((TerraceNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
@@ -698,7 +698,7 @@ void Terrace::printMapInfo(int partition){
         if(induced_trees[part]->leafNum>2){
             induced_trees[part]->drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE );
         }
-        for (int i = 0; i < nodes1.size(); i++) {
+        for (size_t i = 0; i < nodes1.size(); i++) {
             if(((TerraceNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors.size()>0){
                 Neighbor *nei1 = ((TerraceNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part];
                 Neighbor *nei2 = ((TerraceNeighbor*)nodes2[i]->findNeighbor(nodes1[i]))->link_neighbors[part];
@@ -737,7 +737,7 @@ void Terrace::printBackMapInfo(){
     cout<<"\n"<<"BACKWARD mapping information:"<<"\n";
     cout<<"\n"<<"-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*"<<"\n";
     
-    int i,j,k;
+    size_t i,j,k;
     NodeVector node_1, node_2;
     TerraceNeighbor *nei12, *nei21;
     
@@ -797,7 +797,7 @@ void Terrace::printBackMapInfo(){
 
 void Terrace::create_Top_Low_Part_Tree_Pairs(vector<Terrace*> &part_tree_pairs, Terrace *terrace){
     
-    int i=0;
+    size_t i=0;
     NodeVector aux_taxon_nodes;
     vector<TerraceTree*> aux_induced_part_trees;
     IntVector parts;
@@ -812,7 +812,7 @@ void Terrace::create_Top_Low_Part_Tree_Pairs(vector<Terrace*> &part_tree_pairs, 
         
         vector<string> trees, taxa_names;
         double *rfdist;
-        int n=1;
+        size_t n=1;
         rfdist = new double [n*n];
         memset(rfdist, 0, n*n* sizeof(double));
         
@@ -872,7 +872,7 @@ void Terrace::getAllowedBranches(string taxon_name, vector<Terrace*> aux_terrace
     //printMapInfo();
     //printBackMapInfo();
     
-    int i, j, h, k;
+    size_t i, j, h, k;
     TerraceNode *node;
     TerraceNeighbor *nei, *dad_nei, *link_nei, *link_dad_nei;
     
@@ -965,7 +965,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     TerraceNeighbor *nei_part_1, *nei_part_2;
     NodeVector part_taxa;
     
-    int i,j;
+    size_t i,j;
 
     for(i=0; i<part_num; i++){
         
@@ -1053,7 +1053,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     
     TerraceNeighbor *center_node_nei;
     // INFO: since you are introducing new branches, make sure the link_neighbor vector is initialised for them
-    FOR_NEIGHBOR_IT(center_node, NULL, it){
+    FOR_NEIGHBOR_IT(center_node, nullptr, it){
         center_node_nei=(TerraceNeighbor*)(*it)->node->findNeighbor(center_node);
         center_node_nei->link_neighbors.resize(part_num,nullptr);
         ((TerraceNeighbor*)(*it))->link_neighbors.resize(part_num,nullptr);
@@ -1070,7 +1070,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
                 nei_part_1 = (TerraceNeighbor*)induced_part_tree_branch_1[i]->findNeighbor(induced_part_tree_branch_2[i]);
                 nei_part_2 = (TerraceNeighbor*)induced_part_tree_branch_2[i]->findNeighbor(induced_part_tree_branch_1[i]);
                 
-                FOR_NEIGHBOR_IT(center_node, NULL, it){
+                FOR_NEIGHBOR_IT(center_node, nullptr, it){
                     
                     center_node_nei=(TerraceNeighbor*)(*it)->node->findNeighbor(center_node);
 
@@ -1142,7 +1142,7 @@ void Terrace::generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree
     //cout<<"*******************************************************"<<"\n";
     
     
-    int j, id;
+    size_t j, id;
     
     if(!node1_vec_branch.empty()){
         //cout<<"NUM_OF_ALLOWED_BRANCHES_"<<taxon_name<<"_"<<node1_vec_branch.size()<<"\n";
@@ -1207,7 +1207,7 @@ void Terrace::remove_one_taxon(string taxon_name, vector<Terrace*> part_tree_pai
     
     //cout<<"-----------------------------------"<<"\n"<<"REMOVING TAXON: "<<taxon_name<<"\n"<<"-----------------------------------"<<"\n";
     
-    int i, j, h;
+    size_t i, j, h;
     NodeVector induced_part_tree_branch_1, induced_part_tree_branch_2;
     induced_part_tree_branch_1.resize(part_num,nullptr);
     induced_part_tree_branch_2.resize(part_num,nullptr);
@@ -1408,6 +1408,7 @@ void Terrace::remove_one_taxon(string taxon_name, vector<Terrace*> part_tree_pai
     ((TerraceNeighbor*)node_1->findNeighbor(node_2))->link_neighbors.resize(part_num,nullptr);
     ((TerraceNeighbor*)node_2->findNeighbor(node_1))->link_neighbors.resize(part_num,nullptr);
     
+    ASSERT(taxa_num > 0);
     taxa_num -= 1;
     
     //cout<<"Updating maps for partition trees...."<<"\n";
@@ -1450,7 +1451,7 @@ void Terrace::relinkALL(vector<Terrace*> part_tree_pairs){
     // re-link
     linkTrees(true, false);
     
-    for(int i=0; i<part_tree_pairs.size(); i++){
+    for(size_t i=0; i<part_tree_pairs.size(); i++){
         part_tree_pairs[i]->linkTrees(false, true);
     }
 }
@@ -1480,7 +1481,7 @@ void Terrace::cleanAllLinkNeighboursAndTaxa(bool clean_induced_part_maps){
 }
 
 void Terrace::print_ALL_DATA(vector<Terrace*> part_tree_pairs){
-    int i;
+    size_t i;
     
     cout<<"\n"<<"================ BEGIN: PRINTING all INFO ================"<<"\n";
     cout<<"Initial PARENT tree"<<"\n";
@@ -1513,7 +1514,7 @@ void Terrace::renameTaxa(){
     NodeVector taxa;
     getTaxa(taxa);
     
-    for(int i=0; i<taxa_num; i++){
+    for(size_t i=0; i<taxa_num; i++){
         stringstream ss;
         ss << i;
         string name = "t" + ss.str();
@@ -1523,7 +1524,7 @@ void Terrace::renameTaxa(){
                 break;
             }
         }
-        for(int j=0; j<taxa_num; j++){
+        for(size_t j=0; j<taxa_num; j++){
             if(matrix->taxa_names[j] == taxa_names_orgn[i]){
                 matrix->taxa_names[j] = name;
                 break;
@@ -1539,7 +1540,7 @@ bool Terrace::check_two_trees(MTree* query_tree){
     
     vector<string> trees, taxa_names;
     
-    for(int part=0; part<part_num; part++){
+    for(size_t part=0; part<part_num; part++){
         
         trees.clear();
         trees.push_back(getTreeTopologyString(induced_trees[part]));
@@ -1559,14 +1560,15 @@ bool Terrace::check_two_trees(MTree* query_tree){
         //tree_set_1[0]->printTree(cout,WT_SORT_TAXA|WT_BR_LEN_ROUNDING|WT_NEWLINE);
         
         double *rfdist;
-        int n=1;
+        size_t n=1;
         rfdist = new double [n*n];
         memset(rfdist, 0, n*n* sizeof(double));
         
         tree_set.computeRFDist(rfdist,&tree_set_1,true);
         //cout<<"Partition "<<part+1<<": RF-distance between induced trees is "<<rfdist[0]<<"\n";
         
-        if(rfdist[0]!=0){
+        const double EPSILON = 1e-8;
+        if(rfdist[0]>EPSILON){
             //cout<<"---------------------------------------------"<<"\n";
             //cout<<"A query tree does not belong to the terrace:"<<"\n";
             //tree->printTree(cout,WT_SORT_TAXA|WT_BR_LEN_ROUNDING|WT_NEWLINE);
@@ -1608,7 +1610,7 @@ void Terrace::write_terrace_trees_to_file(){
     out.exceptions(ios::failbit | ios::badbit);
     out.open(out_file,std::ios_base::app);
         
-    for(int i=0; i<trees_out_lim; i++){
+    for(size_t i=0; i<trees_out_lim; i++){
         out<<terrace_trees[i]<<"\n";
     }
     out.close();
@@ -1725,13 +1727,13 @@ void Terrace::write_warning_stop(int type){
 string Terrace::getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *ordered_taxa_to_insert,NodeVector &node1_vec_main, NodeVector &node2_vec_main){
     
     string taxon_name;
-    int len = 2*taxa_num-3;
+    size_t len = 2*taxa_num-3;
     vector<string>::iterator it_NEO;
     
     //NodeVector branch_end_1, branch_end_2;
     //this->getBranches(branch_end_1, branch_end_2);
     
-    int bond = 0, diff = ordered_taxa_to_insert->size()-matrix->uniq_taxa_to_insert_num;
+    int bond = 0, diff = static_cast<int>(ordered_taxa_to_insert->size())-matrix->uniq_taxa_to_insert_num;
     //cout<<ordered_taxa_to_insert->size()<<"|"<<matrix->uniq_taxa_num<<"|"<<diff<<"|"<<ordered_taxa_to_insert->size()-matrix->uniq_taxa_num<<"\n";
     if(diff > 0){
         // if there are more non-uniq taxa, only check the number of allowed branches for them, and choose one of them as the next taxon

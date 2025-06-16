@@ -59,7 +59,7 @@ void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
         in_line++;
         if (node_id <= 0) throw "Wrong node ID";
         if (node_id > nodes.size()) throw "Too large node ID";
-        if (nodes[node_id]) {
+        if (nodes[static_cast<size_t>(node_id)]) {
             in >> ch;
             if (ch != '|') throw "No | between node ID and name";
             in.get(ch);
@@ -76,7 +76,7 @@ void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
                     (*i) = '_';
                 }
             }
-            nodes[node_id]->name = node_name;
+            nodes[static_cast<size_t>(node_id)]->name = node_name;
         }
         // get the rest of the line
         string str;
@@ -88,7 +88,7 @@ void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
 Node *NCBITree::readNCBITree(const char *infile, int root_id, const char* taxon_level, const char *ignore_level) {
     ifstream in;
     cout << "Reading NCBI nodes file " << infile << endl;
-    Node *parent = NULL;
+    Node *parent = nullptr;
     try {
         in.exceptions(ios::failbit | ios::badbit);
         in.open(infile);
@@ -106,7 +106,7 @@ Node *NCBITree::readNCBITree(const char *infile, int root_id, const char* taxon_
 
 Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, const char *ignore_level) {
     //IntVector parents_id;
-    nodes.resize(MAX_TAXONOMY_ID, NULL);
+    nodes.resize(MAX_TAXONOMY_ID, nullptr);
     node_levels.resize(MAX_TAXONOMY_ID);
     string node_level;
     int node_id, parent_id, max_node_id = 0, num_nodes = 0;
@@ -133,10 +133,10 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
         string str;
         getline(in, str);
         if (node_id > max_node_id) max_node_id = node_id;
-        if (nodes[node_id]) throw "Duplicated node ID";
-        nodes[node_id] = newNode(node_id, node_id);
-        nodes[node_id]->height = parent_id; // use height temporarily for parent_id
-        node_levels[node_id] = node_level;
+        if (nodes[static_cast<size_t>(node_id)]) throw "Duplicated node ID";
+        nodes[static_cast<size_t>(node_id)] = newNode(node_id, node_id);
+        nodes[static_cast<size_t>(node_id)]->height = parent_id; // use height temporarily for parent_id
+        node_levels[static_cast<size_t>(node_id)] = node_level;
     }
 
     nodes.resize(max_node_id+1);
@@ -144,20 +144,20 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
     int ignored = 0;
 
     for (node_id = 0; node_id <= max_node_id; node_id++)
-        if (nodes[node_id]) {
-            parent_id = nodes[node_id]->height;
+        if (nodes[static_cast<size_t>(node_id)]) {
+            parent_id = nodes[static_cast<size_t>(node_id)]->height;
             if (!nodes[parent_id]) throw "Parent ID not found";
             if (parent_id == node_id) {
                 cout << "Ignore " << node_id << " | " << parent_id << endl;
                 continue;
             }
             double len = 1.0;
-            if (ignore_level && node_levels[node_id] == ignore_level) {
+            if (ignore_level && node_levels[static_cast<size_t>(node_id)] == ignore_level) {
                 len = 0.0;
                 ignored++;
             }
-            nodes[node_id]->addNeighbor(nodes[parent_id], len);
-            nodes[parent_id]->addNeighbor(nodes[node_id], len);
+            nodes[static_cast<size_t>(node_id)]->addNeighbor(nodes[parent_id], len);
+            nodes[parent_id]->addNeighbor(nodes[static_cast<size_t>(node_id)], len);
         }
 
     if (ignore_level)
@@ -194,7 +194,7 @@ Node* NCBITree::readNCBITree(istream &in, int root_id, const char* taxon_level, 
 int NCBITree::pruneTaxa(StrVector &node_levels, const char* taxon_level, Node *node, Node *dad) {
     int num_nodes = 0;
     //if (node_levels[node->id].find(taxon_level) != string::npos) {
-    if (node_levels[node->id] == taxon_level) {
+    if (node_levels[static_cast<size_t>(node->id)] == taxon_level) {
         // prune subtree below node
         Neighbor *node_nei = node->findNeighbor(dad);
         FOR_NEIGHBOR_IT(node, dad, it) {
@@ -233,7 +233,7 @@ int NCBITree::pruneBridgeNodes(Node *node, Node *dad) {
         double len = node->neighbors[0]->length + node->neighbors[1]->length;
         dad->updateNeighbor(node, child, len);
         child->updateNeighbor(node, dad, len);
-        nodes[node->id] = NULL;
+        nodes[static_cast<size_t>(node->id)] = nullptr;
         delete node;
         num_nodes++;
     }
@@ -249,7 +249,7 @@ int NCBITree::freeNode(Node *node, Node *dad)
         if ((*it)->node != dad) {
             num_nodes += freeNode((*it)->node, node);
         }
-    nodes[node->id] = NULL;
+    nodes[static_cast<size_t>(node->id)] = nullptr;
     delete node;
     return num_nodes;
 }

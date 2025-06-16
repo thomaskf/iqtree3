@@ -34,7 +34,7 @@ TerraceTP::TerraceTP(PhyloTree &tree, SuperAlignment* saln) :
 
     names.resize(labels.size());
 
-    for (int i=0; i<labels.size(); i++) {
+    for (size_t i=0; i<labels.size(); i++) {
         string label = labels[i];
 
         names[i] = label;
@@ -45,7 +45,7 @@ TerraceTP::TerraceTP(PhyloTree &tree, SuperAlignment* saln) :
 
     int n_partitions = saln->taxa_index[0].size();
 
-    for (int i=0; i<labels.size(); i++) {
+    for (size_t i=0; i<labels.size(); i++) {
         for (int j=0; j<n_partitions; j++) {
             bool value = (saln->taxa_index[i][j] != -1);
             coverage.set(i, j, value);
