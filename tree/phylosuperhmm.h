@@ -28,28 +28,28 @@ public:
     /**
      destructor
      */
-    ~PhyloSuperHmm();
+    ~PhyloSuperHmm() override;
     
     /**
      @return true if this is a mixture of trees, default: false
      */
-    virtual bool isTreeMix() { return true; }
+    virtual bool isTreeMix() override { return true; }
     
     /**
      set minimum branch length
      */
     virtual void setMinBranchLen(Params& params);
     
-    virtual void initSettings(Params &params);
+    virtual void initSettings(Params &params) override;
     
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
     
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
-    virtual void computeInitialTree(LikelihoodKernel kernel, istream* in);
+    virtual void computeInitialTree(LikelihoodKernel kernel, istream* in) override;
     
-    virtual void setRootNode(const char *my_root, bool multi_taxa);
+    virtual void setRootNode(const char *my_root, bool multi_taxa) override;
 
     virtual void setParams(Params* params);
 

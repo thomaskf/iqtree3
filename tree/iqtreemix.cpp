@@ -12,7 +12,7 @@ const double MAX_PROP = 1000.0;
 const double MAX_LEN = 1.0;
 const double LIKE_THRES = 0.1; // 10% more in team of likelihood value
 const double WEIGHT_EPSILON = 0.001;
-const int OPTIMIZE_STEPS = 10000;
+const int OPTIMIZE_STEPS = NUM_ONE_E_FOUR;
 
 // Input formats for the tree-mixture model
 // 1. linked models and site rates: GTR+G4+T
@@ -442,9 +442,9 @@ void IQTreeMix::separateModel(string modelName) {
         s = model_array[i];
         if (s.length() == 0) {
             continue;
-        } else if (s.length() > 6 && s.substr(0,5) == "TMIX{" && s.substr(s.length()-1,1) == "}") {
+        } else if (s.length() > NUM_SIX && s.substr(0, NUM_FIVE) == "TMIX{" && s.substr(s.length()-1,1) == "}") {
             // mixture model
-            s = s.substr(5,s.length()-6); // remove the beginning "MIX{" and the ending "}"
+            s = s.substr(NUM_FIVE, s.length() - NUM_SIX); // remove the beginning "MIX{" and the ending "}"
             if (i==0) {
                 // unlinked substitution models (while site rates may or may not be linked)
                 bool siteRateAppear = false;
@@ -681,7 +681,7 @@ void IQTreeMix::computeSiteTreeLogLike(int update_which_tree) {
     }
     
     // compute likelihood for each tree
-    double* patternlh_tree = _ptn_like_cat + t*nptn;
+    double* patternlh_tree = _ptn_like_cat + (t*nptn);
     ptree = at(t)->getRate()->getTree();
     // set the tree t as the site rate's tree
     // and compute the likelihood values
@@ -706,7 +706,7 @@ void IQTreeMix::computeSiteTreeLogLike(int update_which_tree) {
     // synchonize the scaling factor between the updated tree and the other trees for every pattern
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
     for (size_t ptn=0; ptn<nptn; ptn++) {
-        double* pattern_lh_tree = ptn_like_cat + ntree * ptn;
+        double* pattern_lh_tree = ptn_like_cat + (ntree * ptn);
         // check whether the scaling factor of the updated tree has much difference
         double scale_diff = at(t)->_pattern_scaling[ptn] - this->_pattern_scaling[ptn];
         double abs_scale_diff = fabs(scale_diff);
@@ -749,7 +749,8 @@ void IQTreeMix::computeSiteTreeLogLike(int update_which_tree) {
 
 double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
     // size_t i,j;
-    double logLike = 0.0;
+    // logLike is never used
+    // double logLike = 0.0;
     double subLike;
     double score;
     
@@ -772,7 +773,7 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
             omp_set_num_threads(at(t)->num_threads);
             #endif
         }
-        double* pattern_lh_tree = _ptn_like_cat + nptn * t;
+        double* pattern_lh_tree = _ptn_like_cat + (nptn * t);
         // save the site rate's tree
         PhyloTree* ptree = at(t)->getRate()->getTree();
         // set the tree t as the site rate's tree
@@ -818,8 +819,8 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
     // synchonize the scaling factor among the trees for every pattern
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
     for (size_t ptn=0; ptn<nptn; ptn++) {
-        double* pattern_lh_tree = ptn_like_cat + ntree * ptn;
-        double* pattern_scale_tree = ptn_scale_cat + ntree * ptn;
+        double* pattern_lh_tree = ptn_like_cat + (ntree * ptn);
+        double* pattern_scale_tree = ptn_scale_cat + (ntree * ptn);
         // find the max scaling factor among the trees
         double max_scale = pattern_scale_tree[0];
         int max_tree = 0;
@@ -901,7 +902,7 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
                 #endif
             }
             #endif
-            double* pattern_lh_tree = _ptn_like_cat + t * nptn;
+            double* pattern_lh_tree = _ptn_like_cat + (t * nptn);
             // save the site rate's tree
             PhyloTree* ptree = at(t)->getRate()->getTree();
             // set the tree t as the site rate's tree
@@ -944,8 +945,8 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
         for (size_t ptn=0; ptn<nptn; ptn++) {
             // find the max scaling factor among the trees
-            double* pattern_lh_tree = ptn_like_cat + ptn * ntree;
-            double* pattern_scale_tree = ptn_scale_cat + ptn * ntree;
+            double* pattern_lh_tree = ptn_like_cat + (ptn * ntree);
+            double* pattern_scale_tree = ptn_scale_cat + (ptn * ntree);
             double max_scale = at(0)->_pattern_scaling[ptn];
             int max_tree = 0;
             for (size_t t=1; t<ntree; t++) {
@@ -1169,7 +1170,7 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
             #endif
         }
         #endif
-        double* pattern_lh_tree = _ptn_like_cat + t * nptn;
+        double* pattern_lh_tree = _ptn_like_cat + (t * nptn);
         // save the site rate's tree
         PhyloTree* ptree = at(t)->getRate()->getTree();
         // set the tree t as the site rate's tree
@@ -1214,8 +1215,8 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
     for (size_t ptn=0; ptn<nptn; ptn++) {
         // find the max scaling factor among the trees
-        double* pattern_lh_tree = ptn_like_cat + ptn * ntree;
-        double* pattern_scale_tree = ptn_scale_cat + ptn * ntree;
+        double* pattern_lh_tree = ptn_like_cat + (ptn * ntree);
+        double* pattern_scale_tree = ptn_scale_cat + (ptn * ntree);
         double max_scale = pattern_scale_tree[0];
         int max_tree = 0;
         for (size_t t=1; t<ntree; t++) {
@@ -1273,7 +1274,7 @@ void IQTreeMix::clearAllPartialLH(bool make_null) {
 
 /**
         compute pattern posterior probabilities per rate/mixture category
-        @param pattern_prob_cat (OUT) all pattern-probabilities per category
+        @param ptn_prob_cat (OUT) all pattern-probabilities per category
         @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
  */
 void IQTreeMix::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
@@ -1292,7 +1293,7 @@ void IQTreeMix::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
 
 /**
         optimize all branch lengths of one tree
-        @param iterations number of iterations to loop through all branches
+        @param my_iterations number of iterations to loop through all branches
  */
 void IQTreeMix::optimizeAllBranchesOneTree(int whichtree, int my_iterations, double tolerance, int maxNRStep) {
     PhyloTree* ptree;
@@ -1307,7 +1308,7 @@ void IQTreeMix::optimizeAllBranchesOneTree(int whichtree, int my_iterations, dou
 
 /**
         optimize all branch lengths of all trees
-        @param iterations number of iterations to loop through all branches
+        @param my_iterations number of iterations to loop through all branches
         @return the likelihood of the tree
  */
 double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
@@ -1483,7 +1484,9 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double logl_ep
     size_t ptn, c;
     double *this_lk_cat;
     double lk_ptn;
-    double prev_score, score;
+    // NHANLT: initialize score to avoid warning Uninitialized variable
+    // though score will be computed later, the initialized value won't be used
+    double prev_score, score = 0.0;
     int step;
 
     prev_score = computeLikelihood();
@@ -1625,14 +1628,14 @@ double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
     return score;
 }
 
-void IQTreeMix::showTree() {
+/* void IQTreeMix::showTree() {
     size_t i;
     for (i=0; i<size(); i++) {
         cout << "Tree " << i+1 << ": ";
         at(i)->printTree(cout);
         cout << endl;
     }
-}
+}*/
 
 void IQTreeMix::setRootNode(const char *my_root, bool multi_taxa) {
     size_t i;
@@ -1643,7 +1646,7 @@ void IQTreeMix::setRootNode(const char *my_root, bool multi_taxa) {
 
 /**
     set checkpoint object
-    @param checkpoint
+    @param checkpoint a checkpoint
 */
 void IQTreeMix::setCheckpoint(Checkpoint *checkpoint) {
     size_t i;
@@ -1752,7 +1755,7 @@ void IQTreeMix::setParams(Params* params) {
         at(i)->setParams(params);
     }
     this->params = params;
-};
+}
 
 /*
  * Generate the branch IDs
@@ -2067,14 +2070,14 @@ void IQTreeMix::optimizeTreesSeparately(bool printInfo, double logl_epsilon, dou
     #endif
 }
 
-void showDoubleArrayContent(string name, int dim, double* arr) {
+/* void showDoubleArrayContent(string name, int dim, double* arr) {
     int i;
     // show the values of array
     cout << name << ":";
     for (i=1; i<=dim; i++)
         cout << " " << arr[i];
     cout << endl;
-}
+}*/
 
 /**
     Initialize the tree weights using parsimony scores
@@ -2177,7 +2180,7 @@ void IQTreeMix::initializeTreeWeights() {
     5. Repeat the steps 3 and 4 until the sum of the absolute changes in the tree weights <= 0.0001
     6. Report the final tree weights
  */
-void IQTreeMix::initializeTreeWeights2() {
+/* void IQTreeMix::initializeTreeWeights2() {
     size_t i, j, k;
     int* parsimony_scores;
     int min_par_score;
@@ -2305,7 +2308,7 @@ void IQTreeMix::initializeTreeWeights2() {
         cout << endl;
          */
         // compute the sum of difference
-        diff_sum = 0.0;
+/*        diff_sum = 0.0;
         for (i=0; i<ntree; i++)
             diff_sum += fabs(weights[i] - pre_weights[i]);
     }
@@ -2329,7 +2332,7 @@ void IQTreeMix::initializeTreeWeights2() {
         cout << weights[i];
     }
     cout << endl;
-}
+}*/
 
 // reset the ptn_freq array to the original frequencies of the patterns
 void IQTreeMix::resetPtnOrigFreq() {
@@ -2345,23 +2348,28 @@ void IQTreeMix::resetPtnOrigFreq() {
 
 string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     size_t i, ptn;
-    int step, n, m, substep1, nsubstep1, nsubstep1_start, nsubstep1_max, nsubstep2_start, nsubstep2_max, substep2, nsubstep2, substep2_tot;
+    // substep2_tot is never used
+    // n is never used
+    int step, m, substep1, nsubstep1, nsubstep1_start, nsubstep1_max, nsubstep2_start, nsubstep2_max, substep2, nsubstep2; // , substep2_tot;
     double* pattern_mix_lh;
     double curr_epsilon;
     double prev_score, prev_score1, prev_score2, score, t_score;
     double* prev_ptn_invar;
     bool tree_weight_converge = false;
-    bool firsttime_substmodel = true;
-    bool firsttime_RHASmodel = true;
-    bool firsttime_branchlen = true;
+    // firsttime_substmodel is never used
+    // bool firsttime_substmodel = true;
+    // firsttime_RHASmodel is never used
+    // bool firsttime_RHASmodel = true;
+    // firsttime_branchlen is never used
+    // bool firsttime_branchlen = true;
     double gradient_epsilon = 0.0001;
     PhyloTree *ptree;
     
-    n = 1;
-    nsubstep1_start = 5;
-    nsubstep1_max = 10;
-    nsubstep2_start = 5;
-    nsubstep2_max = 10;
+    // n = 1;
+    nsubstep1_start = NUM_FIVE;
+    nsubstep1_max = NUM_TEN;
+    nsubstep2_start = NUM_FIVE;
+    nsubstep2_max = NUM_TEN;
     substep2 = 0;
     
     // allocate memory
@@ -2409,7 +2417,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     for (step = 0; step < optimize_steps; step++) {
         
         prev_score1 = score;
-        substep2_tot = 0;
+        // substep2_tot is assigned but never be used
+        // substep2_tot = 0;
 
         for (substep1 = 0; substep1<nsubstep1; substep1++) {
             
@@ -2527,7 +2536,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 prev_score2 = score;
             }
 
-            substep2_tot += substep2;
+            // substep2_tot is assigned but never be used
+            // substep2_tot += substep2;
 
             // optimize the linked site rate model
             if (anySiteRate && isLinkSiteRate) {
@@ -2594,7 +2604,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 score = optimizeTreeWeightsByBFGS(gradient_epsilon);
                 tree_weight_converge = true;
             } else {
-                m = 1 + step / 100;
+                m = 1 + step / NUM_ONE_ZERO_ZERO;
                 score = optimizeTreeWeightsByEM(pattern_mix_lh, gradient_epsilon, m, tree_weight_converge);  // loop max n times
             }
             if (verbose_mode >= VB_MED) {
@@ -2654,7 +2664,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 
 /**
         print tree to .treefile
-        @param params program parameters, field root is taken
+        @param suffix suffix of the output file
  */
 void IQTreeMix::printResultTree(string suffix) {
     ofstream fout;
@@ -2780,10 +2790,7 @@ void IQTreeMix::drawTree(ostream &out, int brtype, double zero_epsilon) {
 /**
         print the tree to the output file in newick format
         @param out the output file.
-        @param node the starting node, nullptr to start from the root
-        @param dad dad of the node, used to direct the search
         @param brtype type of branch to print
-        @return ID of the taxon with smallest ID
  */
 void IQTreeMix::printTree(ostream & out, int brtype) {
     for (size_t i=0; i<size(); i++) {
@@ -2845,7 +2852,6 @@ vector<string> IQTreeMix::getBestTrees(int numTrees) {
 /**
         Read the tree saved with Taxon IDs and branch lengths.
         @param tree_string tree string to read from
-        @param updatePLL if true, tree is read into PLL
  */
 void IQTreeMix::readTreeString(const string &tree_string) {
     vector<string> substrs;
@@ -2949,7 +2955,7 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int u
     if (need_multiplyFreq) {
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
         for (size_t ptn = 0; ptn < nptn; ptn++) {
-            double* this_lk_cat = pattern_mix_lh + ptn * ntree;
+            double* this_lk_cat = pattern_mix_lh + (ptn * ntree);
             double lk_ptn = 0.0;
             for (size_t c = 0; c < ntree; c++) {
                 lk_ptn += this_lk_cat[c];
@@ -2965,7 +2971,7 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int u
     } else {
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
         for (size_t ptn = 0; ptn < nptn; ptn++) {
-            double* this_lk_cat = pattern_mix_lh + ptn * ntree;
+            double* this_lk_cat = pattern_mix_lh + (ptn * ntree);
             double lk_ptn = 0.0;
             for (size_t c = 0; c < ntree; c++) {
                 lk_ptn += this_lk_cat[c];

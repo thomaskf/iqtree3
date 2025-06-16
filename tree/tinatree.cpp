@@ -35,7 +35,7 @@ TinaTree::~TinaTree()
 int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, PhyloNode *dad) {
     int score = 0;
     states = 0;
-    if (!node) node = (PhyloNode*) root;
+    if (!node) node = static_cast<PhyloNode*>(root);
     if (node->degree() > 3)
         outError("Does not work with multifurcating tree");
     if (verbose_mode == VB_DEBUG)
@@ -68,7 +68,7 @@ int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phylo
 
         FOR_NEIGHBOR_IT(node, dad, it) {
             int states_child;
-            int score_child = computeParsimonyScore(ptn, states_child, (PhyloNode*) ((*it)->node), node);
+            int score_child = computeParsimonyScore(ptn, states_child, static_cast<PhyloNode*>((*it)->node), node);
             union_states |= states_child;
             intersect_states &= states_child;
             score += score_child;
@@ -113,7 +113,7 @@ void TinaTree::initializeAllPartialLh() {
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
     if (!node) {
-        node = (PhyloNode*) root;
+        node = static_cast<PhyloNode*>(root);
         // allocate the big central partial likelihoods memory
 
         if (!central_partial_pars) {
@@ -127,15 +127,15 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node,
     }
     if (dad) {
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
-        PhyloNeighbor *nei = (PhyloNeighbor*) node->findNeighbor(dad);
+        PhyloNeighbor *nei = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + (index * pars_block_size);
-        nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        nei = static_cast<PhyloNeighbor*>(dad->findNeighbor(node));
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
         ASSERT(index < nodeNum * 2 - 1);
     }
     FOR_NEIGHBOR_IT(node, dad, it)
-    initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);
+    initializeAllPartialLh(index, indexlh, static_cast<PhyloNode*>((*it)->node), node);
 }

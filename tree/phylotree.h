@@ -108,16 +108,16 @@ inline T *aligned_alloc(size_t size) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) &&!defined(WIN64) && !defined(__CYGWIN__)
         print_stacktrace(cerr);
 #endif
-        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
+        outError("Not enough memory, allocation of " + convertInt64ToString(static_cast<int64_t>(size*sizeof(T))) + " bytes failed (bad_alloc)");
     }
 #endif
     if (mem == nullptr) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) &&!defined(WIN64) && !defined(__CYGWIN__)
         print_stacktrace(cerr);
 #endif
-        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
+        outError("Not enough memory, allocation of " + convertInt64ToString(static_cast<int64_t>(size*sizeof(T))) + " bytes failed (bad_alloc)");
     }
-    return (T*)mem;
+    return static_cast<T*>(mem);
 }
 
 template <class T> T* ensure_aligned_allocated(T* & ptr, long long int size) {
@@ -180,7 +180,7 @@ struct NNIMove {
     int swap_id;
 
     // new branch lengths of 5 branches corresponding to the NNI
-    DoubleVector newLen[5];
+    DoubleVector newLen[NUM_FIVE];
 
     // pattern likelihoods
     double *ptnlh;
@@ -285,9 +285,9 @@ struct QuartetGroups{
 				// 4:	4 clusters  - (a,b)|(c,d)
     int numSeqs;		// number of seqs in alignment (should be #A+#B+#C+#D+#X)
     int numQuartSeqs;		// number of seqs in analysis  (should be #A+#B+#C+#D)
-    int numGrpSeqs[5];		// number of seqs in cluster A, B, C, D, and X (exclude)
+    int numGrpSeqs[NUM_FIVE];		// number of seqs in cluster A, B, C, D, and X (exclude)
     int64_t uniqueQuarts;	// number of existing unique quartets for this grouping
-    string Name[5];		// seqIDs of cluster A
+    string Name[NUM_FIVE];		// seqIDs of cluster A
     vector<int> GroupA;		// seqIDs of cluster A
     vector<int> GroupB;		// seqIDs of cluster B
     vector<int> GroupC;		// seqIDs of cluster C
@@ -324,9 +324,9 @@ public:
     double *echildren;
     double *partial_lh_leaves;
 
-    TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-        this->dad = dad;
-        this->dad_branch = dad_branch;
+    TraversalInfo(PhyloNeighbor *new_dad_branch, PhyloNode *new_dad) {
+        this->dad = new_dad;
+        this->dad_branch = new_dad_branch;
     }
 };
 
@@ -366,7 +366,7 @@ public:
 
     /**
      * Constructor with given alignment
-     * @param alignment
+     * @param aln an alignment
      */
     PhyloTree(Alignment *aln);
 
@@ -386,22 +386,22 @@ public:
     /**
             destructor
      */
-    virtual ~PhyloTree();
+    virtual ~PhyloTree() override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
             read the tree from the input file in newick format
@@ -409,32 +409,32 @@ public:
             @param is_rooted (IN/OUT) true if tree is rooted
             @param tree_line_index the line_index to read the tree (in case with multiple trees *.parttrees)
      */
-    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0);
+    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0) override;
 
     /**
             read the tree from the ifstream in newick format
             @param in the input stream.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    virtual void readTree(istream &in, bool &is_rooted);
+    virtual void readTree(istream &in, bool &is_rooted) override;
 
     /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy
      */
-    virtual void copyTree(MTree *tree);
+    virtual void copyTree(MTree *tree) override;
     /**
             copy the sub-tree structure into this tree
             @param tree the tree to copy
             @param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
      */
-    virtual void copyTree(MTree *tree, string &taxa_set);
+    virtual void copyTree(MTree *tree, string &taxa_set) override;
 
     /**
      copy the constraint tree structure into this tree and reindex node IDs accordingly
      @param tree the tree to copy
-     @param[out] order of taxa with first part being in constraint tree
+     @param[out] taxon_order of taxa with first part being in constraint tree
      */
     void copyConstraintTree(MTree *tree, IntVector &taxon_order, int *rand_stream);
 
@@ -566,7 +566,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr);
+    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -574,7 +574,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual Node* newNode(int node_id, int node_name);
+    virtual Node* newNode(int node_id, int node_name) override;
 
     /**
      *		@return number of alignment patterns
@@ -809,7 +809,7 @@ public:
     /**
             allocate memory for a scale num vector
      */
-    UBYTE *newScaleNum();
+    // UBYTE *newScaleNum();
 
     /** get the number of bytes occupied by scale_num */
     size_t getScaleNumBytes();
@@ -896,8 +896,6 @@ public:
 
     /**
             compute the partial likelihood at a subtree
-            @param dad_branch the branch leading to the subtree
-            @param dad its dad, used to direct the tranversal
      */
     virtual void computePartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
     typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
@@ -995,8 +993,6 @@ public:
     /**
             quickly compute tree likelihood on branch current_it <-> current_it_back given buffer (theta_all).
            	Used after optimizing branch length
-            @param pattern_lh (OUT) if not nullptr, the function will assign pattern log-likelihoods to this vector
-                            assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
     virtual double computeLikelihoodFromBuffer();
@@ -1031,7 +1027,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    // virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
         compute likelihood of rooted tree with virtual root (FOR TINA)
@@ -1045,7 +1041,7 @@ public:
             compute the tree likelihood
             @param pattern_lh (OUT) if not nullptr, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns
-            @param save_log_value, report the log-likelihood values or likelihood values to the array pattern_lh
+            @param save_log_value report the log-likelihood values or likelihood values to the array pattern_lh
             @return tree likelihood
      */
     virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true);
@@ -1107,7 +1103,7 @@ public:
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
      */
-    void computeJointAncestralSequences(int *ancestral_seqs);
+    // void computeJointAncestralSequences(int *ancestral_seqs);
 
     /**
      * compute max ancestral likelihood according to
@@ -1184,8 +1180,8 @@ public:
     /**
      * \brief Approximate the branch legnth between \a dad_branch and \a dad using Least Square instead
      * of Newton Raphson
-     * @param[in] dad_branch
-     * @param[in] dad
+     * @param[in] dad_branch dad branch
+     * @param[in] dad dad node
      * @return approximated branch length
      */
     double computeLeastSquareBranLen(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -1207,7 +1203,7 @@ public:
 
     double correctBranchLengthF81(double observedBran, double alpha);
 
-    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    // double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             Compute the variance in log-likelihood difference
@@ -1229,20 +1225,18 @@ public:
             refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
             Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
-            @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
 
     /**
             Read the tree saved with Taxon names and branch lengths.
             @param tree_string tree string to read from
-            @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeStringSeqName(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
-            @param tree_string tree string to read from
+            @param file_name tree file to read from
      */
     void readTreeFile(const string &file_name);
     
@@ -1266,7 +1260,7 @@ public:
 
     /**
      * Read the newick string into PLL kernel
-     * @param newickTree
+     * @param newickTree a tree in newick string
      */
     void pllReadNewick(string newickTree);
 
@@ -1338,7 +1332,6 @@ public:
             @param dad its dad, used to direct the tranversal
             @param df (OUT) first derivative
             @param ddf (OUT) second derivative
-            @return tree likelihood
      */
     void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf);
 
@@ -1366,9 +1359,6 @@ public:
     /**
             FAST VERSION: used internally by computeParsimonyTree() to find the best target branch to add into the tree
             @param added_node node to add
-            @param target_node (OUT) one end of the best branch found
-            @param target_dad (OUT) the other end of the best branch found
-            @param target_partial_pars (OUT) copy of the partial_pars corresponding to best branch
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
@@ -1417,7 +1407,6 @@ public:
             @param node2 2nd end node of the branch
             @param clearLH true to clear the partial likelihood, otherwise false
             @param maxNRStep maximum number of Newton-Raphson steps
-            @return likelihood score
      */
     virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
 
@@ -1433,7 +1422,6 @@ public:
             optimize all branch lengths at the subtree rooted at node step-by-step.
             @param node the current node
             @param dad dad of the node, used to direct the search
-            @return the likelihood of the tree
      */
     virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = nullptr, int maxNRStep = 100);
 
@@ -1449,7 +1437,7 @@ public:
 
     /**
             optimize all branch lengths of the tree
-            @param iterations number of iterations to loop through all branches
+            @param my_iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
@@ -1459,7 +1447,7 @@ public:
     virtual double computeFundiLikelihood();
 
     /**
-     optimize \rho and branch length of the central branch by FunDi model (Gaston, Susko, Roger 2011)
+     optimize rho and branch length of the central branch by FunDi model (Gaston, Susko, Roger 2011)
      @return log-likelihood of FunDi model
      */
     virtual double optimizeFundiModel();
@@ -1485,7 +1473,7 @@ public:
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFunction(double value);
+    virtual double computeFunction(double value) override;
 
     /**
             Inherited from Optimization class.
@@ -1494,9 +1482,8 @@ public:
             @param value current branch length
             @param df (OUT) first derivative
             @param ddf (OUT) second derivative
-            @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
     /**
         optimize the scaling factor for tree length, given all branch lengths fixed
@@ -1526,7 +1513,7 @@ public:
      * Estimate the current branch using least squares
      * @param node1 first node of the branch
      * @param node2 second node of the branch
-     * @return
+     * @return a double
      */
     double optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2);
 
@@ -1684,7 +1671,7 @@ public:
             grow the tree by step-wise addition
             @param alignment input alignment
      */
-    void growTreeML(Alignment *alignment);
+    // void growTreeML(Alignment *alignment);
 
     /**
             used internally by growTreeML() to find the best target branch to add into the tree
@@ -1702,15 +1689,6 @@ public:
      ****************************************************************************/
 
     virtual void prepareToComputeDistances();
-    
-    /**
-            compute the distance between 2 sequences.
-            @param seq1 index of sequence 1
-            @param seq2 index of sequence 2
-            @param initial_dist initial distance
-            @param (OUT) variance of distance between seq1 and seq2
-            @return distance between seq1 and seq2
-     */
     
     virtual bool hasMatrixOfConvertedSequences() const;
 
@@ -1775,7 +1753,7 @@ public:
             @param dist_mat (IN/OUT) the shortest path between all pairs of taxa
     @return the longest distance
      */
-    double correctDist(double *dist_mat);
+    // double correctDist(double *dist_mat);
 
     /**
     compute the distance between two nodes on a tree.
@@ -1809,7 +1787,6 @@ public:
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.
-            @param fixed_length fixed branch length to set to negative branch lengths
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
@@ -1878,7 +1855,7 @@ public:
             no tree improvement found.
             @return the likelihood of the tree
      */
-    double optimizeSPRBranches();
+    // double optimizeSPRBranches();
 
     /**
             search by Subtree pruning and regrafting at a current subtree
@@ -1910,10 +1887,10 @@ public:
 
     double assessSPRMove(double cur_score, const SPRMove &spr);
 
-    void pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info);
+    // void pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info);
 
-    void regraftSubtree(PruningInfo &info,
-            PhyloNode *in_node, PhyloNode *in_dad);
+    /*void regraftSubtree(PruningInfo &info,
+            PhyloNode *in_node, PhyloNode *in_dad);*/
 
     /****************************************************************************
             Approximate Likelihood Ratio Test with SH-like interpretation
@@ -1964,7 +1941,7 @@ public:
     vector<SeqQuartetInfo> lmap_seq_quartet_info;
 
     /** generate a bunch of quartets and compute likelihood for 3 quartet trees for each replicate
-        @param lmap_num_quartets number of quartets
+        @param LMGroups number of quartets
         @param lmap_quartet_info (OUT) vector of quartet information
     */
     void computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info, QuartetGroups &LMGroups);
@@ -1987,7 +1964,6 @@ public:
      compute site concordance factor
      @param branch target branch
      @param nquartets number of quartets
-     @param[out] info concordance information
      @param rstream random stream
      */
     virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
@@ -2001,7 +1977,6 @@ public:
      compute ancestral site concordance factor
      @param branch target branch
      @param nquartets number of quartets
-     @param[out] info concordance information
      @param rstream random stream
      */
     virtual void computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
@@ -2047,7 +2022,6 @@ public:
     /**
             reinsert one leaf back into the tree
             @param leaf the leaf to reinsert
-            @param adjacent_node the node adjacent to the leaf, returned by deleteLeaves() function
             @param node one end node of the reinsertion branch in the existing tree
             @param dad the other node of the reinsertion branch in the existing tree
      */
@@ -2296,8 +2270,7 @@ public:
     virtual void writeBranches(ostream &out);
     
     /**
-       @param out the file path to which a (newly generated) distance file has been written
-        (or blank, if it hasn't)
+       @return a string
      */
     const string& getDistanceFileWritten() const;
 
@@ -2459,7 +2432,7 @@ protected:
     /**
         return the number of dimensions
     */
-    virtual int getNDim();
+    virtual int getNDim() override;
 
 
     /**
@@ -2467,7 +2440,7 @@ protected:
         @param x the input vector x
         @return the function value at x
     */
-    virtual double targetFunk(double x[]);
+    virtual double targetFunk(double x[]) override;
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
@@ -2506,7 +2479,7 @@ protected:
             allocate new memory for a bit block vector
             @return the allocated memory
      */
-    UINT *newBitsBlock();
+    // UINT *newBitsBlock();
 
     virtual void saveCurrentTree(double logl) {
     } // save current tree

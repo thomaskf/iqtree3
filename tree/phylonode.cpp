@@ -33,7 +33,7 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 }
 
 void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
-	PhyloNeighbor* node_nei = (PhyloNeighbor*)findNeighbor(dad);
+	PhyloNeighbor* node_nei = static_cast<PhyloNeighbor*>(findNeighbor(dad));
 	node_nei->partial_lh_computed = 0;
 	if (make_null) node_nei->partial_lh = nullptr;
 
@@ -41,7 +41,7 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode* dad) {
 	if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
 		node_nei->size = 0;
 
-	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
+	node_nei = static_cast<PhyloNeighbor*>(dad->findNeighbor(this));
 	node_nei->partial_lh_computed = 0;
 	if (make_null) {
 		node_nei->partial_lh = nullptr;
@@ -89,7 +89,7 @@ void PhyloNode::addNeighbor(Node *node, double length, int id) {
 
 
 int PhyloNode::computeSize(Node *dad) {
-    PhyloNeighbor *nei = (PhyloNeighbor*)dad->findNeighbor(this);
+    PhyloNeighbor *nei = static_cast<PhyloNeighbor*>(dad->findNeighbor(this));
     if (nei->size > 0)
         return nei->size;
 

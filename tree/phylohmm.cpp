@@ -48,7 +48,7 @@ PhyloHmm::PhyloHmm(int n_site, int n_cat) {
     marginal_tran = aligned_alloc<double>(site_transition_size);
 
     // the probabilities are initialized as equally distributed
-    double init_prob_value = 1.0/((double)ncat);
+    double init_prob_value = 1.0/(static_cast<double>(ncat));
     for (size_t i = 0; i < ncat; i++)
         prob[i] = init_prob_value;
     computeLogProb();
@@ -74,7 +74,7 @@ PhyloHmm::~PhyloHmm() {
 // prerequisite: array site_like_cat has been updated (i.e. computeLogLikelihoodSiteTree() has been invoked)
 // note: site_like_cat[i * ntree + j] : log-likelihood of site nsite-i-1 and tree j
 double PhyloHmm::computeBackLike(bool showInterRst) {
-    int showlines = 5;
+    int showlines = NUM_FIVE;
     size_t pre_k = 0;
     size_t k;
     size_t i,j;
@@ -136,7 +136,7 @@ double PhyloHmm::computeMaxPath() {
                 v = transit_arr[l] + pre_work[l];
                 if (work[j] < v) {
                     work[j] = v;
-                    next_cat_arr[j] = (int) l;
+                    next_cat_arr[j] = static_cast<int>(l);
                 }
             }
             work[j] += site_lh_arr[j];
@@ -153,7 +153,7 @@ double PhyloHmm::computeMaxPath() {
         v = prob_log[j] + pre_work[j];
         if (max_log_like < v) {
             max_log_like = v;
-            max_cat = (int) j;
+            max_cat = static_cast<int>(j);
         }
     }
     pathLogLike = max_log_like;
@@ -164,7 +164,7 @@ double PhyloHmm::computeMaxPath() {
     // get the assignment of the categories along sites with maximum likelihood
     site_categories[0] = max_cat;
     for (i = 0; i < nsite - 1; i++) {
-        max_cat = next_cat[i * ncat + max_cat];
+        max_cat = next_cat[(i * ncat) + max_cat];
         site_categories[i+1] = max_cat;
     }
     
@@ -209,7 +209,7 @@ double PhyloHmm::optimizeProbEM() {
     for (j = 1; j < ncat; j++) {
         if (max < work[j]) {
             max = work[j];
-            max_j = (int) j;
+            max_j = static_cast<int>(j);
         }
     }
     // exp(prob_log[i] + work[i] - max)
@@ -351,7 +351,7 @@ void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment, int cat_as
         out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
     
     for (i=0; i<ncat; i++)
-        rateSites[i] = (double) numSites[i] / nsite;
+        rateSites[i] = static_cast<double>(numSites[i]) / nsite;
     
     // show the statistics
     out << "Number of sites for each category:";
@@ -389,7 +389,8 @@ void PhyloHmm::computeLogProb() {
 // prerequisite: array site_like_cat has been updated (i.e. computeLogLikelihoodSiteTree() has been invoked)
 // and save all the intermediate results to the bwd_array array
 double PhyloHmm::computeBackLikeArray() {
-    size_t pre_k = 0;
+    // pre_k is never used
+    // size_t pre_k = 0;
     size_t k;
     double* pre_work;
     double* work;
@@ -416,7 +417,8 @@ double PhyloHmm::computeBackLikeArray() {
 // compute forward log-likelihood
 // and save all the intermediate results to the fwd_array array
 double PhyloHmm::computeFwdLikeArray() {
-    size_t pre_k = 0;
+    // pre_k is never used
+    // size_t pre_k = 0;
     size_t k;
     double* pre_work;
     double* work;
@@ -441,7 +443,7 @@ double PhyloHmm::computeFwdLikeArray() {
 }
 
 // verify the backLikeArray and FwdLikeArray
-void PhyloHmm::checkEachSiteBackFwdLikeArray() {
+/* void PhyloHmm::checkEachSiteBackFwdLikeArray() {
     double score;
     double* f_array = fwd_array;
     double* b_array = bwd_array;
@@ -451,7 +453,7 @@ void PhyloHmm::checkEachSiteBackFwdLikeArray() {
         f_array += ncat;
         b_array += ncat;
     }
-}
+}*/
 
 // compute the marginal probabilities for each site
 void PhyloHmm::computeMarginalProb(ostream* out) {
@@ -491,10 +493,10 @@ void PhyloHmm::computeMarginalProb(ostream* out) {
 
 // compute the marginal probabilities for transitions between every pair of sites
 void PhyloHmm::computeMarginalTransitProb() {
-    double score, sum;
+    double score; // , sum;
     double* f_array = fwd_array;
     double* b_array = bwd_array + ncat;
-    double* catlike_array = site_like_cat + ncat * (nsite - 1);
+    double* catlike_array = site_like_cat + (ncat * (nsite - 1));
     double* t_array;
     double* mprob = marginal_tran;
     double* t1 = new double[ncat * ncat];
@@ -519,10 +521,11 @@ void PhyloHmm::computeMarginalTransitProb() {
         }
         score = logDotProd(t1, t2, sq_ncat);
         // cout << "[" << score << "]";
-        sum = 0.0;
+        // sum = 0.0;
         for (k=0; k<sq_ncat; k++) {
             mprob[k] = exp(t1[k] + t2[k] - score);
-            sum += mprob[k];
+            // NHANLT: sum is never used since the line " cout << " {" << sum << "}" << endl;" was commented
+            // sum += mprob[k];
             // cout << " " << mprob[k];
         }
         // cout << " {" << sum << "}" << endl;
@@ -535,7 +538,7 @@ void PhyloHmm::computeMarginalTransitProb() {
     delete[] t2;
 }
 
-void PhyloHmm::showSiteLikeCat() {
+/* void PhyloHmm::showSiteLikeCat() {
     int k = 0;
     cout << "Array site_like_cat :" << endl;
     for (int i=0; i<nsite; i++) {
@@ -545,9 +548,9 @@ void PhyloHmm::showSiteLikeCat() {
         }
         cout << endl;
     }
-}
+}*/
 
-void PhyloHmm::showTransiteLog() {
+/* void PhyloHmm::showTransiteLog() {
     double* transit_arr = modelHmm->getTransitLog(1);
     int k = 0;
     cout << "Array TransiteLog :" << endl;
@@ -559,6 +562,6 @@ void PhyloHmm::showTransiteLog() {
         }
         cout << endl;
     }
-}
+}*/
 
 

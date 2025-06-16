@@ -697,7 +697,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 						nodes_vec[id][i]->name = "-" + nodes_vec[id][i]->name;*/
 				} 
 			}
-			double rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
+			double rf_val = (*hsit)->size() + (*hsit2)->size() - (2*common_splits);
             if (Params::getInstance().normalize_tree_dist) {
                 int non_trivial = (*hsit)->size() - (*hsit)->getNTrivialSplits();
                 non_trivial += (*hsit2)->size() - ((*hsit2)->begin())->first->getNTaxa();
@@ -706,7 +706,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
             if (k_by_k)
                 rfdist[id] = rf_val;
             else
-                rfdist[id*col_size + id2] = rf_val;
+                rfdist[(id*col_size) + id2] = rf_val;
 			if (info_file) oinfo << endl;
 			if (tree_file) { at(id)->printTree(otree); otree << endl; }
 			for (i = 0; i < nodes_vec[id].size(); i++)
@@ -723,7 +723,7 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 			for (spit = (*hsit3)->begin(); spit != (*hsit3)->end(); spit++) 
 				if (!(*hsit)->compatible(*spit)) num_incomp++;
 					
-			incomp_splits[id*col_size + id2] = num_incomp;
+			incomp_splits[(id*col_size) + id2] = num_incomp;
 		}
 	}
 	// delete memory 

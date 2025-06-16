@@ -37,6 +37,7 @@
 #include <string.h>
 #include <sstream>
 #include <random>
+#include <cstddef> // to avoid the warning "no header providing "size_t" is directly included"
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -211,6 +212,48 @@ enum MCMC_CLOCK{
     EQUAL_RATES = 1,
     INDEPENDENT = 2,
     CORRELATED = 3
+};
+
+/**
+ *  predefined number to avoid warnings about using magic number
+ */
+enum NumIndex {
+    NUM_ZERO = 0,
+    NUM_ONE = 1,
+    NUM_TWO = 2,
+    NUM_THREE = 3,
+    NUM_FOUR = 4,
+    NUM_FIVE = 5,
+    NUM_SIX = 6,
+    NUM_SEVEN = 7,
+    NUM_EIGHT = 8,
+    NUM_NINE = 9,
+    NUM_TEN = 10,
+    NUM_ONE_ONE = 11,
+    NUM_ONE_TWO = 12,
+    NUM_ONE_THREE = 13,
+    NUM_ONE_FOUR = 14,
+    NUM_ONE_FIVE = 15,
+    NUM_ONE_SIX = 16,
+    NUM_ONE_SEVEN = 17,
+    NUM_ONE_EIGHT = 18,
+    NUM_ONE_NINE = 19,
+    NUM_TWO_ZERO = 20,
+    NUM_TWO_ONE = 21,
+    NUM_TWO_TWO = 22,
+    NUM_TWO_THREE = 23,
+    NUM_TWO_FOUR = 24,
+    NUM_THREE_TWO = 32,
+    NUM_SIX_FOUR = 64,
+    NUM_ONE_ZERO_ZERO = 100,
+    NUM_ONE_TWO_SIX = 126,
+    NUM_TWO_ZERO_ZERO = 200,
+    NUM_TWO_FIVE_SIX = 256,
+    NUM_FIVE_ONE_TWO = 512,
+    NUM_ONE_E_THREE = 1000,
+    NUM_ONE_ZERO_TWO_FOUR = 1024,
+    NUM_ONE_E_FOUR = 10000,
+    NUM_ONE_E_SIX = 1000000
 };
 
 struct IndelDistribution {

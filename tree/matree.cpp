@@ -46,18 +46,18 @@ void MaTree::printBrInfo(ostream& out) {
     sort(outer.begin(),outer.end());
     sort(all.begin(),all.end());
     //for the statistics
-    int noInner = inner.size();
-    int noOuter = outer.size();
-    int noBr = all.size();
+    size_t noInner = inner.size();
+    size_t noOuter = outer.size();
+    size_t noBr = all.size();
     double aveInner = 0;
     double aveOuter = 0;
     double treeLen = 0;
 
-    for ( int i = 0; i < noInner; i++ )
+    for ( size_t i = 0; i < noInner; i++ )
         aveInner += inner[i];
-    for ( int i = 0; i < noOuter; i++ )
+    for ( size_t i = 0; i < noOuter; i++ )
         aveOuter += outer[i];
-    for ( int i = 0; i < noBr; i++ )
+    for ( size_t i = 0; i < noBr; i++ )
         treeLen += all[i];
     aveInner /= (double)noInner;
     aveOuter /= (double)noOuter;

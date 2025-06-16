@@ -61,7 +61,7 @@ void IQTree::init() {
 //    write_intermediate_trees = 0;
 //    max_candidate_trees = 0;
     logl_cutoff = 0.0;
-    len_scale = 10000;
+    len_scale = NUM_ONE_E_FOUR;
 //    save_all_br_lens = false;
     duplication_counter = 0;
     //boot_splits = new SplitGraph;
@@ -106,27 +106,27 @@ void IQTree::saveUFBoot(Checkpoint *checkpoint) {
     if (MPIHelper::getInstance().isWorker()) {
         CKP_SAVE(sample_start);
         CKP_SAVE(sample_end);
-        checkpoint->startList(boot_samples.size());
+        checkpoint->startList(static_cast<int>(boot_samples.size()));
         checkpoint->setListElement(sample_start-1);
         ASSERT(sample_start >= 0);
         ASSERT(sample_end >= 0);
         for (size_t id = static_cast<size_t>(sample_start); id != static_cast<size_t>(sample_end); id++) {
             checkpoint->addListElement();
             stringstream ss;
-            ss.precision(10);
+            ss.precision(NUM_TEN);
             ss << boot_counts[id] << " " << boot_logl[id] << " " << boot_orig_logl[id] << " " << boot_trees[id];
             checkpoint->put("", ss.str());
         }
         checkpoint->endList();
     } else {
         CKP_SAVE(logl_cutoff);
-        int boot_splits_size = boot_splits.size();
+        int boot_splits_size = static_cast<int>(boot_splits.size());
         CKP_SAVE(boot_splits_size);
-        checkpoint->startList(boot_samples.size());
+        checkpoint->startList(static_cast<int>(boot_samples.size()));
         for (size_t id = 0; id != boot_samples.size(); id++) {
             checkpoint->addListElement();
             stringstream ss;
-            ss.precision(10);
+            ss.precision(NUM_TEN);
             ss << boot_counts[id] << " " << boot_logl[id] << " " << boot_orig_logl[id] << " " << boot_trees[id];
             checkpoint->put("", ss.str());
         }
@@ -193,10 +193,10 @@ void IQTree::restoreCheckpoint() {
         // NHANLT: id is always >= 0: starting at 0 and increasing
         size_t id = 0;
         checkpoint->startList(params->gbo_replicates);
-        boot_trees.resize(params->gbo_replicates);
-        boot_logl.resize(params->gbo_replicates);
-        boot_orig_logl.resize(params->gbo_replicates);
-        boot_counts.resize(params->gbo_replicates);
+        boot_trees.resize(static_cast<size_t>(params->gbo_replicates));
+        boot_logl.resize(static_cast<size_t>(params->gbo_replicates));
+        boot_orig_logl.resize(static_cast<size_t>(params->gbo_replicates));
+        boot_counts.resize(static_cast<size_t>(params->gbo_replicates));
         for (id = 0; id < static_cast<size_t>(params->gbo_replicates); id++) {
             checkpoint->addListElement();
             string str;
@@ -211,7 +211,7 @@ void IQTree::restoreCheckpoint() {
 
         // boot_splits
         for (id = 0; id < static_cast<size_t>(boot_splits_size); id++) {
-            checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
+            checkpoint->startStruct("UFBootSplit" + convertIntToString(static_cast<int>(id)));
             SplitGraph *sg = new SplitGraph;
             sg->createBlocks();
             StrVector taxname;
@@ -240,22 +240,22 @@ void IQTree::initSettings(Params &params) {
     } else {
         setNumThreads(params.num_threads);
     }
-    candidateTrees.init(this->aln, 200);
+    candidateTrees.init(this->aln, NUM_TWO_ZERO_ZERO);
     intermediateTrees.init(this->aln, 200000);
 
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
             if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
-                params.min_iterations = aln->getNSeq() * 100;
-            } else if (aln->getNSeq() < 100) {
-                params.min_iterations = 200;
+                params.min_iterations = static_cast<int>(aln->getNSeq()) * NUM_ONE_ZERO_ZERO;
+            } else if (aln->getNSeq() < NUM_ONE_ZERO_ZERO) {
+                params.min_iterations = NUM_TWO_ZERO_ZERO;
             } else {
-                params.min_iterations = aln->getNSeq() * 2;
+                params.min_iterations = static_cast<int>(aln->getNSeq()) * 2;
             }
             if (params.iteration_multiple > 1)
-                params.min_iterations = aln->getNSeq() * params.iteration_multiple;
+                params.min_iterations = static_cast<int>(aln->getNSeq()) * params.iteration_multiple;
         } else {
-            params.min_iterations = 100;
+            params.min_iterations = NUM_ONE_ZERO_ZERO;
         }
     }
     if (!params.treeset_file.empty() && params.min_iterations == -1) {
@@ -274,13 +274,13 @@ void IQTree::initSettings(Params &params) {
             params.p_delete = 0.0; // delete nothing
         } else if (aln->getNSeq() == 4) {
             params.p_delete = 0.25; // just delete 1 leaf
-        } else if (aln->getNSeq() == 5) {
+        } else if (aln->getNSeq() == NUM_FIVE) {
             params.p_delete = 0.4; // just delete 2 leaves
         } else if (aln->getNSeq() < 51) {
             params.p_delete = 0.5;
-        } else if (aln->getNSeq() < 100) {
+        } else if (aln->getNSeq() < NUM_ONE_ZERO_ZERO) {
             params.p_delete = 0.3;
-        } else if (aln->getNSeq() < 200) {
+        } else if (aln->getNSeq() < NUM_TWO_ZERO_ZERO) {
             params.p_delete = 0.2;
         } else if (aln->getNSeq() < 400) {
             params.p_delete = 0.1;
@@ -292,15 +292,16 @@ void IQTree::initSettings(Params &params) {
     if (params.p_delete != -1.0) {
         k_delete = k_delete_min = k_delete_max = ceil(params.p_delete * leafNum);
     } else {
-        k_delete = k_delete_min = 10;
+        k_delete = k_delete_min = NUM_TEN;
         k_delete_max = leafNum / 2;
-        if (k_delete_max > 100) {
-            k_delete_max = 100;
+        if (k_delete_max > NUM_ONE_ZERO_ZERO) {
+            k_delete_max = NUM_ONE_ZERO_ZERO;
         }
-        if (k_delete_max < 20) {
-            k_delete_max = 20;
+        if (k_delete_max < NUM_TWO_ZERO) {
+            k_delete_max = NUM_TWO_ZERO;
         }
-        k_delete_stay = ceil(leafNum / k_delete);
+        ASSERT(k_delete >= 0);
+        k_delete_stay = ceil(leafNum / static_cast<unsigned int>(k_delete));
     }
 
     //tree.setIQPIterations(params.stop_condition, params.stop_confidence, params.min_iterations, params.max_iterations);
@@ -360,20 +361,20 @@ void IQTree::initSettings(Params &params) {
 //        cout << "Generating " << params.gbo_replicates << " samples for ultrafast "
 //             << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")..." << endl;
         // allocate memory for boot_samples
-        boot_samples.resize(params.gbo_replicates);
+        boot_samples.resize(static_cast<size_t>(params.gbo_replicates));
         sample_start = 0;
-        sample_end = boot_samples.size();
+        sample_end = static_cast<int>(boot_samples.size());
 
         // compute the sample_start and sample_end
         if (MPIHelper::getInstance().getNumProcesses() > 1) {
-            int num_samples = boot_samples.size() / MPIHelper::getInstance().getNumProcesses();
-            if (boot_samples.size() % MPIHelper::getInstance().getNumProcesses() != 0) {
+            int num_samples = static_cast<int>(boot_samples.size()) / MPIHelper::getInstance().getNumProcesses();
+            if (boot_samples.size() % static_cast<size_t>(MPIHelper::getInstance().getNumProcesses()) != 0) {
                 num_samples++;
             }
             sample_start = MPIHelper::getInstance().getProcessID() * num_samples;
             sample_end = sample_start + num_samples;
             if (sample_end > boot_samples.size()) {
-                sample_end = boot_samples.size();
+                sample_end = static_cast<int>(boot_samples.size());
             }
         }
 
@@ -390,10 +391,10 @@ void IQTree::initSettings(Params &params) {
         }
 
         if (boot_trees.empty()) {
-            boot_logl.resize(params.gbo_replicates, -DBL_MAX);
-            boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
-            boot_trees.resize(params.gbo_replicates, "");
-            boot_counts.resize(params.gbo_replicates, 0);
+            boot_logl.resize(static_cast<size_t>(params.gbo_replicates), -DBL_MAX);
+            boot_orig_logl.resize(static_cast<size_t>(params.gbo_replicates), -DBL_MAX);
+            boot_trees.resize(static_cast<size_t>(params.gbo_replicates), "");
+            boot_counts.resize(static_cast<size_t>(params.gbo_replicates), 0);
         } else {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
         }
@@ -437,7 +438,7 @@ void IQTree::initSettings(Params &params) {
         on_refine_btree = false;
         saved_aln_on_refine_btree = nullptr;
         if(params.ufboot2corr){
-            boot_samples_int.resize(params.gbo_replicates);
+            boot_samples_int.resize(static_cast<size_t>(params.gbo_replicates));
             for (size_t i = 0; i < params.gbo_replicates; i++) {
                 boot_samples_int[i].resize(nptn, 0);
                 for (size_t j = 0; j < orig_nptn; j++) {
@@ -480,7 +481,7 @@ extern const char *aa_model_names_rax[];
 
 void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
     if (isSuperTree()) {
-        PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
+        PhyloSuperTree *siqtree = static_cast<PhyloSuperTree*>(this);
         // additional check for PLL hard limit
         if (params.pll) {
             if (siqtree->size() > PLL_NUM_BRANCHES) {
@@ -492,7 +493,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             // prepare proper partition file 
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
                 i++;
-                int curLen = ((*it)->aln->seq_type == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                int curLen = static_cast<int>(((*it)->aln->seq_type == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite());
                 if ((*it)->aln->seq_type == SEQ_DNA || (*it)->aln->seq_type == SEQ_CODON) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
@@ -503,7 +504,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                             modelStr = "LG4M";
                         }
                         bool name_ok = false;
-                        for (int j = 0; j < 18; j++) {
+                        for (int j = 0; j < NUM_ONE_EIGHT; j++) {
                             if (modelStr == aa_model_names_rax[j]) {
                                 name_ok = true;
                                 break;
@@ -540,7 +541,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                                 pllPartitionFileHandle << "WAG";
                             }
                         }
-                        int curLen = (datatype[i] == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                        int curLen = static_cast<int>((datatype[i] == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite());
                         if (first) {
                             pllPartitionFileHandle << ", p" << i << " = ";
                         } else {
@@ -551,7 +552,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                         startPos = startPos + curLen;
                         first = false;
                     } else {
-                        startPos = startPos + (*it)->getAlnNSite();
+                        startPos = startPos + static_cast<int>((*it)->getAlnNSite());
                     }
                 if (!first) {
                     pllPartitionFileHandle << endl;
@@ -811,11 +812,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
-        pars_trees.resize(nParTrees);
+        pars_trees.resize(static_cast<size_t>(nParTrees));
         #pragma omp parallel
         {
             int *rstream;
-            int ran_seed = params->ran_seed + processID * 1000 + omp_get_thread_num();
+            int ran_seed = params->ran_seed + processID * NUM_ONE_E_THREE + omp_get_thread_num();
             init_random(ran_seed, false, &rstream);
             PhyloTree tree;
             if (!constraintTree.empty()) {
@@ -827,14 +828,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(nullptr, aln, rstream);
-                pars_trees[i] = tree.getTreeString();
+                pars_trees[static_cast<size_t>(i)] = tree.getTreeString();
             }
             finish_random(rstream);
         }
     }
 #endif
 
-    int init_size = candidateTrees.size();
+    int init_size = static_cast<int>(candidateTrees.size());
 
 //    unsigned long curNumTrees = candidateTrees.size();
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
@@ -865,7 +866,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
-            PhyloTree::readTreeString(pars_trees[treeNr-1]);
+            PhyloTree::readTreeString(pars_trees[static_cast<size_t>(treeNr-1)]);
 #else
             computeParsimonyTree(nullptr, aln, randstream);
 #endif
@@ -903,7 +904,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.clear();
 
     if (init_size < initTreeStrings.size()) {
-        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size << " initial trees ... ";
+        cout << "Computing log-likelihood of " << static_cast<int>(initTreeStrings.size()) - init_size << " initial trees ... ";
     }
     startTime = getRealTime();
 
@@ -986,7 +987,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 }
 
-string IQTree::generateParsimonyTree(int randomSeed) {
+/* string IQTree::generateParsimonyTree(int randomSeed) {
     string parsimonyTreeString;
     if (params->start_tree == STT_PLL_PARSIMONY) {
         pllInst->randomNumberSeed = randomSeed;
@@ -1013,7 +1014,7 @@ string IQTree::generateParsimonyTree(int randomSeed) {
     }
     return parsimonyTreeString;
 
-}
+}*/
 
 void IQTree::initializePLL(Params &params) {
     pllAttr.rateHetModel = PLL_GAMMA;
@@ -1032,7 +1033,7 @@ void IQTree::initializePLL(Params &params) {
     stringstream pllAln;
     aln->printAlignment(IN_PHYLIP, pllAln, "");
     string pllAlnStr = pllAln.str();
-    pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
+    pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), static_cast<long>(pllAlnStr.length()));
 
     /* Read in the partition information */
     // BQM: to avoid printing file
@@ -1071,13 +1072,13 @@ void IQTree::initializeModel(Params &params, string model_name, ModelsBlock *mod
         if (!getModelFactory()) {
             if (isSuperTree()) {
                 if (params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED) {
-                    setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
+                    setModelFactory(new PartitionModel(params, static_cast<PhyloSuperTree*>(this), models_block));
                 } else {
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
                 }
                 // mapTrees again in case of different rooting
                 if (root) {
-                    ((PhyloSuperTree*)this)->mapTrees();
+                    (static_cast<PhyloSuperTree*>(this))->mapTrees();
                 }
             } else {
                 setModelFactory(new ModelFactory(params, model_name, this, models_block));
@@ -1125,12 +1126,13 @@ double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
 }
 
-void IQTree::resetKDelete() {
+/* void IQTree::resetKDelete() {
     k_delete = k_delete_min;
-    k_delete_stay = ceil(leafNum / k_delete);
-}
+    ASSERT(k_delete >= 0);
+    k_delete_stay = ceil(leafNum / static_cast<unsigned int>(k_delete));
+}*/
 
-void IQTree::increaseKDelete() {
+/* void IQTree::increaseKDelete() {
     if (k_delete >= k_delete_max) {
         return;
     }
@@ -1139,11 +1141,12 @@ void IQTree::increaseKDelete() {
         return;
     }
     k_delete++;
-    k_delete_stay = ceil(leafNum / k_delete);
+    ASSERT(k_delete >= 0);
+    k_delete_stay = ceil(leafNum / static_cast<unsigned int>(k_delete));
     if (verbose_mode >= VB_MED) {
         cout << "Increase k_delete to " << k_delete << endl;
     }
-}
+}*/
 
 //void IQTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations,
 //        int max_iterations) {
@@ -1153,8 +1156,8 @@ void IQTree::increaseKDelete() {
 //}
 
 RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, int nei_id, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) (dad->neighbors[static_cast<size_t>(nei_id)]->node);
-    int set_id = dad->id * 3 + nei_id;
+    PhyloNode *node = static_cast<PhyloNode*>(dad->neighbors[static_cast<size_t>(nei_id)]->node);
+    size_t set_id = static_cast<size_t>((dad->id * 3) + nei_id);
     if (leaves_vec[set_id]) {
         return leaves_vec[set_id];
     }
@@ -1235,14 +1238,15 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
  }
  }*/
 
-void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
+/* void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     NodeVector cherry_taxa;
     NodeVector noncherry_taxa;
     // get the vector of non cherry taxa
     getNonCherryLeaves(noncherry_taxa, cherry_taxa);
     root = nullptr;
     size_t num_taxa = aln->getNSeq();
-    int num_delete = k_delete;
+    ASSERT(k_delete >= 0);
+    size_t num_delete = static_cast<size_t>(k_delete);
     if (num_delete > num_taxa - 4) {
         num_delete = num_taxa - 4;
     }
@@ -1257,14 +1261,14 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         ++startValue;
     }
     my_random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
-    int i;
+    size_t i;
     for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
         PhyloNode *taxon = (PhyloNode*) noncherry_taxa[indices_noncherry[i]];
         del_leaves.push_back(taxon);
         deleteLeaf(taxon);
         //cout << taxon->id << ", ";
     }
-    int j = 0;
+    size_t j = 0;
     if (i < num_delete) {
         vector<unsigned int> indices_cherry(cherry_taxa.size());
         //iota(indices_cherry.begin(), indices_cherry.end(), 0);
@@ -1283,7 +1287,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         }
     }
     root = cherry_taxa[j];
-}
+}*/
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     NodeVector taxa;
@@ -1291,8 +1295,9 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     getTaxa(taxa);
     root = nullptr;
     //int num_delete = floor(p_delete * taxa.size());
-    int num_delete = k_delete;
-    int i;
+    ASSERT(k_delete >= 0);
+    size_t num_delete = static_cast<size_t>(k_delete);
+    size_t i;
     if (num_delete > taxa.size() - 4) {
         num_delete = taxa.size() - 4;
     }
@@ -1301,13 +1306,13 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     }
     // now try to randomly delete some taxa of the probability of p_delete
     for (i = 0; i < num_delete;) {
-        size_t id = static_cast<size_t>(random_int(taxa.size()));
+        size_t id = static_cast<size_t>(random_int(static_cast<int>(taxa.size())));
         if (!taxa[id]) {
             continue;
         } else {
             i++;
         }
-        PhyloNode *taxon = (PhyloNode*) taxa[id];
+        PhyloNode *taxon = static_cast<PhyloNode*>(taxa[id]);
         del_leaves.push_back(taxon);
         deleteLeaf(taxon);
         taxa[id] = nullptr;
@@ -1325,9 +1330,9 @@ int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf)
     ASSERT(dist_matrix);
     int nseq = aln->getNSeq();
     //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
-    double dist0 = dist_matrix[static_cast<size_t>(leaf0->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf1->id * nseq + leaf2->id)];
-    double dist1 = dist_matrix[static_cast<size_t>(leaf1->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf0->id * nseq + leaf2->id)];
-    double dist2 = dist_matrix[static_cast<size_t>(leaf2->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf0->id * nseq + leaf1->id)];
+    double dist0 = dist_matrix[static_cast<size_t>((leaf0->id * nseq) + del_leaf->id)] + dist_matrix[static_cast<size_t>((leaf1->id * nseq) + leaf2->id)];
+    double dist1 = dist_matrix[static_cast<size_t>((leaf1->id * nseq) + del_leaf->id)] + dist_matrix[static_cast<size_t>((leaf0->id * nseq) + leaf2->id)];
+    double dist2 = dist_matrix[static_cast<size_t>((leaf2->id * nseq) + del_leaf->id)] + dist_matrix[static_cast<size_t>((leaf0->id * nseq) + leaf1->id)];
     if (dist0 < dist1 && dist0 < dist2) {
         return 0;
     }
@@ -1372,10 +1377,10 @@ int IQTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2, Node *
 
 void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     if (!node)
-        node = (PhyloNode*) root;
+        node = static_cast<PhyloNode*>(root);
     if (dad) {
-        PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
-        PhyloNeighbor *dad_nei = (PhyloNeighbor*) dad->findNeighbor(node);
+        PhyloNeighbor *node_nei = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
+        PhyloNeighbor *dad_nei = static_cast<PhyloNeighbor*>(dad->findNeighbor(node));
         node_nei->lh_scale_factor = 0.0;
         node_nei->partial_lh_computed = 0;
         dad_nei->lh_scale_factor = 0.0;
@@ -1383,12 +1388,12 @@ void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     }
 
     FOR_NEIGHBOR_IT(node, dad, it){
-    initializeBonus((PhyloNode*) ((*it)->node), node);
+    initializeBonus(static_cast<PhyloNode*>((*it)->node), node);
 }
 }
 
 void IQTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
-    ((PhyloNeighbor*) nei)->lh_scale_factor += bonus;
+    (static_cast<PhyloNeighbor*>(nei))->lh_scale_factor += bonus;
     if (verbose_mode >= VB_DEBUG)
         cout << dad->id << " - " << nei->node->id << " : " << bonus << endl;
 
@@ -1397,7 +1402,7 @@ void IQTree::raiseBonus(Neighbor *nei, Node *dad, double bonus) {
 }
 
 double IQTree::computePartialBonus(Node *node, Node* dad) {
-    PhyloNeighbor *node_nei = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNeighbor *node_nei = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (node_nei->partial_lh_computed)
         return node_nei->lh_scale_factor;
 
@@ -1527,7 +1532,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
             drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
         //printTree(cout, WT_BR_LEN | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
-            assessQuartets(leaves_vec, (PhyloNode*) (*it), (*it_leaf));
+            assessQuartets(leaves_vec, static_cast<PhyloNode*>(*it), (*it_leaf));
         }
         NodeVector best_nodes, best_dads;
         double best_bonus;
@@ -1562,16 +1567,16 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 }
 
-void IQTree::doParsimonyReinsertion() {
+/* void IQTree::doParsimonyReinsertion() {
     PhyloNodeVector del_leaves;
 
     deleteLeaves(del_leaves);
 
     reinsertLeavesByParsimony(del_leaves);
     fixNegativeBranch(false);
-}
+}*/
 
-void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches) {
+/* void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches) {
     if (tabuSplits.size() == 0) {
         return;
     }
@@ -1592,7 +1597,7 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
         }
 
     }
-}
+}*/
 
 void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *node, Node *dad) {
     if (!node) {
@@ -1749,7 +1754,7 @@ string IQTree::perturbStableSplits(double suppValue) {
     clearAllPartialLH();
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        (static_cast<PhyloSuperTree*>(this))->mapTrees();
     }
     if (params->pll) {
         pllReadNewick(getTreeString());
@@ -1811,7 +1816,7 @@ string IQTree::doRandomNNIs(bool storeTabu) {
     setRootNode(params->root);
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        (static_cast<PhyloSuperTree*>(this))->mapTrees();
     }
     if (params->pll) {
         pllReadNewick(getTreeString());
@@ -1841,7 +1846,7 @@ void IQTree::doIQP() {
 //    lhComputed = false;
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        (static_cast<PhyloSuperTree*>(this))->mapTrees();
     }
 
 //    if (enable_parsimony) {
@@ -1909,10 +1914,10 @@ void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
     getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
-        ((ModelMarkov*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        (static_cast<ModelMarkov*>(getModel()))->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
     }
-    ((ModelMarkov*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
+    (static_cast<ModelMarkov*>(getModel()))->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
 }
 
 void IQTree::inputModelIQTree2PLL() {
@@ -1922,7 +1927,7 @@ void IQTree::inputModelIQTree2PLL() {
         alpha = PLL_ALPHA_MAX;
     if (aln->num_states == 4) {
         // get the rate parameters
-        double *rate_param = new double[6];
+        double *rate_param = new double[NUM_SIX];
         getModel()->getRateMatrix(rate_param);
         // get the state frequencies
         double *state_freqs = new double[aln->num_states];
@@ -2016,16 +2021,16 @@ void IQTree::pllBuildIQTreePatternIndex(){
  * DTH:
  * Substitute bases in seq according to PLL's rules
  * This function should be updated if PLL's rules change.
- * @param seq: data of some sequence to be substituted
- * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+ * @param seq data of some sequence to be substituted
+ * @param dataType PLL_DNA_DATA or PLL_AA_DATA
  */
 void IQTree::pllBaseSubstitute (char *seq, int dataType)
 {
-    char meaningDNA[256];
-    char  meaningAA[256];
+    char meaningDNA[NUM_TWO_FIVE_SIX];
+    char  meaningAA[NUM_TWO_FIVE_SIX];
     char * d;
 
-    for (size_t i = 0; i < 256; ++ i)
+    for (size_t i = 0; i < NUM_TWO_FIVE_SIX; ++ i)
     {
         meaningDNA[i] = -1;
         meaningAA[i]  = -1;
@@ -2034,35 +2039,35 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     /* DNA data */
 
     meaningDNA[(int)'A'] =  1;
-    meaningDNA[(int)'B'] = 14;
+    meaningDNA[(int)'B'] = NUM_ONE_FOUR;
     meaningDNA[(int)'C'] =  2;
-    meaningDNA[(int)'D'] = 13;
+    meaningDNA[(int)'D'] = NUM_ONE_THREE;
     meaningDNA[(int)'G'] =  4;
-    meaningDNA[(int)'H'] = 11;
-    meaningDNA[(int)'K'] = 12;
+    meaningDNA[(int)'H'] = NUM_ONE_ONE;
+    meaningDNA[(int)'K'] = NUM_ONE_TWO;
     meaningDNA[(int)'M'] =  3;
-    meaningDNA[(int)'R'] =  5;
-    meaningDNA[(int)'S'] =  6;
-    meaningDNA[(int)'T'] =  8;
-    meaningDNA[(int)'U'] =  8;
-    meaningDNA[(int)'V'] =  7;
-    meaningDNA[(int)'W'] =  9;
-    meaningDNA[(int)'Y'] = 10;
+    meaningDNA[(int)'R'] =  NUM_FIVE;
+    meaningDNA[(int)'S'] =  NUM_SIX;
+    meaningDNA[(int)'T'] =  NUM_EIGHT;
+    meaningDNA[(int)'U'] =  NUM_EIGHT;
+    meaningDNA[(int)'V'] =  NUM_SEVEN;
+    meaningDNA[(int)'W'] =  NUM_NINE;
+    meaningDNA[(int)'Y'] = NUM_TEN;
     meaningDNA[(int)'a'] =  1;
-    meaningDNA[(int)'b'] = 14;
+    meaningDNA[(int)'b'] = NUM_ONE_FOUR;
     meaningDNA[(int)'c'] =  2;
-    meaningDNA[(int)'d'] = 13;
+    meaningDNA[(int)'d'] = NUM_ONE_THREE;
     meaningDNA[(int)'g'] =  4;
-    meaningDNA[(int)'h'] = 11;
-    meaningDNA[(int)'k'] = 12;
+    meaningDNA[(int)'h'] = NUM_ONE_ONE;
+    meaningDNA[(int)'k'] = NUM_ONE_TWO;
     meaningDNA[(int)'m'] =  3;
-    meaningDNA[(int)'r'] =  5;
-    meaningDNA[(int)'s'] =  6;
-    meaningDNA[(int)'t'] =  8;
-    meaningDNA[(int)'u'] =  8;
-    meaningDNA[(int)'v'] =  7;
-    meaningDNA[(int)'w'] =  9;
-    meaningDNA[(int)'y'] = 10;
+    meaningDNA[(int)'r'] =  NUM_FIVE;
+    meaningDNA[(int)'s'] =  NUM_SIX;
+    meaningDNA[(int)'t'] =  NUM_EIGHT;
+    meaningDNA[(int)'u'] =  NUM_EIGHT;
+    meaningDNA[(int)'v'] =  NUM_SEVEN;
+    meaningDNA[(int)'w'] =  NUM_NINE;
+    meaningDNA[(int)'y'] = NUM_TEN;
 
     meaningDNA[(int)'N'] =
     meaningDNA[(int)'n'] =
@@ -2071,7 +2076,7 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     meaningDNA[(int)'X'] =
     meaningDNA[(int)'x'] =
     meaningDNA[(int)'-'] =
-    meaningDNA[(int)'?'] = 15;
+    meaningDNA[(int)'?'] = NUM_ONE_FIVE;
 
     /* AA data */
 
@@ -2080,51 +2085,51 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     meaningAA[(int)'N'] =  2;  /*  asparagine*/
     meaningAA[(int)'D'] =  3;  /* aspartic */
     meaningAA[(int)'C'] =  4;  /* cysteine */
-    meaningAA[(int)'Q'] =  5;  /* glutamine */
-    meaningAA[(int)'E'] =  6;  /* glutamic */
-    meaningAA[(int)'G'] =  7;  /* glycine */
-    meaningAA[(int)'H'] =  8;  /* histidine */
-    meaningAA[(int)'I'] =  9;  /* isoleucine */
-    meaningAA[(int)'L'] =  10; /* leucine */
-    meaningAA[(int)'K'] =  11; /* lysine */
-    meaningAA[(int)'M'] =  12; /* methionine */
-    meaningAA[(int)'F'] =  13; /* phenylalanine */
-    meaningAA[(int)'P'] =  14; /* proline */
-    meaningAA[(int)'S'] =  15; /* serine */
-    meaningAA[(int)'T'] =  16; /* threonine */
-    meaningAA[(int)'W'] =  17; /* tryptophan */
-    meaningAA[(int)'Y'] =  18; /* tyrosine */
-    meaningAA[(int)'V'] =  19; /* valine */
-    meaningAA[(int)'B'] =  20; /* asparagine, aspartic 2 and 3*/
-    meaningAA[(int)'Z'] =  21; /*21 glutamine glutamic 5 and 6*/
+    meaningAA[(int)'Q'] =  NUM_FIVE;  /* glutamine */
+    meaningAA[(int)'E'] =  NUM_SIX;  /* glutamic */
+    meaningAA[(int)'G'] =  NUM_SEVEN;  /* glycine */
+    meaningAA[(int)'H'] =  NUM_EIGHT;  /* histidine */
+    meaningAA[(int)'I'] =  NUM_NINE;  /* isoleucine */
+    meaningAA[(int)'L'] =  NUM_TEN; /* leucine */
+    meaningAA[(int)'K'] =  NUM_ONE_ONE; /* lysine */
+    meaningAA[(int)'M'] =  NUM_ONE_TWO; /* methionine */
+    meaningAA[(int)'F'] =  NUM_ONE_THREE; /* phenylalanine */
+    meaningAA[(int)'P'] =  NUM_ONE_FOUR; /* proline */
+    meaningAA[(int)'S'] =  NUM_ONE_FIVE; /* serine */
+    meaningAA[(int)'T'] =  NUM_ONE_SIX; /* threonine */
+    meaningAA[(int)'W'] =  NUM_ONE_SEVEN; /* tryptophan */
+    meaningAA[(int)'Y'] =  NUM_ONE_EIGHT; /* tyrosine */
+    meaningAA[(int)'V'] =  NUM_ONE_NINE; /* valine */
+    meaningAA[(int)'B'] =  NUM_TWO_ZERO; /* asparagine, aspartic 2 and 3*/
+    meaningAA[(int)'Z'] =  NUM_TWO_ONE; /*21 glutamine glutamic 5 and 6*/
     meaningAA[(int)'a'] =  0;  /* alanine */
     meaningAA[(int)'r'] =  1;  /* arginine */
     meaningAA[(int)'n'] =  2;  /*  asparagine*/
     meaningAA[(int)'d'] =  3;  /* aspartic */
     meaningAA[(int)'c'] =  4;  /* cysteine */
-    meaningAA[(int)'q'] =  5;  /* glutamine */
-    meaningAA[(int)'e'] =  6;  /* glutamic */
-    meaningAA[(int)'g'] =  7;  /* glycine */
-    meaningAA[(int)'h'] =  8;  /* histidine */
-    meaningAA[(int)'i'] =  9;  /* isoleucine */
-    meaningAA[(int)'l'] =  10; /* leucine */
-    meaningAA[(int)'k'] =  11; /* lysine */
-    meaningAA[(int)'m'] =  12; /* methionine */
-    meaningAA[(int)'f'] =  13; /* phenylalanine */
-    meaningAA[(int)'p'] =  14; /* proline */
-    meaningAA[(int)'s'] =  15; /* serine */
-    meaningAA[(int)'t'] =  16; /* threonine */
-    meaningAA[(int)'w'] =  17; /* tryptophan */
-    meaningAA[(int)'y'] =  18; /* tyrosine */
-    meaningAA[(int)'v'] =  19; /* valine */
-    meaningAA[(int)'b'] =  20; /* asparagine, aspartic 2 and 3*/
-    meaningAA[(int)'z'] =  21; /*21 glutamine glutamic 5 and 6*/
+    meaningAA[(int)'q'] =  NUM_FIVE;  /* glutamine */
+    meaningAA[(int)'e'] =  NUM_SIX;  /* glutamic */
+    meaningAA[(int)'g'] =  NUM_SEVEN;  /* glycine */
+    meaningAA[(int)'h'] =  NUM_EIGHT;  /* histidine */
+    meaningAA[(int)'i'] =  NUM_NINE;  /* isoleucine */
+    meaningAA[(int)'l'] =  NUM_TEN; /* leucine */
+    meaningAA[(int)'k'] =  NUM_ONE_ONE; /* lysine */
+    meaningAA[(int)'m'] =  NUM_ONE_TWO; /* methionine */
+    meaningAA[(int)'f'] =  NUM_ONE_THREE; /* phenylalanine */
+    meaningAA[(int)'p'] =  NUM_ONE_FOUR; /* proline */
+    meaningAA[(int)'s'] =  NUM_ONE_FIVE; /* serine */
+    meaningAA[(int)'t'] =  NUM_ONE_SIX; /* threonine */
+    meaningAA[(int)'w'] =  NUM_ONE_SEVEN; /* tryptophan */
+    meaningAA[(int)'y'] =  NUM_ONE_EIGHT; /* tyrosine */
+    meaningAA[(int)'v'] =  NUM_ONE_NINE; /* valine */
+    meaningAA[(int)'b'] =  NUM_TWO_ZERO; /* asparagine, aspartic 2 and 3*/
+    meaningAA[(int)'z'] =  NUM_TWO_ONE; /*21 glutamine glutamic 5 and 6*/
 
     meaningAA[(int)'X'] =
     meaningAA[(int)'x'] =
     meaningAA[(int)'?'] =
     meaningAA[(int)'*'] =
-    meaningAA[(int)'-'] = 22;
+    meaningAA[(int)'-'] = NUM_TWO_TWO;
 
     d = (dataType == PLL_DNA_DATA) ? meaningDNA : meaningAA;
     int seq_len = strlen(seq);
@@ -2138,8 +2143,8 @@ double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     ASSERT(node1->isLeaf());
     ASSERT(node2->isLeaf());
 
-    PhyloNeighbor *node1nei = (PhyloNeighbor*) *(node1->neighbors.begin());
-    PhyloNeighbor *node2nei = (PhyloNeighbor*) *(node2->neighbors.begin());
+    PhyloNeighbor *node1nei = static_cast<PhyloNeighbor*>(*(node1->neighbors.begin()));
+    PhyloNeighbor *node2nei = static_cast<PhyloNeighbor*>(*(node2->neighbors.begin()));
 
     node2nei->node->updateNeighbor(node2, node1);
     node1nei->node->updateNeighbor(node1, node2);
@@ -2148,13 +2153,13 @@ double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
     node1->updateNeighbor(node1->neighbors.begin(), node2nei);
     node2->updateNeighbor(node2->neighbors.begin(), node1nei);
 
-    PhyloNeighbor *node1NewNei = (PhyloNeighbor*) *(node1->neighbors.begin());
-    PhyloNeighbor *node2NewNei = (PhyloNeighbor*) *(node2->neighbors.begin());
+    PhyloNeighbor *node1NewNei = static_cast<PhyloNeighbor*>(*(node1->neighbors.begin()));
+    PhyloNeighbor *node2NewNei = static_cast<PhyloNeighbor*>(*(node2->neighbors.begin()));
 
     // Reoptimize the branch lengths
-    optimizeOneBranch(node1, (PhyloNode*) node1NewNei->node);
+    optimizeOneBranch(node1, static_cast<PhyloNode*>(node1NewNei->node));
 //    this->curScore = optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
-    optimizeOneBranch(node2, (PhyloNode*) node2NewNei->node);
+    optimizeOneBranch(node2, static_cast<PhyloNode*>(node2NewNei->node));
     //drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE);
     this->curScore = computeLikelihoodFromBuffer();
     return this->curScore;
@@ -2166,18 +2171,18 @@ double IQTree::perturb(int times) {
         // get the vector of taxa
         getTaxa(taxa);
         int taxonid1 = random_int(taxa.size());
-        PhyloNode *taxon1 = (PhyloNode*) taxa[taxonid1];
+        PhyloNode *taxon1 = static_cast<PhyloNode*>(taxa[taxonid1]);
         PhyloNode *taxon2;
         int *dists = new int[taxa.size()];
-        int minDist = 1000000;
+        int minDist = NUM_ONE_E_SIX;
         for (size_t i = 0; i < taxa.size(); i++) {
             if (i == taxonid1) {
                 continue;
             }
-            taxon2 = (PhyloNode*) taxa[i];
+            taxon2 = static_cast<PhyloNode*>(taxa[i]);
             int dist = taxon1->calDist(taxon2);
             dists[i] = dist;
-            if (dist >= 7 && dist < minDist) {
+            if (dist >= NUM_SEVEN && dist < minDist) {
                 minDist = dist;
             }
         }
@@ -2189,7 +2194,7 @@ double IQTree::perturb(int times) {
             }
         }
 
-        taxon2 = (PhyloNode*) taxa[taxonid2];
+        taxon2 = static_cast<PhyloNode*>(taxa[taxonid2]);
 
         cout << "Swapping node " << taxon1->id << " and node " << taxon2->id << endl;
         cout << "Distance " << minDist << endl;
@@ -2242,7 +2247,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
         }
         if (isSuperTree()) {
-            ((PhyloSuperTree*) this)->computeBranchLengths();
+            (static_cast<PhyloSuperTree*>(this))->computeBranchLengths();
         }
         if (getModelFactory()->isUnstableParameters() && aln->seq_type != SEQ_CODON) {
             cout << endl;
@@ -2279,7 +2284,7 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
     } else {
         initTree = optimizeModelParameters(true, initEpsilon);
         if (isMixlen()) {
-            initTree = ((ModelFactoryMixlen*)getModelFactory())->sortClassesByTreeLength();
+            initTree = (static_cast<ModelFactoryMixlen*>(getModelFactory()))->sortClassesByTreeLength();
         }
         saveCheckpoint();
         getModelFactory()->saveCheckpoint();
@@ -2349,7 +2354,7 @@ double IQTree::doTreeSearch() {
 
     double initCPUTime = getRealTime();
     int treesPerProc = (params->numInitTrees) / MPIHelper::getInstance().getNumProcesses() - candidateTrees.size();
-    if (params->numInitTrees % MPIHelper::getInstance().getNumProcesses() != 0) {
+    if (params->numInitTrees % static_cast<size_t>(MPIHelper::getInstance().getNumProcesses()) != 0) {
         treesPerProc++;
     }
     if (treesPerProc < 0) {
@@ -2487,7 +2492,7 @@ double IQTree::doTreeSearch() {
         }
 
         if (isSuperTree()) {
-            ((PhyloSuperTree *) this)->computeBranchLengths();
+            (static_cast<PhyloSuperTree*>(this))->computeBranchLengths();
         }
 
         /*----------------------------------------
@@ -2861,9 +2866,9 @@ void IQTree::refineBootTrees() {
         IQTree *boot_tree;
         if (aln->isSuperAlignment()){
             if(params->partition_type != BRLEN_OPTIMIZE){
-                boot_tree = new PhyloSuperTreePlen((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+                boot_tree = new PhyloSuperTreePlen(static_cast<SuperAlignment*>(bootstrap_alignment), static_cast<PhyloSuperTree*>(this));
             } else {
-                boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+                boot_tree = new PhyloSuperTree(static_cast<SuperAlignment*>(bootstrap_alignment), static_cast<PhyloSuperTree*>(this));
             }
         } else {
             // allocate heterotachy tree if neccessary
@@ -2893,7 +2898,7 @@ void IQTree::refineBootTrees() {
 
         // 2019-06-03: bug fix setting part_info properly
         if (boot_tree->isSuperTree()) {
-            ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
+            (static_cast<PhyloSuperTree*>(boot_tree))->setPartInfo(static_cast<PhyloSuperTree*>(this));
         }
 
         // copy model
@@ -2901,7 +2906,7 @@ void IQTree::refineBootTrees() {
         boot_tree->initializeModel(*params, aln->model_name, models_block);
         boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
         if (isSuperTree()) {
-            ((PartitionModel*)boot_tree->getModelFactory())->PartitionModel::restoreCheckpoint();
+            (static_cast<PartitionModel*>(boot_tree->getModelFactory()))->PartitionModel::restoreCheckpoint();
         } else {
             boot_tree->getModelFactory()->restoreCheckpoint();
         }
@@ -2915,7 +2920,7 @@ void IQTree::refineBootTrees() {
         }
         
         if (boot_tree->isSuperTree() && params->partition_type == BRLEN_OPTIMIZE) {
-            if (((PhyloSuperTree*)boot_tree)->size() > 1) {
+            if ((static_cast<PhyloSuperTree*>(boot_tree))->size() > 1) {
                 // re-initialize branch lengths for unlinked model
                 boot_tree->wrapperFixNegativeBranch(true);
             }
@@ -2964,7 +2969,7 @@ void IQTree::refineBootTrees() {
         delete bootstrap_alignment;
 
 
-        if ((sample+1) % 100 == 0) {
+        if ((sample+1) % NUM_ONE_ZERO_ZERO == 0) {
             cout << sample+1 << " samples done" << endl;
         }
 
@@ -3136,7 +3141,7 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
         nniInfos = optimizeNNI(Params::getInstance().speednni);
         doneComputingDistances();
         if (isSuperTree()) {
-            ((PhyloSuperTree*) this)->computeBranchLengths();
+            (static_cast<PhyloSuperTree*>(this))->computeBranchLengths();
         }
         if (params->print_trees_site_posterior)
             computePatternCategories();
@@ -3197,7 +3202,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (verbose_mode >= VB_DEBUG && !progress_display::getProgressDisplay()) {
             cout << "Doing NNI round " << numSteps << endl;
             if (isSuperTree()) {
-                ((PhyloSuperTree*) this)->printMapInfo();
+                (static_cast<PhyloSuperTree*>(this))->printMapInfo();
             }
         }
 
@@ -3227,7 +3232,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
             filterNNIBranches(appliedNNIs, filteredNNIBranches);
             for (Branches::iterator it = filteredNNIBranches.begin(); it != filteredNNIBranches.end(); it++) {
                 Branch curBranch = it->second;
-                PhyloNeighbor* nei = (PhyloNeighbor*) curBranch.first->findNeighbor(curBranch.second);
+                PhyloNeighbor* nei = static_cast<PhyloNeighbor*>(curBranch.first->findNeighbor(curBranch.second));
                 Split* curSplit = nei->split;
                 bool tabu = false;
                 bool stable = false;
@@ -3391,7 +3396,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     return searchinfo.curLogl;
 }
 
-void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
+/* void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
     ofstream bfile("boot_samples.log");
     bfile << "Original freq:" << endl;
     int sum = 0;
@@ -3413,11 +3418,11 @@ void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatter
     }
     bfile.close();
 
-}
+}*/
 
 void IQTree::pllInitUFBootData(){
     if(pllUFBootDataPtr == nullptr){
-        pllUFBootDataPtr = (pllUFBootData *) malloc(sizeof(pllUFBootData));
+        pllUFBootDataPtr = static_cast<pllUFBootData *>(malloc(sizeof(pllUFBootData)));
         pllUFBootDataPtr->boot_samples = nullptr;
         pllUFBootDataPtr->candidate_trees_count = 0;
 
@@ -3442,13 +3447,13 @@ void IQTree::pllInitUFBootData(){
 
             // aln->createBootstrapAlignment() must be called before this fragment
             pllUFBootDataPtr->boot_samples =
-                (int **) malloc(params->gbo_replicates * sizeof(int *));
+                static_cast<int **>(malloc(params->gbo_replicates * sizeof(int *)));
             if(!pllUFBootDataPtr->boot_samples) {
                 outError("Not enough dynamic memory!");
             }
             for(size_t i = 0; i < params->gbo_replicates; i++){
                 pllUFBootDataPtr->boot_samples[i] =
-                    (int *) malloc(pllAlignment->sequenceLength * sizeof(int));
+                    static_cast<int *>(malloc(pllAlignment->sequenceLength * sizeof(int)));
                 if(!pllUFBootDataPtr->boot_samples[i]) {
                     outError("Not enough dynamic memory!");
                 }
@@ -3460,7 +3465,7 @@ void IQTree::pllInitUFBootData(){
 
 
             pllUFBootDataPtr->boot_logl =
-                (double *) malloc(params->gbo_replicates * (sizeof(double)));
+                static_cast<double *>(malloc(params->gbo_replicates * (sizeof(double))));
             if(!pllUFBootDataPtr->boot_logl) {
                 outError("Not enough dynamic memory!");
             }
@@ -3469,7 +3474,7 @@ void IQTree::pllInitUFBootData(){
             }
 
             pllUFBootDataPtr->boot_counts =
-                (int *) malloc(params->gbo_replicates * (sizeof(int)));
+                static_cast<int *>(malloc(params->gbo_replicates * (sizeof(int))));
             if(!pllUFBootDataPtr->boot_counts) {
                 outError("Not enough dynamic memory!");
             }
@@ -3562,7 +3567,7 @@ void IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compa
 //    }
 //}
 
-double IQTree::getAvgNumNNI() {
+/* double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
         return 0;
     } else {
@@ -3576,9 +3581,9 @@ double IQTree::getAvgNumNNI() {
         }
         return median;
     }
-}
+}*/
 
-double IQTree::estDeltaMedian() {
+/* double IQTree::estDeltaMedian() {
     if (vecImpProNNI.size() == 0) {
         return 0;
     } else {
@@ -3592,7 +3597,7 @@ double IQTree::estDeltaMedian() {
         }
         return median;
     }
-}
+}*/
 
 //inline double IQTree::estDelta95() {
 //    if (vecImpProNNI.size() == 0) {
@@ -3608,13 +3613,13 @@ int IQTree::getDelete() const {
     return k_delete;
 }
 
-void IQTree::setDelete(int _delete) {
+/* void IQTree::setDelete(int _delete) {
     k_delete = _delete;
-}
+}*/
 
 void IQTree::evaluateNNIs(Branches &nniBranches, vector<NNIMove>  &positiveNNIs) {
     for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {
-        NNIMove nni = getBestNNIForBran((PhyloNode*) it->second.first, (PhyloNode*) it->second.second, nullptr);
+        NNIMove nni = getBestNNIForBran(static_cast<PhyloNode*>(it->second.first), static_cast<PhyloNode*>(it->second.second), nullptr);
         if (nni.newloglh > curScore) {
             positiveNNIs.push_back(nni);
         }
@@ -3635,13 +3640,13 @@ void IQTree::evaluateNNIs(Branches &nniBranches, vector<NNIMove>  &positiveNNIs)
 //    }
 //}
 
-double IQTree::optimizeNNIBranches(Branches &nniBranches) {
+/* double IQTree::optimizeNNIBranches(Branches &nniBranches) {
     for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {
         optimizeOneBranch((PhyloNode*) it->second.first, (PhyloNode*) it->second.second, true, PLL_NEWZPERCYCLE);
     }
     curScore = computeLikelihoodFromBuffer();
     return curScore;
-}
+}*/
 
 /**
  *  Currently not used, commented out to simplify the interface of getBestNNIForBran
@@ -3861,7 +3866,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 
 void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
-        node = (PhyloNode*) root;
+        node = static_cast<PhyloNode*>(root);
     }
     if (dad && !node->isLeaf() && !dad->isLeaf()) {
         double *pat_lh1 = new double[aln->getNPattern()];
@@ -3871,7 +3876,7 @@ void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
         delete[] pat_lh2;
         delete[] pat_lh1;
     }
-    FOR_NEIGHBOR_IT(node, dad, it)saveNNITrees((PhyloNode*) (*it)->node, node);
+    FOR_NEIGHBOR_IT(node, dad, it)saveNNITrees(static_cast<PhyloNode*>((*it)->node), node);
 }
 
 void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
@@ -3880,14 +3885,14 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     if (verbose_mode >= VB_MAX) {
         for (i = 0; i < trees.size(); i++) {
             if (trees.tree_weights[i] > 0) {
-                cout << "Tree " << i + 1 << " weight= " << (double) trees.tree_weights[i] * 100 / sum_weights << endl;
+                cout << "Tree " << i + 1 << " weight= " << (double) trees.tree_weights[i] * NUM_ONE_ZERO_ZERO / sum_weights << endl;
             }
         }
     }
     int max_tree_id = max_element(trees.tree_weights.begin(), trees.tree_weights.end()) - trees.tree_weights.begin();
     if (verbose_mode >= VB_MED) {
         cout << "max_tree_id = " << max_tree_id + 1 << "   max_weight = " << trees.tree_weights[max_tree_id];
-        cout << " (" << (double) trees.tree_weights[max_tree_id] * 100 / sum_weights << "%)" << endl;
+        cout << " (" << (double) trees.tree_weights[max_tree_id] * NUM_ONE_ZERO_ZERO / sum_weights << "%)" << endl;
     }
     // assign bootstrap support
     SplitGraph sg;
@@ -4186,7 +4191,8 @@ void IQTree::computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, boo
     
     Split outgroup_split(leafNum);
     getTaxa(outgroup_split, outgroup_branch.first, outgroup_branch.second->node);
-    int first_outgroup_id = outgroup_split.firstTaxon();
+    // first_outgroup_id is never used
+    // int first_outgroup_id = outgroup_split.firstTaxon();
     
     // sanity check
     if (outgroup_split.countTaxa() != outgroup_vec.size()) {
@@ -4485,16 +4491,16 @@ void IQTree::printBestCandidateTree() {
 }
 
 
-void IQTree::printPhylolibTree(const char* suffix) {
+/* void IQTree::printPhylolibTree(const char* suffix) {
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, 1, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
-    char phylolibTree[1024];
+    char phylolibTree[NUM_ONE_ZERO_TWO_FOUR];
     strcpy(phylolibTree, params->out_prefix);
     strcat(phylolibTree, suffix);
     FILE *phylolib_tree = fopen(phylolibTree, "w");
     fprintf(phylolib_tree, "%s", pllInst->tree_string);
     cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
-}
+}*/
 
 void IQTree::printIntermediateTree(int brtype) {
     setRootNode(params->root);
@@ -4541,7 +4547,7 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 
-void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs) {
+/* void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs) {
     for (size_t i = 0; i < numNNIs; i++) {
         Split *sp = new Split(*getSplit(compatibleNNIs[i].node1, compatibleNNIs[i].node2));
         if (sp->shouldInvert()) {
@@ -4549,7 +4555,7 @@ void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMo
         }
         nniSplits.insertSplit(sp, 1);
     }
-}
+}*/
 
 double IQTree::getBestScore() {
     return candidateTrees.getBestScore();
@@ -4877,7 +4883,7 @@ int PhyloTree::testNumThreads() {
     
     // clear the relative treelength arrays if it is GHOST model
     if (isMixlen()) {
-        ((PhyloTreeMixlen*)this)->clear_relative_treelen();
+        (static_cast<PhyloTreeMixlen*>(this))->clear_relative_treelen();
     }
 
     return bestProc+1;

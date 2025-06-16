@@ -199,7 +199,7 @@ void initsvg(FILE *ofp, QuartetGroups &LMGroups)
 void plotlmpointsvg(FILE *ofp, double w1, double w2)
 {
 	/* plot dots into triangle 1 (top) */
-	fprintf(ofp,"	<circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" />\n", (0.5*w1 + w2)*1000, -(w1*866.0254038));
+    fprintf(ofp,"	<circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" />\n", (0.5*w1 + w2)*NUM_ONE_E_THREE, -(w1*866.0254038));
 } /* plotlmpointsvg */
 
 
@@ -234,17 +234,17 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	<text\n");
 	fprintf(ofp,"	   x=\"440\"\n");
 	fprintf(ofp,"	   y=\"-500\"\n");
-	fprintf(ofp,"	   id=\"up_2\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_AR1]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"up_2\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR1])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"up_2\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_AR1]*100.0/Numquartets);
 	fprintf(ofp,"	<text\n");
 	fprintf(ofp,"	   x=\"250\"\n");
 	fprintf(ofp,"	   y=\"-150\"\n");
-	fprintf(ofp,"	   id=\"down_left_2\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_AR3]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"down_left_2\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR3])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"down_left_2\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_AR3]*100.0/Numquartets);
 	fprintf(ofp,"	<text\n");
 	fprintf(ofp,"	   x=\"630\"\n");
 	fprintf(ofp,"	   y=\"-150\"\n");
-	fprintf(ofp,"	   id=\"down_right_2\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_AR2]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"down_right_2\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR2])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"down_right_2\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_AR2]*100.0/Numquartets);
 	fprintf(ofp,"  </g>\n");
 	/* end triangle 2 (bottom left) */
@@ -295,21 +295,21 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	   x=\"500\"\n");
 	fprintf(ofp,"	   y=\"-660\"\n");
 	fprintf(ofp,"	   text-anchor=\"middle\"\n");
-	fprintf(ofp,"	   id=\"up_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG1]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"up_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG1])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"up_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG1]*100.0/Numquartets);
 
 	/* number of resolved quartets, bottom left */
 	fprintf(ofp,"	<text\n");
 	fprintf(ofp,"	   y=\"-50\"\n");
 	fprintf(ofp,"	   x=\"70\"\n");
-	fprintf(ofp,"	   id=\"down_left_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG3]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"down_left_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG3])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"down_left_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG3]*100.0/Numquartets);
 
 	/* number of resolved quartets, bottom right */
 	fprintf(ofp,"	<text\n");
 	fprintf(ofp,"	   y=\"-50\"\n");
 	fprintf(ofp,"	   x=\"770\"\n");
-	fprintf(ofp,"	   id=\"down_right_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG2]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"down_right_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG2])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"down_right_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG2]*100.0/Numquartets);
 
 	/* number of partly resolved quartets, bottom */
@@ -317,7 +317,7 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	   x=\"500\"\n");
 	fprintf(ofp,"	   y=\"-50\"\n");
 	fprintf(ofp,"	   text-anchor=\"middle\"\n");
-	fprintf(ofp,"	   id=\"down_side_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG5]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"down_side_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG5])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"down_side_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG5]*100.0/Numquartets);
 
 	/* number of unresolved quartets, center */
@@ -325,7 +325,7 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	   x=\"500\"\n");
 	fprintf(ofp,"	   y=\"-280\"\n");
 	fprintf(ofp,"	   text-anchor=\"middle\"\n");
-	fprintf(ofp,"	   id=\"center_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG7]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"center_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG7])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"center_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG7]*100.0/Numquartets);
 
 	/* number of partly resolved quartets, top right */
@@ -335,7 +335,7 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	   y=\"-390.8439\"\n");
 	fprintf(ofp,"	   text-anchor=\"middle\"\n");
 	fprintf(ofp,"	   transform=\"rotate(60,665.0,-380.8439)\"\n");
-	fprintf(ofp,"	   id=\"right_side_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG4]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"right_side_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG4])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"right_side_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG4]*100.0/Numquartets);
 
 	/* number of partly resolved quartets, top left */
@@ -345,7 +345,7 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp,"	   y=\"-390.8439\"\n");
 	fprintf(ofp,"	   text-anchor=\"middle\"\n");
 	fprintf(ofp,"	   transform=\"rotate(-60,335.0,-380.8439)\"\n");
-	fprintf(ofp,"	   id=\"left_side_3\">%.1f%%</text>\n", (double)lmap_seq_quartet_info[leafNum].countarr[LM_REG6]*100.0/Numquartets);
+	fprintf(ofp,"	   id=\"left_side_3\">%.1f%%</text>\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG6])*100.0/Numquartets);
 	// fprintf(ofp,"	   id=\"left_side_3\">%.1f%%</text>\n", (double)countarr[Maxspc][LM_REG6]*100.0/Numquartets);
 
 	fprintf(ofp,"  </g>\n");
@@ -491,7 +491,7 @@ void initeps(FILE *ofp, QuartetGroups &LMGroups)
 /* plot one point of likelihood mapping analysis (EPS) */
 void plotlmpointeps(FILE *epsofp, double w1, double w2)
 {
-	fprintf(epsofp,"%.10f tl %.10f tl dot\n", 0.5*w1 + w2, w1*0.8660254038);
+	fprintf(epsofp,"%.10f tl %.10f tl dot\n", (0.5*w1) + w2, w1*0.8660254038);
 } /* plotlmpointeps */
 
 
@@ -507,7 +507,7 @@ void plotlmpoint(FILE *epsofp, FILE *svgofp, double w1, double w2)
 	if (lmapsvg_optn) {
 		//fprintf(svgofp,"    <use x=\"%.10f\" y=\"%.10f\" xlink:href=\"#result\" />\n", (0.5*w1 + w2), -(w1*0.8660254038));
 		fprintf(svgofp,"    <circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" />\n", 
-			(0.5*w1 + w2)*1000, -(w1*866.0254038));
+            (0.5*w1 + w2)*NUM_ONE_E_THREE, -(w1*866.0254038));
 	}
 } /* plotlmpoint */
 #endif
@@ -543,7 +543,7 @@ void plotlmpointcolor(FILE *epsofp, FILE *svgofp, double w1, double w2, int red,
 		you can use rgb values as well: fill: rgb(255,0,0);
 */
 		fprintf(svgofp,"    <circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" ", 
-			(0.5*w1 + w2)*1000, -(w1*866.0254038));
+			(0.5*w1 + w2)*NUM_ONE_E_THREE, -(w1*866.0254038));
 		fprintf(svgofp,"fill=\"rgb(%d%%, %d%%, %d%%)\" />\n", (int)(100*red), (int)(100*green), (int)(100*blue));
 	}
 } /* plotlmpointcolor */
@@ -578,11 +578,11 @@ void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp, " 0.75 tl 0.4330127019 tl lineto\n");
 	fprintf(ofp, "stroke\n");
 	fprintf(ofp, "0.44 tl 0.5 tl moveto %% up\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_AR1]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR1])*100.0/Numquartets);
 	fprintf(ofp, "0.25 tl 0.15 tl moveto %% down left\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_AR3]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR3])*100.0/Numquartets);
 	fprintf(ofp, "0.63 tl 0.15 tl moveto %% down right\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_AR2]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_AR2])*100.0/Numquartets);
 	fprintf(ofp, "} def\n");
 	fprintf(ofp, "%% third triangle (the one with 7 basins)\n");
 	fprintf(ofp, "/thirdtriangle {\n");
@@ -624,30 +624,30 @@ void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 	fprintf(ofp, "stroke\n");
 	/* resolved quartets, top */
 	fprintf(ofp, "0.42 tl 0.66 tl moveto %% up\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG1]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG1])*100.0/Numquartets);
 	/* resolved quartets, bottom left */
 	fprintf(ofp, "0.07 tl 0.05 tl moveto %% down left\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG3]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG3])*100.0/Numquartets);
 	/* resolved quartets, bottom right */
 	fprintf(ofp, "0.77 tl 0.05 tl moveto %% down right\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG2]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG2])*100.0/Numquartets);
 	/* partly resolved quartets, bottom */
 	fprintf(ofp, "0.43 tl 0.05 tl moveto %% down side\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG5]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG5])*100.0/Numquartets);
 	/* unresolved quartets */
 	fprintf(ofp, "0.43 tl 0.28 tl moveto %% center\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG7]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG7])*100.0/Numquartets);
 	/* partly resolved quartets, top right */
 	fprintf(ofp, "gsave\n");
 	fprintf(ofp, "-60 rotate\n");
 	fprintf(ofp, "-0.07 tl 0.77 tl moveto %% right side\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG4]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG4])*100.0/Numquartets);
 	fprintf(ofp, "grestore\n");
 	/* partly resolved quartets, top left */
 	fprintf(ofp, "gsave\n");
 	fprintf(ofp, "60 rotate\n");
 	fprintf(ofp, "0.4 tl -0.09 tl moveto %% left side\n");
-	fprintf(ofp, "(%.1f%%) show\n", (double) lmap_seq_quartet_info[leafNum].countarr[LM_REG6]*100.0/Numquartets);
+	fprintf(ofp, "(%.1f%%) show\n", static_cast<double>(lmap_seq_quartet_info[leafNum].countarr[LM_REG6])*100.0/Numquartets);
 	fprintf(ofp, "grestore\n");
 	fprintf(ofp, "} def\n");
 	fprintf(ofp, "%% print the other two triangles\n");
@@ -735,18 +735,18 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	   size2 = sizeA-3;
 	   size1 = sizeA-2;
 	   size0 = sizeA-1;
-	   LMGroups.uniqueQuarts = (int64_t)1 + size3 +
-	                           (int64_t)size2 * (size2-1) / 2 +
-	                           (int64_t)size1 * (size1-1) * (size1-2) / 6 +
-	                           (int64_t)size0 * (size0-1) * (size0-2) * (size0-3) / 24;
+	   LMGroups.uniqueQuarts = static_cast<int64_t>(1) + size3 +
+            static_cast<int64_t>(size2) * (size2-1) / 2 +
+            static_cast<int64_t>(size1) * (size1-1) * (size1-2) / NUM_SIX +
+            static_cast<int64_t>(size0) * (size0-1) * (size0-2) * (size0-3) / NUM_TWO_FOUR;
 	   break;
 	case 2: 
-	   LMGroups.uniqueQuarts = ((int64_t)sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
-	case 3: 
-	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
-	case 4: 
-	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * sizeC * sizeD; break;
-	default: 
+	   LMGroups.uniqueQuarts = (static_cast<int64_t>(sizeA) * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
+	case 3:
+	   LMGroups.uniqueQuarts = static_cast<int64_t>(sizeA) * sizeB * (sizeC * (sizeC - 1)) / 2; break;
+	case 4:
+	   LMGroups.uniqueQuarts = static_cast<int64_t>(sizeA) * sizeB * sizeC * sizeD; break;
+	default:
 	   outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!"); 
 	   break;
     }
@@ -918,7 +918,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                 quartet_aln->orderPatternByNumChars(PAT_VARIANT);
             PhyloTree *quartet_tree;
             if (isSuperTree()) {
-                quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+                quartet_tree = new PhyloSuperTree(static_cast<SuperAlignment*>(quartet_aln), static_cast<PhyloSuperTree*>(this));
             } else {
                 quartet_tree = new PhyloTree(quartet_aln);
             }
@@ -936,8 +936,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
             // set up partition model
             if (isSuperTree()) {
-                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-                PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+                PhyloSuperTree *quartet_super_tree = static_cast<PhyloSuperTree*>(quartet_tree);
+                PhyloSuperTree *super_tree = static_cast<PhyloSuperTree*>(this);
                 for (size_t i = 0; i < quartet_super_tree->size(); i++) {
                     quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
                     quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
@@ -955,13 +955,13 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             // loop over 3 quartets to compute likelihood
             for (size_t k = 0; k < 3; k++) {
                 string quartet_tree_str;
-                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
-                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
+                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[(k*4)+1]) + ",(" +
+                    quartet_aln->getSeqName(qc[(k*4)+2]) + "," + quartet_aln->getSeqName(qc[(k*4)+3]) + "));";
                 quartet_tree->readTreeStringSeqName(quartet_tree_str);
                 quartet_tree->initializeAllPartialLh();
                 quartet_tree->wrapperFixNegativeBranch(true);
                 // optimize branch lengths with logl_epsilon=0.1 accuracy
-                lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
+                lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(NUM_TEN, 0.1);
             }
             // reset model & rate so that they are not deleted
             quartet_tree->setModel(nullptr);
@@ -969,7 +969,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             quartet_tree->setRate(nullptr);
 
             if (isSuperTree()) {
-                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                PhyloSuperTree *quartet_super_tree = static_cast<PhyloSuperTree*>(quartet_tree);
                 for (size_t i = 0; i < quartet_super_tree->size(); i++) {
                     quartet_super_tree->at(i)->setModelFactory(nullptr);
                     quartet_super_tree->at(i)->setModel(nullptr);
@@ -1066,7 +1066,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	/* 110 distribution */
 	temp1 = 0.5 - lmap_quartet_info[qid].qweight[qworder[0]];
 	temp2 = 0.5 - lmap_quartet_info[qid].qweight[qworder[1]];
-	sqdiff[1] = temp1*temp1 + temp2*temp2 +
+	sqdiff[1] = (temp1*temp1) + (temp2*temp2) +
 		lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
 	discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
 
@@ -1075,7 +1075,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	temp2 = onethird - lmap_quartet_info[qid].qweight[qworder[1]];
 	temp3 = onethird - lmap_quartet_info[qid].qweight[qworder[2]];
 	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
-	discreteweight[2] = (unsigned char) 7;
+    discreteweight[2] = static_cast<unsigned char>(NUM_SEVEN);
 
         /* sort in descending order */
         int sqorder[3]; // local (thread-safe) vector for sorting
@@ -1111,7 +1111,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
 
         // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-        unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
+        unsigned char qpbranching = static_cast<unsigned char>(discreteweight[sqorder[2]]);
 
 	if (qpbranching == 1) {
 		lmap_quartet_info[qid].area=0; // LM_REG1 - top
@@ -1126,22 +1126,22 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	if (qpbranching == 3) {
 		lmap_quartet_info[qid].area=3; // LM_REG4
 	}
-	if (qpbranching == 6) {
+    if (qpbranching == NUM_SIX) {
 		lmap_quartet_info[qid].area=4; // LM_REG5
 	}
-	if (qpbranching == 5) {
-		lmap_quartet_info[qid].area=5; // LM_REG6
+    if (qpbranching == NUM_FIVE) {
+        lmap_quartet_info[qid].area=NUM_FIVE; // LM_REG6
 	}
 
-	if (qpbranching == 7) {
-		lmap_quartet_info[qid].area=6; // LM_REG7 - center 
+    if (qpbranching == NUM_SEVEN) {
+		lmap_quartet_info[qid].area=NUM_SIX; // LM_REG7 - center
 	}
 
 	{
 		int64_t count = (qid+1);
-		if ((count % 100) == 0) {
+		if ((count % NUM_ONE_ZERO_ZERO) == 0) {
 			cout << '.';
-			if ((count % 1000) == 0) { // separator after 10 dots
+            if ((count % NUM_ONE_E_THREE) == 0) { // separator after 10 dots
 				cout << ' ';
 				if ((count % 5000) == 0) // new-line after 50 dots
 					cout << " : " << count << endl;
@@ -1281,7 +1281,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     TaxaSetNameVector *allsets = lmclusters->getSets();
     numsets = static_cast<int>(allsets->size());
 
-    if(numsets > 5) outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!");
+    if(numsets > NUM_FIVE) outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!");
 
     int n = 0;
     for (TaxaSetNameVector::iterator i = allsets->begin(); i != allsets->end(); i++) {
@@ -1383,10 +1383,10 @@ void PhyloTree::doLikelihoodMapping() {
         LMGroups.numGroups = 0; /* no clusterfile -> un-initialized */
         int64_t recommended_quartets;
         if (aln->getNSeq() > 10) {
-            recommended_quartets = (int64_t)25*aln->getNSeq();
+            recommended_quartets = static_cast<int64_t>(25)*aln->getNSeq();
         } else {
             int64_t n = aln->getNSeq();
-            recommended_quartets = n*(n-1)*(n-2)*(n-3)/24;
+            recommended_quartets = n*(n-1)*(n-2)*(n-3)/NUM_TWO_FOUR;
         }
         if (params->lmap_num_quartets > 0 && params->lmap_num_quartets < recommended_quartets) {
             outWarning("Number of quartets is recommended to be at least " + convertInt64ToString(recommended_quartets) + " s.t. each sequence is sampled sufficiently");
@@ -1394,31 +1394,31 @@ void PhyloTree::doLikelihoodMapping() {
 
     }
 
-    areacount[0] = 0;
-    areacount[1] = 0;
-    areacount[2] = 0;
-    areacount[3] = 0;
-    areacount[4] = 0;
-    areacount[5] = 0;
-    areacount[6] = 0;
-    areacount[7] = 0;
-    cornercount[0] = 0;
-    cornercount[1] = 0;
-    cornercount[2] = 0;
-    cornercount[3] = 0;
+    areacount[NUM_ZERO] = 0;
+    areacount[NUM_ONE] = 0;
+    areacount[NUM_TWO] = 0;
+    areacount[NUM_THREE] = 0;
+    areacount[NUM_FOUR] = 0;
+    areacount[NUM_FIVE] = 0;
+    areacount[NUM_SIX] = 0;
+    areacount[NUM_SEVEN] = 0;
+    cornercount[NUM_ZERO] = 0;
+    cornercount[NUM_ONE] = 0;
+    cornercount[NUM_TWO] = 0;
+    cornercount[NUM_THREE] = 0;
 
     lmap_seq_quartet_info.resize(leafNum+1);
     for (qid = 0; qid < leafNum; qid++) {
-        lmap_seq_quartet_info[qid].countarr[0] = 0;
-        lmap_seq_quartet_info[qid].countarr[1] = 0;
-        lmap_seq_quartet_info[qid].countarr[2] = 0;
-        lmap_seq_quartet_info[qid].countarr[3] = 0;
-        lmap_seq_quartet_info[qid].countarr[4] = 0;
-        lmap_seq_quartet_info[qid].countarr[5] = 0;
-        lmap_seq_quartet_info[qid].countarr[6] = 0;
-        lmap_seq_quartet_info[qid].countarr[7] = 0;
-        lmap_seq_quartet_info[qid].countarr[8] = 0;
-        lmap_seq_quartet_info[qid].countarr[9] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_ZERO] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_ONE] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_TWO] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_THREE] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_FOUR] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_FIVE] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_SIX] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_SEVEN] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_EIGHT] = 0;
+        lmap_seq_quartet_info[qid].countarr[NUM_NINE] = 0;
     }
 
     computeQuartetLikelihoods(lmap_quartet_info, LMGroups);
@@ -1445,16 +1445,16 @@ void PhyloTree::doLikelihoodMapping() {
     
     if (params->print_lmap_quartet_lh) {
         // print quartet file
-        filename = (string)params->out_prefix + ".lmap.quartetlh";
+        filename = static_cast<string>(params->out_prefix) + ".lmap.quartetlh";
         out.open(filename.c_str());
     }
 
-    string lmap_svgfilename = (string)params->out_prefix + ".lmap.svg";
+    string lmap_svgfilename = static_cast<string>(params->out_prefix) + ".lmap.svg";
     FILE *svgout;
     svgout = fopen(lmap_svgfilename.c_str(), "w");
     initsvg(svgout, LMGroups);
 
-    string lmap_epsfilename = (string)params->out_prefix + ".lmap.eps";
+    string lmap_epsfilename = static_cast<string>(params->out_prefix) + ".lmap.eps";
     FILE *epsout;
     epsout = fopen(lmap_epsfilename.c_str(), "w");
     initeps(epsout, LMGroups);
@@ -1495,10 +1495,10 @@ void PhyloTree::doLikelihoodMapping() {
 //        PhyloTree::reportLikelihoodMapping(out);
 
     }
-
-    resolved   = areacount[0] + areacount[1] + areacount[2];
-    partly     = areacount[3] + areacount[4] + areacount[5];
-    unresolved = areacount[6];
+    
+    resolved   = areacount[NUM_ZERO] + areacount[NUM_ONE] + areacount[NUM_TWO];
+    partly     = areacount[NUM_THREE] + areacount[NUM_FOUR] + areacount[NUM_FIVE];
+    unresolved = areacount[NUM_SIX];
 	
 #if 0  // for debugging purposes only (HAS)
     out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
@@ -1712,11 +1712,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " 
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " 
         	   << PhyloTree::aln->getSeqName(static_cast<int>(qid)) << endl;
 	    } else {
 	       out << "-----------------------------------------------------------------------------" << endl;
@@ -1725,11 +1725,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " << endl;
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " << endl;
 	    }
         }
 
@@ -1748,19 +1748,19 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
                    << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
+		   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  "
         	   << PhyloTree::aln->getSeqName(static_cast<int>(qid)) << endl;
 	    } else {
 	       out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
@@ -1769,19 +1769,19 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
                    << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
+		   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  " 
+        	   << " (" << setw(6) << static_cast<double>(100.0)*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  "
 	           << endl << endl;
 	    }
         }
@@ -1803,11 +1803,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
                    << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
+		   << " (" << setw(6) << static_cast<double>(100.0)*resolved/sumq0 << ") "
         	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*partly/sumq0 << ") "
         	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  "
+                   << " (" << setw(6) << static_cast<double>(100.0)*unres/sumq0 << ")  "
         	   << PhyloTree::aln->getSeqName(static_cast<int>(qid)) << endl;
 	    } else {
 	       out << "-----------------------------------------------------------------------------" << endl;
@@ -1816,17 +1816,17 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
                    << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
+		   << " (" << setw(6) << static_cast<double>(100.0)*resolved/sumq0 << ") "
         	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
+                   << " (" << setw(6) << static_cast<double>(100.0)*partly/sumq0 << ") "
         	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  " << endl;
+                   << " (" << setw(6) << static_cast<double>(100.0)*unres/sumq0 << ")  " << endl;
 	    }
         }
 
-    resolved   = areacount[0] + areacount[1] + areacount[2];
-    partly     = areacount[3] + areacount[4] + areacount[5];
-    unresolved = areacount[6];
+    resolved   = areacount[NUM_ZERO] + areacount[NUM_ONE] + areacount[NUM_TWO];
+    partly     = areacount[NUM_THREE] + areacount[NUM_FOUR] + areacount[NUM_FIVE];
+    unresolved = areacount[NUM_SIX];
 	
     // out << endl << "LIKELIHOOD MAPPING ANALYSIS" << endl << endl;
     // out << "Number of quartets: " << (resolved+partly+unresolved)

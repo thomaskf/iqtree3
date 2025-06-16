@@ -41,18 +41,18 @@ public:
 		@param userTreeFile the name of the user tree
 		@param is_rooted (IN/OUT) true if tree is rooted
 	*/
-	MExtTree(const char *userTreeFile, bool &is_rooted) : MTree(userTreeFile, is_rooted) {};
+	MExtTree(const char *userTreeFile, bool &is_rooted) : MTree(userTreeFile, is_rooted) {}
 
 	/**
 		constructor, get from another tree
 		@param tree another MTree
 	*/
-	MExtTree(MTree &tree) : MTree(tree) {};
+	MExtTree(MTree &tree) : MTree(tree) {}
 
 	/**
 		constructor
 	*/
-    MExtTree() : MTree() {};
+    MExtTree() : MTree() {}
 
 
 /********************************************************
@@ -77,7 +77,6 @@ public:
 	/**
 		generate a random tree following Yule-Harding model satisfying a constraint tree
 		@param params program parameters
-		@param binary TRUE if you want to generate a binary tree
         @param constraint_tree a (multifurcating) constraint tree
         @param taxnames taxa names
 	*/
@@ -94,7 +93,6 @@ public:
     /**
         generate a random tree following birth-death model
         @param params program parameters
-        @param scale_birth_rate (birth_rate/(birth_rate+death_rate)
     */
     void generateBirthDeath(Params &params);
 

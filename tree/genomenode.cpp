@@ -71,9 +71,9 @@ GenomeNode::~GenomeNode()
 /**
     update relations
  */
-void GenomeNode::updateRelation(GenomeNode* n_parent, GenomeNode* n_left_child, GenomeNode* n_right_child)
+/* void GenomeNode::updateRelation(GenomeNode* n_parent, GenomeNode* n_left_child, GenomeNode* n_right_child)
 {
     parent = n_parent;
     left_child = n_left_child;
     right_child = n_right_child;
-}
+}*/
