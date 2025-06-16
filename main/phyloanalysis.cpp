@@ -999,9 +999,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << " - measured in number of mutations and frequency shifts per site: " << totalLen << endl;
         out << " - measured in number of substitutions per site (divided by N^2): " << totalLen / (N * N) << endl;
     } else {
-        if (treemix == nullptr) {
-            out << "Total tree length (sum of branch lengths): " << totalLen << endl;
-        } else {
+        if (treemix != nullptr) {
             out << "Total tree lengths (sum of branch lengths):";
             for (i = 0; i < treemix->size(); i++) {
                 out << " " << totalLens[i];
