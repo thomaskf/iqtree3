@@ -119,7 +119,7 @@ IntVector MaAlignment::computeExpectedNorFre()
 	r[0] = ell[0];
 	expectedNorFre[0] = (int)floor(ell[0]+0.5); //note that floor(_number+0.5) returns the ordinary rounding of _number
 	int sum = expectedNorFre[0];
-	for (int j = 1; j < patNum; j++ )
+	for (size_t j = 1; j < patNum; j++ )
 	{
 		r[j] = ell[j] + r[j-1] - floor(r[j-1]+0.5);
 		expectedNorFre[j] = (int)floor(r[j]+0.5);

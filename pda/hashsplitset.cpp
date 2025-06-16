@@ -20,12 +20,14 @@
 #include "hashsplitset.h"
 #include "splitgraph.h"
 
+using namespace std;
+
 Split *SplitIntMap::findSplit(Split *sp) {
     iterator ass_it = find(sp);
     if (ass_it != end()) {
         return ass_it->first;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -36,7 +38,7 @@ Split *SplitIntMap::findSplit(Split *sp, int &value) {
         return ass_it->first;
     }
     value = 0;
-    return NULL;
+    return nullptr;
 }
 
 int SplitIntMap::getValue(Split *sp) {
@@ -64,7 +66,7 @@ void SplitIntMap::insertSplit(Split *sp, int value) {
 
 void SplitIntMap::buildMap(SplitGraph &sg, bool use_index) {
     clear();
-    for (int i = 0; i < sg.size(); i++) {
+    for (size_t i = 0; i < sg.size(); i++) {
         if (use_index) 
             insertSplit(sg[i], i);
         else

@@ -48,7 +48,7 @@ bool Graph::isCyclic()
     // stack
     bool *visited = new bool[V];
     bool *recStack = new bool[V];
-    for(int i = 0; i < V; i++){
+    for(size_t i = 0; i < V; i++){
         visited[i] = false;
         recStack[i] = false;
     }

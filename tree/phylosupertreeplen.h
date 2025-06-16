@@ -112,9 +112,9 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
-    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
             de-allocate central_partial_lh
@@ -184,7 +184,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
 
 
     /**
@@ -212,10 +212,10 @@ public:
             @param cur_score current likelihood score
             @param node1 1st end node of the branch
             @param node2 2nd end node of the branch
-            @param nni_param (OUT) if not NULL: swapping information returned
+            @param nni_param (OUT) if not nullptr: swapping information returned
             @return the likelihood of the tree
      */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL, NNIMove *nniMoves = NULL);
+    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = nullptr, NNIMove *nniMoves = nullptr);
 
     /**
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
@@ -266,7 +266,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, Node *node = nullptr, Node *dad = nullptr);
 
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
 

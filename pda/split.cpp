@@ -21,6 +21,8 @@
  ***************************************************************************/
 #include "split.h"
 
+using namespace std;
+
 Split::Split()
 		: vector<UINT>()
 {

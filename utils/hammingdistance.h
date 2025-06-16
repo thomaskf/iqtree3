@@ -38,7 +38,7 @@ template <class L, class F> inline double hammingDistance
          , int seqLen, const F* frequencyVector, double& frequencyOfUnknowns ) {
     double distance = 0;
     frequencyOfUnknowns = 0;
-    for (int pos = 0; pos < seqLen; ++pos) {
+    for (size_t pos = 0; pos < seqLen; ++pos) {
         if ( sequenceA[pos] == unknown ||
             sequenceB[pos] == unknown ) {
             frequencyOfUnknowns += frequencyVector[pos];
@@ -100,7 +100,7 @@ inline double hammingDistance
             b += blockSize;
         }
     }
-    for (int pos=blockStop; pos < seqLen; ++pos ) {
+    for (size_t pos=blockStop; pos < seqLen; ++pos ) {
         if (sequenceA[pos]==unknown || sequenceB[pos]==unknown) {
             freqUnknown += frequencyVector[pos];
         }

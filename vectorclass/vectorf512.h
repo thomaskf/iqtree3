@@ -286,7 +286,7 @@ private: // Prevent constructing from int, etc.
     Vec8db(int b);
     Vec8db & operator = (int x);
 public:
-    static int size () {
+    static size_t size () {
         return 8;
     }
 };
@@ -442,7 +442,7 @@ public:
     Vec8f get_high() const {
         return _mm256_castpd_ps(_mm512_extractf64x4_pd(_mm512_castps_pd(zmm),1));
     }
-    static int size () {
+    static size_t size () {
         return 16;
     }
 };
@@ -1114,7 +1114,7 @@ public:
     Vec4d get_high() const {
         return _mm512_extractf64x4_pd(zmm,1);
     }
-    static int size () {
+    static size_t size () {
         return 8;
     }
 };

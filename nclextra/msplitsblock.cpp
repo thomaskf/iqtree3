@@ -238,7 +238,7 @@ void MSplitsBlock::Read(NxsToken &token)
 				cycle.push_back(tax-1);
 				token.GetNextToken();
 			}
-			if (cycle.size() != ntaxa) {
+			if (cycle.size() != static_cast<size_t>(ntaxa)) {
 				errormsg = "Not all taxa in CYCLE are included";
 				throw NxsException(errormsg, token);
 			}

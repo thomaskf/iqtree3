@@ -50,7 +50,7 @@ public:
     void computeLogLikelihoodSiteTree(int updateTree = -1);
     
     // compute backward log-likelihood
-    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
+    virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true);
     
     /**
      optimize all branch lengths of one tree
@@ -63,7 +63,7 @@ public:
      @param iterations number of iterations to loop through all branches
      @return the likelihood of the tree
      */
-    double optimizeAllBranches(double* pattern_mix_lh = NULL, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    double optimizeAllBranches(double* pattern_mix_lh = nullptr, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
     
     double optimizeAllBranchLensByBFGS(double gradient_epsilon, double logl_epsilon, int maxsteps = 3);
     /**
@@ -91,7 +91,7 @@ public:
     virtual int getNParameters();
     
     // print out all the results to a file
-    void printResults(const char *filename, int cat_assign_method = 0, int* numSiteCat = NULL);
+    void printResults(const char *filename, int cat_assign_method = 0, int* numSiteCat = nullptr);
 
     // print out the marginal probabilities to a file
     void printMarginalProb(const char *filename);
@@ -100,10 +100,10 @@ public:
     void showParameters(ostream& out);
     
     // optimize all substitution models
-    double optimizeAllSubstModels(double gradient_epsilon, double* pattern_mix_lh = NULL);
+    double optimizeAllSubstModels(double gradient_epsilon, double* pattern_mix_lh = nullptr);
     
     // optimize all RHAS models
-    double optimizeAllRHASModels(double gradient_epsilon, double score = 0.0, double* pattern_mix_lh = NULL);
+    double optimizeAllRHASModels(double gradient_epsilon, double score = 0.0, double* pattern_mix_lh = nullptr);
     
 private:
     
@@ -185,7 +185,7 @@ private:
     void setAvgLenEachBranchGrp();
     
     // update the ptn_freq array according to the marginal probabilities along each site for each tree
-    void computeFreqArray(double* pattern_mix_lh = NULL, bool need_computeLike = true, int update_which_tree = -1);
+    void computeFreqArray(double* pattern_mix_lh = nullptr, bool need_computeLike = true, int update_which_tree = -1);
     
     // get marginal probabilities along each site for each tree
     void getMarginalProb(bool need_computeLike = true, int update_which_tree = -1);

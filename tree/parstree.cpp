@@ -26,7 +26,7 @@ ParsTree::~ParsTree() {
 //void ParsTree::initParsData(Params* pars_params) {
 //    if(!pars_params) return;
 //    initCostMatrixLinear();
-//    if(cost_matrix == NULL) loadCostMatrixFile(pars_params->sankoff_cost_file);
+//    if(cost_matrix == nullptr) loadCostMatrixFile(pars_params->sankoff_cost_file);
 //}
 
 void ParsTree::printPatternScore() {
@@ -42,7 +42,7 @@ UINT ParsTree::findMstScore(int ptn) {
 	// site_states[i] = 0 => state i is present, nonzero means it's absent
 	for(int i = 0; i < aln->num_states; i++) site_states[i] = UINT_MAX;
 	Pattern pat = aln->at(ptn);
-	for(int j = 0; j < pat.size(); j++){
+	for(size_t j = 0; j < pat.size(); j++){
 		if(pat[j] < aln->num_states) site_states[pat[j]] = 0;
 //		else initLeafSiteParsForAmbiguousState(pat[j], site_states)
 	}
@@ -66,7 +66,7 @@ UINT ParsTree::findMstScore(int ptn) {
 
 	do{
 		if(count == 0){
-			for(int c = 0; c < aln->num_states; c++){
+			for(size_t c = 0; c < aln->num_states; c++){
 				if((added[c] == false) && (site_states[c] == 0)){
 					labelled_value[c] = 0;
 //					cout << "c = " << c << endl;
@@ -77,11 +77,11 @@ UINT ParsTree::findMstScore(int ptn) {
 		// find among nodes unadded the one with smallest value
 		int min_label = UINT_MAX;
 		add_node = -1;
-		for(int c = 0; c < aln->num_states; c++){
+		for(size_t c = 0; c < aln->num_states; c++){
 			if((added[c] == false) && (site_states[c] == 0))
 				if(labelled_value[c] < min_label){
 					min_label = labelled_value[c];
-					add_node = c;
+					add_node = static_cast<int>(c);
 				}
 		}
 
@@ -91,7 +91,7 @@ UINT ParsTree::findMstScore(int ptn) {
 		}else break;
 
 		// update adjacent list
-		for(int c = 0; c < aln->num_states; c++)
+		for(size_t c = 0; c < aln->num_states; c++)
 			if((site_states[c] == 0) && (added[c] == false)){
 				if(labelled_value[c] > cost_matrix[add_node * cost_nstates + c])
 					labelled_value[c] = cost_matrix[add_node * cost_nstates + c];
@@ -99,7 +99,7 @@ UINT ParsTree::findMstScore(int ptn) {
 	}while(count < aln->num_states);
 
 	UINT score = 0;
-	for(int i = 0; i < aln->num_states; i++)
+	for(size_t i = 0; i < aln->num_states; i++)
 		if(site_states[i] == 0)
 			score += labelled_value[i];
 

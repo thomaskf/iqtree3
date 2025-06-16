@@ -318,7 +318,7 @@ void runLSD2(PhyloTree *tree) {
     
     int argc = arg.size();
     char *argv[argc];
-    for (int i = 0; i < argc; i++)
+    for (size_t i = 0; i < argc; i++)
         argv[i] = (char*)arg[i].c_str();
     std::copy(arg.begin(), arg.end(), std::ostream_iterator<string>(std::cout, " "));
     cout << endl;

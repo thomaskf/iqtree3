@@ -125,8 +125,6 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 	#include <set>
 #endif
 
-using namespace std;
-
 
 #if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER) && !defined(__clang__)
 /*
@@ -237,7 +235,7 @@ public:
 
         // calculate the averages of arrays x and y
         double xa = 0, ya = 0;
-        for (int i = 0; i < n; i++) {
+        for (size_t i = 0; i < static_cast<size_t>(n); i++) {
             xa += x[i];
             ya += y[i];
         }
@@ -246,7 +244,7 @@ public:
 
         // calculate auxiliary sums
         double xx = 0, yy = 0, xy = 0;
-        for (int i = 0; i < n; i++) {
+        for (size_t i = 0; i < static_cast<size_t>(n); i++) {
             double tmpx = x[i] - xa, tmpy = y[i] - ya;
             xx += tmpx * tmpx;
             yy += tmpy * tmpy;
@@ -629,6 +627,11 @@ private:
     //void operator=(Params const&) {}; // Disable assignment
 public:
 
+    /**
+     * Assign the default values to the variables
+     */
+    void setDefault();
+    
     /**
     *  Fast and accurate optimiation for alpha and p_invar
     */
@@ -1121,7 +1124,7 @@ public:
 
     /**
             name of the reference sequence where aln_site_list is based on,
-            NULL to take alignment positions.
+            nullptr to take alignment positions.
      */
     char *ref_seq_name;
 
@@ -1649,6 +1652,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** TRUE to optimize mixture model nucleotide/amino acide frequency */
+    bool optimize_mixmodel_freq;
+
     /** number of mixture branch lengths, default 1 */
     int num_mixlen;
     /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
@@ -1881,7 +1887,7 @@ public:
     /** bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
         to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
         must equal m, where m is the alignment length. Otherwise, an error will occur.
-        The default bootstrap_spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
+        The default bootstrap_spec == nullptr, a standard procedure is applied, i.e., randomly draw m sites.
     */
     char *bootstrap_spec;
 
@@ -2852,6 +2858,11 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+    
+    /**
+     *  input tree string (instead of a file)
+     */
+    string intree_str;
 };
 
 /**
@@ -3223,7 +3234,7 @@ void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',
         read distributions from built-in string or user-specified file
  */
 
-void read_distributions(char* filepath = NULL);
+void read_distributions(char* filepath = nullptr);
 
 /**
         randomly select a number from the pool of random numbers of a distribution
@@ -3431,12 +3442,12 @@ extern vector<default_random_engine> generator_vec;
  * @param seed seed for generator
  * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed, bool write_info = false, int** rstream = NULL);
+int init_random(int seed, bool write_info = false, int** rstream = nullptr);
 
 /**
  * finalize random number generator (e.g. free memory
  */
-int finish_random(int *rstream = NULL);
+int finish_random(int *rstream = nullptr);
 
 /**
  * initialize multiple random streams
@@ -3453,7 +3464,7 @@ int finish_multi_rstreams();
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
-int random_int(int n, int *rstream = NULL);
+int random_int(int n, int *rstream = nullptr);
 
 /**
  *  return a random integer in the range [a,b]
@@ -3464,18 +3475,18 @@ int random_int(int n, int *rstream = NULL);
  * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
-//int random_int(int *rstream = NULL);
+//int random_int(int *rstream = nullptr);
 
 /**
  * returns a random floating-point nuber in the range [0; 1)
  */
-double random_double(int *rstream = NULL);
+double random_double(int *rstream = nullptr);
 
 /**
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean, int *rstream = NULL);
+double random_double_exponential_distribution(double mean, int *rstream = nullptr);
 
 /**
  * geometric random number generation
@@ -3514,7 +3525,7 @@ int random_int_lav(double a, int m);
 IndelDistribution parseIndelDis(string input, string event_name);
 
 template <class T>
-void my_random_shuffle (T first, T last, int *rstream = NULL)
+void my_random_shuffle (T first, T last, int *rstream = nullptr)
 {
 	int n = last - first;
 	for (int i=n-1; i>0; --i) {
@@ -3528,7 +3539,7 @@ void my_random_shuffle (T first, T last, int *rstream = NULL)
  @param[in/out] sample array of size n with frequency of resampling
  @param rstream random number generator stream
 */
-void random_resampling(int n, IntVector &sample, int *rstream = NULL);
+void random_resampling(int n, IntVector &sample, int *rstream = nullptr);
 
 #define RESAMPLE_NAME ((Params::getInstance().jackknife_prop == 0.0) ? "bootstrap" : "jackknife")
 #define RESAMPLE_NAME_I ((Params::getInstance().jackknife_prop == 0.0) ? "Bootstrap" : "Jackknife")
@@ -3615,7 +3626,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames = 63);
     quicksort template
 */
 template<class T1, class T2>
-void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
+void quicksort(T1* arr, int left, int right, T2* arr2 = nullptr) {
     if (left > right) return;
     ASSERT(left <= right);
       int i = left, j = right;
@@ -3656,7 +3667,7 @@ void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
 */
 inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   const uint64_t* data = (uint64_t*) buf;
-  uint32_t size = n/(sizeof(uint64_t)/sizeof(int));
+  uint32_t size = static_cast<uint32_t>( static_cast<unsigned long>(n)/(sizeof(uint64_t)/sizeof(int)) );
   const uint64_t m1  = (0x5555555555555555ULL);
   const uint64_t m2  = (0x3333333333333333ULL);
   const uint64_t m4  = (0x0F0F0F0F0F0F0F0FULL);

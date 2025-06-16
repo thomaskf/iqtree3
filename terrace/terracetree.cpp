@@ -28,9 +28,9 @@ TerraceTree::~TerraceTree(){
         }
     }
 
-    if (root != NULL)
+    if (root != nullptr)
         freeNode();
-    root = NULL;
+    root = nullptr;
 };
 
 
@@ -238,7 +238,7 @@ void TerraceTree::remove_taxon(string taxon_name,bool update_leafNode,bool updat
         
         // nei is a central node (or a second leaf in a 2-taxon tree), the branch will be joined, therefore, the link_neis should be deleted (only the pointers, not objects).
         
-        FOR_NEIGHBOR_DECLARE(nei->node,NULL, it){
+        FOR_NEIGHBOR_DECLARE(nei->node,nullptr, it){
             ((TerraceNeighbor*)(*it))->delete_ptr_members();
             ((TerraceNeighbor*)(*it)->node->findNeighbor(nei->node))->delete_ptr_members();
         }
@@ -406,7 +406,7 @@ void TerraceTree::fillbrNodes(){
     NodeVector br_1, br_2;
     getBranches(br_1, br_2);
     int id;
-    for(int i=0; i<branchNum; i++){
+    for(size_t i=0; i<branchNum; i++){
         id=br_1[i]->findNeighbor(br_2[i])->id;
         brNodes[id]={br_1[i],br_2[i]};;
         /*for(const auto& b: brNodes[id]){

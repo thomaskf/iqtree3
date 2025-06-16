@@ -223,7 +223,7 @@ public:
     Vec4fb get_high() const {
         return _mm256_extractf128_ps(ymm,1);
     }
-    static int size () {
+    static size_t size () {
         return 8;
     }
 };
@@ -437,7 +437,7 @@ public:
     Vec2db get_high() const {
         return _mm256_extractf128_pd(ymm,1);
     }
-    static int size () {
+    static size_t size () {
         return 4;
     }
 };
@@ -670,7 +670,7 @@ public:
     Vec4f get_high() const {
         return _mm256_extractf128_ps(ymm,1);
     }
-    static int size () {
+    static size_t size () {
         return 8;
     }
 };
@@ -1463,7 +1463,7 @@ public:
     Vec2d get_high() const {
         return _mm256_extractf128_pd(ymm,1);
     }
-    static int size () {
+    static size_t size () {
         return 4;
     }
 };
@@ -3214,7 +3214,7 @@ static inline void scatter(Vec8f const & data, float * array) {
     _mm512_mask_i32scatter_ps(array, mask, indx, _mm512_castps256_ps512(data), 4);
 #else
     const int index[8] = {i0,i1,i2,i3,i4,i5,i6,i7};
-    for (int i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++) {
         if (index[i] >= 0) array[index[i]] = data[i];
     }
 #endif
@@ -3232,7 +3232,7 @@ static inline void scatter(Vec4d const & data, double * array) {
     _mm512_mask_i32scatter_pd(array, mask, indx, _mm512_castpd256_pd512(data), 8);
 #else
     const int index[4] = {i0,i1,i2,i3};
-    for (int i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 4; i++) {
         if (index[i] >= 0) array[index[i]] = data[i];
     }
 #endif
@@ -3247,7 +3247,7 @@ static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & da
     __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
     _mm512_mask_i32scatter_ps(array, mask, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 4);
 #else
-    for (int i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++) {
         if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
     }
 #endif
@@ -3262,7 +3262,7 @@ static inline void scatter(Vec4q const & index, uint32_t limit, Vec4d const & da
     __mmask16 mask = _mm512_cmplt_epu64_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec4uq(uint64_t(limit))));
     _mm512_mask_i64scatter_pd(array, mask, _mm512_castsi256_si512(index), _mm512_castpd256_pd512(data), 8);
 #else
-    for (int i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 4; i++) {
         if (uint64_t(index[i]) < uint64_t(limit)) array[index[i]] = data[i];
     }
 #endif
@@ -3277,7 +3277,7 @@ static inline void scatter(Vec4i const & index, uint32_t limit, Vec4d const & da
     __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi128_si512(index), _mm512_castsi128_si512(Vec4ui(limit)));
     _mm512_mask_i32scatter_pd(array, mask, _mm256_castsi128_si256(index), _mm512_castpd256_pd512(data), 8);
 #else
-    for (int i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 4; i++) {
         if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
     }
 #endif

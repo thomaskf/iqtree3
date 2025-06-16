@@ -29,7 +29,7 @@ void PhyloSuperTreeUnlinked::setAlignment(Alignment *alignment) {
     ASSERT(alignment->isSuperAlignment());
     SuperAlignment *saln = (SuperAlignment*)alignment;
     ASSERT(saln->partitions.size() == size());
-    for (int i = 0; i < size(); i++)
+    for (size_t i = 0; i < size(); i++)
         at(i)->setAlignment(saln->partitions[i]);
 }
 
@@ -52,7 +52,7 @@ int PhyloSuperTreeUnlinked::computeParsimonyTree(const char *out_prefix, Alignme
     int i;
     ASSERT(saln->partitions.size() == size());
     for (i = 0; i < size(); i++) {
-        score += at(i)->computeParsimonyTree(NULL, saln->partitions[i], rand_stream);
+        score += at(i)->computeParsimonyTree(nullptr, saln->partitions[i], rand_stream);
     }
     if (out_prefix) {
         string file_name = out_prefix;
@@ -200,7 +200,7 @@ pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info) {
     int NNIs = 0, NNI_steps = 0;
     double score = 0.0;
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
-    for (int i = 0; i < size(); i++) {
+    for (size_t i = 0; i < size(); i++) {
         IQTree *part_tree = (IQTree*)at(part_order[i]);
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
@@ -242,7 +242,7 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     params->print_ufboot_trees = false;
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
-    for (int i = 0; i < size(); i++) {
+    for (size_t i = 0; i < size(); i++) {
         IQTree *part_tree = (IQTree*)at(part_order[i]);
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
@@ -333,7 +333,7 @@ int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, do
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: num_low_support)
 #endif
-    for (int id = 0; id < size(); id++) {
+    for (size_t id = 0; id < size(); id++) {
         num_low_support += at(id)->testAllBranches(threshold, at(id)->getCurScore(), ptn_lh[id],
                             reps, lbp_reps, aLRT_test, aBayes_test);
     }

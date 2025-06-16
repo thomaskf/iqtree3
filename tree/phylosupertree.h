@@ -128,7 +128,7 @@ public:
     /**
         init sequence instances for each nodes when using AliSim
     */
-    virtual void initSequences(Node* node = NULL, Node* dad = NULL);
+    virtual void initSequences(Node* node = nullptr, Node* dad = nullptr);
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
@@ -162,20 +162,20 @@ public:
     /**
      * save branch lengths into a vector
      */
-    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
-    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
         Collapse all internal branches with length <= threshold
-		@param node the starting node, NULL to start from the root
+		@param node the starting node, nullptr to start from the root
 		@param dad dad of the node, used to direct the search
         @param threshold branch length threshold
         @return number of branches collapsed
     */
-    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+    virtual int collapseInternalBranches(Node *node = nullptr, Node *dad = nullptr, double threshold = 0.0);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -183,7 +183,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -225,7 +225,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
 	 */
-	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = NULL, SuperNode *dad = NULL);
+	void linkTree(int part, NodeVector &part_taxa, SuperNode *node = nullptr, SuperNode *dad = nullptr);
 
 	/**
 	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
@@ -264,11 +264,11 @@ public:
 
     /**
             compute the tree likelihood
-            @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
+            @param pattern_lh (OUT) if not nullptr, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
+    virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true);
 
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
@@ -281,10 +281,10 @@ public:
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
             @param cur_logl current log-likelihood (for sanity check)
-            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
+            @param pattern_lh_cat (OUT) if not nullptr, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
-    		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = nullptr,
+    		double *pattern_lh_cat = nullptr, SiteLoglType wsl = WSL_RATECAT);
 
     /**
             compute pattern posterior probabilities per rate/mixture category
@@ -308,7 +308,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
@@ -328,7 +328,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees
@@ -391,7 +391,7 @@ public:
     /**
      * count the number of super branches that map to no branches in gene trees
      */
-    int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    int countEmptyBranches(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
@@ -401,9 +401,9 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+    virtual int fixNegativeBranch(bool force = false, Node *node = nullptr, Node *dad = nullptr);
 
-    virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = nullptr);
 
     /****************************************************************************
             ancestral sequence reconstruction
