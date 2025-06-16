@@ -28,10 +28,10 @@ public:
     /**
      destructor
      */
-    ~IQTreeMixHmm();
+    ~IQTreeMixHmm() override;
     
     // initialize the model
-    void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    void initializeModel(Params &params, string model_name, ModelsBlock *models_block) override;
 
     // initialize the transition model
     void initializeTransitModel(Params &params);
@@ -50,17 +50,17 @@ public:
     void computeLogLikelihoodSiteTree(int updateTree = -1);
     
     // compute backward log-likelihood
-    virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true);
+    virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true) override;
     
     /**
      optimize all branch lengths of one tree
-     @param iterations number of iterations to loop through all branches
+     @param my_iterations number of iterations to loop through all branches
      */
     void optimizeAllBranchesOneTree(int whichtree, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
     
     /**
      optimize all branch lengths of all trees
-     @param iterations number of iterations to loop through all branches
+     @param my_iterations number of iterations to loop through all branches
      @return the likelihood of the tree
      */
     double optimizeAllBranches(double* pattern_mix_lh = nullptr, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
@@ -69,11 +69,11 @@ public:
     /**
      @return true if this is a HMM model
      */
-    virtual bool isHMM() { return true; }
+    virtual bool isHMM() override { return true; }
     
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
     
-    virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
+    virtual string optimizeModelParameters(bool printInfo, double logl_epsilon) override;
 
     // Optimize parameters according to the MAST model
     string optimizeModelParamMAST(bool printInfo, double logl_epsilon);
@@ -81,14 +81,14 @@ public:
     // Optimize parameters according to the HMM model
     string optimizeModelParamHMM(bool printInfo, double logl_epsilon);
 
-    virtual void setNumThreads(int num_threads);
+    virtual void setNumThreads(int num_threads) override;
     
     /**
      test the best number of threads
      */
-    virtual int testNumThreads();
+    virtual int testNumThreads() override;
     
-    virtual int getNParameters();
+    virtual int getNParameters() override;
     
     // print out all the results to a file
     void printResults(const char *filename, int cat_assign_method = 0, int* numSiteCat = nullptr);
@@ -150,21 +150,21 @@ private:
     void setAllBranchLengths();
     
     // show the branch lengths of all trees
-    void showAllBranchLengths();
+    // void showAllBranchLengths();
     
     //--------------------------------------------
     // optimization of branch lengths using BFGS
     //--------------------------------------------
 
     // the following three functions are for dimension = 1
-    double computeFunction(double x);
+    double computeFunction(double x) override;
     
     double setSingleVariable();
     
     void getSingleVariable(double x);
 
     // the following four functions are for dimension > 1
-    virtual double targetFunk(double x[]);
+    virtual double targetFunk(double x[]) override;
     
     virtual void setVariables(double *variables);
     
@@ -172,7 +172,7 @@ private:
     
     virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
-    virtual int getNDim();
+    virtual int getNDim() override;
     
     double optimizeBranchGroup(int branchgrp, double gradient_epsilon);
     

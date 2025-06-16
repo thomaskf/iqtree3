@@ -34,7 +34,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     dad_branch->partial_lh_computed |= 1;
 
     size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
 
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
@@ -60,7 +60,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 	ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+		if (!left) left = static_cast<PhyloNeighbor*>(*it); else right = static_cast<PhyloNeighbor*>(*it);
 	}
 
 	if (!left->node->isLeaf() && right->node->isLeaf()) {
@@ -78,7 +78,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
         // re-orient partial_lh
         bool done = false;
         FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            PhyloNeighbor *backnei = (static_cast<PhyloNeighbor*>((*it2)->node->findNeighbor(node)));
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
@@ -107,8 +107,8 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 
-	VectorClass *eleft = (VectorClass*)aligned_alloc<double>(block*nstates);
-	VectorClass *eright = (VectorClass*)aligned_alloc<double>(block*nstates);
+	VectorClass *eleft = static_cast<VectorClass*>(aligned_alloc<double>(block*nstates));
+	VectorClass *eright = static_cast<VectorClass*>(aligned_alloc<double>(block*nstates));
 
 	// precompute information buffer
 	for (c = 0; c < ncat; c++) {
@@ -450,8 +450,8 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -479,9 +479,9 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 
-	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
-	VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
-	VectorClass *vc_val2 = (VectorClass*)aligned_alloc<double>(block);
+	VectorClass *vc_val0 = static_cast<VectorClass*>(aligned_alloc<double>(block));
+	VectorClass *vc_val1 = static_cast<VectorClass*>(aligned_alloc<double>(block));
+	VectorClass *vc_val2 = static_cast<VectorClass*>(aligned_alloc<double>(block));
 
 	VectorClass vc_len = dad_branch->length;
 	for (c = 0; c < ncat; c++) {
@@ -698,8 +698,8 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -990,7 +990,7 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
     double *eval = model->getEigenvalues();
     ASSERT(eval);
 
-	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
+	VectorClass *vc_val0 = static_cast<VectorClass*>(aligned_alloc<double>(block));
 
 	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat; c++) {

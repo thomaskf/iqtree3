@@ -40,8 +40,8 @@ Node::Node(int aid) {
 
 Node::Node(int aid, int aname) {
     id = aid;
-    char str[20];
-    snprintf(str, 20, "%d", aname);
+    char str[NUM_TWO_ZERO];
+    snprintf(str, NUM_TWO_ZERO, "%d", aname);
     name = str;
     height = -1;
     sequence = nullptr;

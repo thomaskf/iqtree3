@@ -136,8 +136,8 @@ void SuperAlignment::computeQuartetSupports(IntVector &quartet, vector<int64_t> 
             part_support.resize(3, 0);
             partitions[part]->computeQuartetSupports(part_quartet, part_support);
             for (size_t j = 0; j < 3; j++) if (part_support[j] > 0) {
-                ASSERT(support[part*3+3+j] >= 0);
-                support[part*3+3+j] += part_support[j];
+                ASSERT(support[(part*3)+3+j] >= 0);
+                support[(part*3)+3+j] += part_support[j];
                 support[j] += part_support[j];
             }
         } else
@@ -212,7 +212,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     support.resize(3, 0);
     // reserve size for partition-wise concordant/discordant sites
     if (Params::getInstance().site_concordance_partition && aln->isSuperAlignment()) {
-        SuperAlignment *saln = (SuperAlignment*)aln;
+        SuperAlignment *saln = static_cast<SuperAlignment*>(aln);
         support.resize(saln->partitions.size()*3+3, 0);
         // check for gene trees not decisive for this branch
         StrVector taxname;
@@ -245,7 +245,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             }
             if (left_count < 2 || right_count < 2) {
                 // not decisive
-                support[part*3+3] = support[part*3+4] = support[part*3+5] = -1;
+                support[(part*3)+3] = support[(part*3)+4] = support[(part*3) + NUM_FIVE] = -1;
                 break;
             }
         }
@@ -278,9 +278,9 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
         if (sum > 0) {
-            sCF += ((double)support[0]) / sum;
-            sDF1 += ((double)support[1]) / sum;
-            sDF2 += ((double)support[2]) / sum;
+            sCF += (static_cast<double>(support[0])) / sum;
+            sDF1 += (static_cast<double>(support[1])) / sum;
+            sDF2 += (static_cast<double>(support[2])) / sum;
             sCF_N += support[0];
             sDF1_N += support[1];
             sDF2_N += support[2];
@@ -289,21 +289,21 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
             // print sCF for each quartet
             stringstream ss;
             ss << quartet[0]+1 << '\t' << quartet[1]+1 << '\t' << quartet[2]+1 << '\t' << quartet[3]+1
-               << '\t' << (((double)support[0]) / sum) << '\t' << support[0]
-               << '\t' << (((double)support[1]) / sum) << '\t' << support[1]
-               << '\t' << (((double)support[2]) / sum) <<  '\t' << support[2]
+               << '\t' << ((static_cast<double>(support[0])) / sum) << '\t' << support[0]
+               << '\t' << ((static_cast<double>(support[1])) / sum) << '\t' << support[1]
+               << '\t' << ((static_cast<double>(support[2])) / sum) <<  '\t' << support[2]
                << '\t' << sum;
             nei->putAttr("q" + convertIntToString(static_cast<int>(i)), ss.str());
         }
     }
-    sN = (double)sum_sites / nquartets;
+    sN = static_cast<double>(sum_sites) / nquartets;
     // rounding
-    sCF = round(sCF / nquartets * 10000)/100;
-    sDF1 = round(sDF1 / nquartets * 10000)/100;
-    sDF2 = round(sDF2 / nquartets * 10000)/100;
-    sCF_N = round(sCF_N / nquartets * 100)/100;
-    sDF1_N = round(sDF1_N / nquartets * 100)/100;
-    sDF2_N = round(sDF2_N / nquartets * 100)/100;
+    sCF = round(sCF / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sDF1 = round(sDF1 / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sDF2 = round(sDF2 / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sCF_N = round(sCF_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
+    sDF1_N = round(sDF1_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
+    sDF2_N = round(sDF2_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
     PUT_ATTR(nei, sCF);
     PUT_ATTR(nei, sN);
     PUT_ATTR(nei, sDF1);
@@ -321,7 +321,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     string keys[] = {"sC", "sD1", "sD2"};
     for (size_t i = 3; i < support.size(); ++i) {
         if (support[i] >= 0) {
-            nei->putAttr(keys[i%3] + convertIntToString(static_cast<int>(i)/3), (double)support[i]/nquartets);
+            nei->putAttr(keys[i%3] + convertIntToString(static_cast<int>(i)/3), static_cast<double>(support[i])/nquartets);
         } else {
             nei->putAttr(keys[i%3] + convertIntToString(static_cast<int>(i)/3), "NA");
         }
@@ -398,12 +398,12 @@ void PhyloTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNod
         // internal node
         // convert vector_size into continuous pattern
         for (size_t ptn = 0; ptn < nptn; ptn += vector_size) {
-            double *state_prob = ptn_ancestral_prob + ptn*nstates;
+            double *state_prob = ptn_ancestral_prob + (ptn*nstates);
             for (size_t c = 0; c < ncat_mix; c++) {
                 for (size_t i = 0; i < nstates; i++) {
                     for (size_t v = 0; v < vector_size; v++) {
                         if (ptn+v < nptn) {
-                            state_prob[v*nstates+i] += lh_state[i*vector_size + v];
+                            state_prob[(v*nstates)+i] += lh_state[(i*vector_size) + v];
                         }
                     }
                 }
@@ -414,7 +414,7 @@ void PhyloTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNod
 
     // now normalize to probability
     for (size_t ptn = 0; ptn < nptn; ptn++) {
-        double *state_prob = ptn_ancestral_prob + ptn*nstates;
+        double *state_prob = ptn_ancestral_prob + (ptn*nstates);
         double sum = 0.0;
         int state_best = 0;
         for (size_t i = 0; i < nstates; i++) {
@@ -442,7 +442,7 @@ void PhyloTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNod
 
 double* PhyloTree::newAncestralProb() {
     if (isSuperTree()) {
-        PhyloSuperTree* stree = (PhyloSuperTree*)(this);
+        PhyloSuperTree* stree = static_cast<PhyloSuperTree*>(this);
         size_t total_size = 0;
         for (auto it = stree->begin(); it != stree->end(); it++) {
             size_t nptn = (*it)->getAlnNPattern();
@@ -480,17 +480,17 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         double *ptn_ancestral_prob = newAncestralProb();
         int *ptn_ancestral_seq = aligned_alloc<int>(getAlnNPattern());
         if (params->ancestral_site_concordance == 1) {
-            computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
+            computeMarginalAncestralState(static_cast<PhyloNeighbor*>(*it), static_cast<PhyloNode*>(branch.first),
                                           ptn_ancestral_prob, ptn_ancestral_seq);
         } else {
-            computeSubtreeAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
+            computeSubtreeAncestralState(static_cast<PhyloNeighbor*>(*it), static_cast<PhyloNode*>(branch.first),
                                          ptn_ancestral_prob, ptn_ancestral_seq);
         }
 //        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.first);
 //        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
 //            ptn_ancestral_prob, marginal_ancestral_seq);
         if (verbose_mode >= VB_MED)
-            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
+            writeMarginalAncestralState(cout, static_cast<PhyloNode*>((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
         first_ancestral_prob.push_back(ptn_ancestral_prob);
         first_ancestral_seq.push_back(ptn_ancestral_seq);
     }
@@ -505,17 +505,17 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         double *ptn_ancestral_prob = newAncestralProb();
         int *ptn_ancestral_seq = aligned_alloc<int>(getAlnNPattern());
         if (params->ancestral_site_concordance == 1) {
-            computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
+            computeMarginalAncestralState(static_cast<PhyloNeighbor*>(*it), static_cast<PhyloNode*>(branch.second),
                                           ptn_ancestral_prob, ptn_ancestral_seq);
         } else {
-            computeSubtreeAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
+            computeSubtreeAncestralState(static_cast<PhyloNeighbor*>(*it), static_cast<PhyloNode*>(branch.second),
                                          ptn_ancestral_prob, ptn_ancestral_seq);
         }
 //        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.second);
 //        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
 //            ptn_ancestral_prob, marginal_ancestral_seq);
         if (verbose_mode >= VB_MED) {
-            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
+            writeMarginalAncestralState(cout, static_cast<PhyloNode*>((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
         }
         second_ancestral_prob.push_back(ptn_ancestral_prob);
         second_ancestral_seq.push_back(ptn_ancestral_seq);
@@ -552,7 +552,7 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         size_t support[3] = {0, 0, 0};
 
         if (isSuperTree()) {
-            PhyloSuperTree* stree = (PhyloSuperTree*)this;
+            PhyloSuperTree* stree = static_cast<PhyloSuperTree*>(this);
             size_t start_pos = 0;
             size_t start_pos_seq = 0;
             for (auto it = stree->begin(); it != stree->end(); it++) {
@@ -566,10 +566,10 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
                         second_ancestral_seq[second_id1][start_pos_seq + ptn] >= nstates) {
                         continue;
                     }
-                    StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates+start_pos, rstream);
-                    StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates+start_pos, rstream);
-                    StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates+start_pos, rstream);
-                    StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates+start_pos, rstream);
+                    StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+(ptn*nstates)+start_pos, rstream);
+                    StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+(ptn*nstates)+start_pos, rstream);
+                    StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+(ptn*nstates)+start_pos, rstream);
+                    StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+(ptn*nstates)+start_pos, rstream);
                     if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0) {
                         support[0] += (*it)->aln->at(ptn).frequency;
                     }
@@ -609,22 +609,22 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
         if (sum > 0) {
-            sCF += ((double)support[0]) / sum;
-            sDF1 += ((double)support[1]) / sum;
-            sDF2 += ((double)support[2]) / sum;
+            sCF += (static_cast<double>(support[0])) / sum;
+            sDF1 += (static_cast<double>(support[1])) / sum;
+            sDF2 += (static_cast<double>(support[2])) / sum;
             sCF_N += support[0];
             sDF1_N += support[1];
             sDF2_N += support[2];
         }
     }
-    sN = (double)sum_sites / nquartets;
+    sN = static_cast<double>(sum_sites) / nquartets;
     // rounding
-    sCF = round(sCF / nquartets * 10000)/100;
-    sDF1 = round(sDF1 / nquartets * 10000)/100;
-    sDF2 = round(sDF2 / nquartets * 10000)/100;
-    sCF_N = round(sCF_N / nquartets * 100)/100;
-    sDF1_N = round(sDF1_N / nquartets * 100)/100;
-    sDF2_N = round(sDF2_N / nquartets * 100)/100;
+    sCF = round(sCF / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sDF1 = round(sDF1 / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sDF2 = round(sDF2 / nquartets * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+    sCF_N = round(sCF_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
+    sDF1_N = round(sDF1_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
+    sDF2_N = round(sDF2_N / nquartets * NUM_ONE_ZERO_ZERO)/NUM_ONE_ZERO_ZERO;
     PUT_ATTR(nei, sCF);
     PUT_ATTR(nei, sN);
     PUT_ATTR(nei, sDF1);
@@ -851,10 +851,10 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         int gDF1_N = supports[1][i];
         int gDF2_N = supports[2][i];
         int gDFP_N = gN - gCF_N - gDF1_N - gDF2_N;
-        double gCF = round((double)gCF_N/gN * 10000)/100;
-        double gDF1 = round((double)gDF1_N/gN * 10000)/100;
-        double gDF2 = round((double)gDF2_N/gN * 10000)/100;
-        double gDFP = round((double)gDFP_N/gN * 10000)/100;
+        double gCF = round(static_cast<double>(gCF_N)/gN * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+        double gDF1 = round(static_cast<double>(gDF1_N)/gN * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+        double gDF2 = round(static_cast<double>(gDF2_N)/gN * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
+        double gDFP = round(static_cast<double>(gDFP_N)/gN * NUM_ONE_E_FOUR)/NUM_ONE_ZERO_ZERO;
         PUT_ATTR(nei, gCF);
         PUT_ATTR(nei, gDF1);
         PUT_ATTR(nei, gDF2);
@@ -873,7 +873,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
 
         stringstream tmp;
         tmp.precision(3);
-        tmp << (double)supports[0][i]/decisive_counts[i]*100;
+        tmp << static_cast<double>(supports[0][i])/decisive_counts[i]*NUM_ONE_ZERO_ZERO;
         if (verbose_mode >= VB_MED) {
             tmp << "%" << decisive_counts[i];
         }
@@ -983,7 +983,7 @@ double PhyloTree::computeQuartetConcordance(Branch &branch, MTreeSet &trees) {
         }
         int sum = quartetCF[0] + quartetCF[1] + quartetCF[2];
         if (sum > 0) {
-            sum_support += ((double)quartetCF[0]) / sum;
+            sum_support += (static_cast<double>(quartetCF[0])) / sum;
         }
     }
     return sum_support / num_quartets;

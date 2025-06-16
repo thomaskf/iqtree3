@@ -29,7 +29,7 @@ void MemSlotVector::init(PhyloTree *tree, int num_slot) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     reserve(num_slot+2);
-    resize(num_slot);
+    resize(static_cast<size_t>(num_slot));
     size_t lh_size = tree->getPartialLhSize();
     size_t scale_size = tree->getScaleNumSize();
     reset();
@@ -76,7 +76,7 @@ void MemSlotVector::addSpecialNei(PhyloNeighbor *nei) {
     ms.partial_lh = nei->partial_lh;
     ms.scale_num = nei->scale_num;
     push_back(ms);
-    nei_id_map[nei] = size()-1;
+    nei_id_map[nei] = static_cast<int>(size())-1;
 }
 
 void MemSlotVector::eraseSpecialNei() {
@@ -237,7 +237,7 @@ void MemSlotVector::replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     cout << "slot " << distance(begin(), it) << " replaced" << endl;
 }
 
-void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
+/* void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator it = findNei(new_nei);
@@ -251,4 +251,4 @@ void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     nei_id_map.erase(new_nei);
 //    nei_id_map[old_nei] = it;
     cout << "slot " << distance(begin(), it) << " restored" << endl;
-}
+}*/

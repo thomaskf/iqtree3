@@ -31,11 +31,11 @@ public:
     TinaTree();
     /**
      * Constructor with given alignment
-     * @param alignment
+     * @param alignment an alignment
      */
     TinaTree(Alignment *alignment);
 
-    ~TinaTree();
+    ~TinaTree() override;
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
             @return the parsimony score
@@ -52,9 +52,9 @@ public:
      */
     int computeParsimonyScore(int ptn, int &states, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
-	virtual void initializeAllPartialLh();
+	virtual void initializeAllPartialLh() override;
 
-	virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+	virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
 
 };
 

@@ -40,7 +40,7 @@
 #include "model/modelsubst.h"
 #include "alignment/sequence.h"
 
-using namespace std;
+// using namespace std;
 
 /*--------------------------------------------------------------*/
 
@@ -98,7 +98,7 @@ public:
         construct class with a node and length
         @param anode the other end of the branch
         @param alength length of branch
-        @param id branch ID
+        @param aid branch ID
      */
     Neighbor(Node *anode, double alength, int aid) {
         node = anode;
@@ -145,7 +145,6 @@ public:
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
-        @return branch length for class c
     */
     virtual void getLength(DoubleVector &vec) {
         vec.resize(1);
@@ -168,14 +167,12 @@ public:
         set branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @param c class index
-        @return branch length for class c
     */
     virtual void setLength(int c, double len) { length = len; }
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
-        @return branch length for class c
     */
     virtual void setLength(DoubleVector &vec) { 
         ASSERT(vec.size() == 1);
@@ -186,7 +183,6 @@ public:
         set branch length by length of a Neighbor, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @param nei source neigbor to copy branch lengths
-        @return branch length for class c
     */
     virtual void setLength(Neighbor *nei) { length = nei->length; }
 
@@ -302,7 +298,7 @@ public:
         id = -1;
         height = -1;
         sequence = nullptr;
-    };
+    }
 
 
     /**

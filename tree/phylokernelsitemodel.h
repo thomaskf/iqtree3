@@ -29,14 +29,14 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
 
     size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
     size_t ptn, c;
     size_t ncat = site_rate->getNRate();
     size_t i, x, j;
     size_t block = nstates * ncat;
-    ModelSet *models = (ModelSet*) model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     ASSERT(models->size() == nptn);
 
 
@@ -56,8 +56,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *nei = (PhyloNeighbor*)*it;
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+        PhyloNeighbor *nei = static_cast<PhyloNeighbor*>(*it);
+		if (!left) left = static_cast<PhyloNeighbor*>(*it); else right = static_cast<PhyloNeighbor*>(*it);
         if ((nei->partial_lh_computed & 1) == 0)
             computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
@@ -67,7 +67,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
         // re-orient partial_lh
         bool done = false;
         FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            PhyloNeighbor *backnei = (static_cast<PhyloNeighbor*>((*it2)->node->findNeighbor(node)));
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
@@ -107,15 +107,15 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			VectorClass partial_lh_tmp[nstates/VCSIZE];
-			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-			VectorClass *partial_lh_left = (VectorClass*)(tip_partial_lh_left + ptn*nstates);
-			VectorClass *partial_lh_right = (VectorClass*)(tip_partial_lh_right + ptn*nstates);
+			VectorClass *partial_lh = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_left = static_cast<VectorClass*>(tip_partial_lh_left + ptn*nstates);
+			VectorClass *partial_lh_right = static_cast<VectorClass*>(tip_partial_lh_right + ptn*nstates);
 
             VectorClass expleft[nstates/VCSIZE];
             VectorClass expright[nstates/VCSIZE];
-            VectorClass *eval = (VectorClass*)(models->at(ptn)->getEigenvalues());
-            VectorClass *evec = (VectorClass*)(models->at(ptn)->getEigenvectors());
-            VectorClass *inv_evec = (VectorClass*)(models->at(ptn)->getInverseEigenvectors());
+            VectorClass *eval = static_cast<VectorClass*>(models->at(ptn)->getEigenvalues());
+            VectorClass *evec = static_cast<VectorClass*>(models->at(ptn)->getEigenvectors());
+            VectorClass *inv_evec = static_cast<VectorClass*>(models->at(ptn)->getInverseEigenvectors());
             VectorClass vleft[VCSIZE];
             VectorClass vright[VCSIZE];
             VectorClass res[VCSIZE];
@@ -177,16 +177,16 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			VectorClass partial_lh_tmp[nstates/VCSIZE];
-			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-			VectorClass *partial_lh_left = (VectorClass*)(tip_partial_lh_left + ptn*nstates);
-			VectorClass *partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
+			VectorClass *partial_lh = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_left = static_cast<VectorClass*>(tip_partial_lh_left + ptn*nstates);
+			VectorClass *partial_lh_right = static_cast<VectorClass*>(right->partial_lh + ptn*block);
             VectorClass lh_max = 0.0;
 
             VectorClass expleft[nstates/VCSIZE];
             VectorClass expright[nstates/VCSIZE];
-            VectorClass *eval = (VectorClass*)(models->at(ptn)->getEigenvalues());
-            VectorClass *evec = (VectorClass*)(models->at(ptn)->getEigenvectors());
-            VectorClass *inv_evec = (VectorClass*)(models->at(ptn)->getInverseEigenvectors());
+            VectorClass *eval = static_cast<VectorClass*>(models->at(ptn)->getEigenvalues());
+            VectorClass *evec = static_cast<VectorClass*>(models->at(ptn)->getEigenvectors());
+            VectorClass *inv_evec = static_cast<VectorClass*>(models->at(ptn)->getInverseEigenvectors());
             VectorClass vleft[VCSIZE];
             VectorClass vright[VCSIZE];
             VectorClass res[VCSIZE];
@@ -236,7 +236,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
             // check if one should scale partial likelihoods
             double dmax = horizontal_max(lh_max);
             if (dmax < SCALING_THRESHOLD) {
-                partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                partial_lh = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
             	if (dmax == 0.0) {
             		// for very shitty data
             		for (c = 0; c < ncat; c++)
@@ -275,16 +275,16 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			VectorClass partial_lh_tmp[nstates/VCSIZE];
-			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-			VectorClass *partial_lh_left = (VectorClass*)(left->partial_lh + ptn*block);
-			VectorClass *partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
+			VectorClass *partial_lh = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_left = static_cast<VectorClass*>(left->partial_lh + ptn*block);
+			VectorClass *partial_lh_right = static_cast<VectorClass*>(right->partial_lh + ptn*block);
             VectorClass lh_max = 0.0;
 
             VectorClass expleft[nstates/VCSIZE];
             VectorClass expright[nstates/VCSIZE];
-            VectorClass *eval = (VectorClass*)(models->at(ptn)->getEigenvalues());
-            VectorClass *evec = (VectorClass*)(models->at(ptn)->getEigenvectors());
-            VectorClass *inv_evec = (VectorClass*)(models->at(ptn)->getInverseEigenvectors());
+            VectorClass *eval = static_cast<VectorClass*>(models->at(ptn)->getEigenvalues());
+            VectorClass *evec = static_cast<VectorClass*>(models->at(ptn)->getEigenvectors());
+            VectorClass *inv_evec = static_cast<VectorClass*>(models->at(ptn)->getInverseEigenvectors());
             VectorClass vleft[VCSIZE];
             VectorClass vright[VCSIZE];
             VectorClass res[VCSIZE];
@@ -337,7 +337,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
             // check if one should scale partial likelihoods
             double dmax = horizontal_max(lh_max);
             if (dmax < SCALING_THRESHOLD) {
-                partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                partial_lh = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
             	if (dmax == 0.0) {
             		// for very shitty data
             		for (c = 0; c < ncat; c++)
@@ -373,8 +373,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -412,9 +412,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 #pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-				VectorClass *lh_tip = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
+				VectorClass *partial_lh_dad = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+				VectorClass *theta = static_cast<VectorClass*>(theta_all + ptn*block);
+				VectorClass *lh_tip = static_cast<VectorClass*>(tip_partial_lh_node + ptn*nstates);
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates/VCSIZE; i++) {
                         theta[i] = lh_tip[i] * partial_lh_dad[i];
@@ -435,9 +435,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 #pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-			    VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+				VectorClass *partial_lh_dad = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+				VectorClass *theta = static_cast<VectorClass*>(theta_all + ptn*block);
+			    VectorClass *partial_lh_node = static_cast<VectorClass*>(node_branch->partial_lh + ptn*block);
 	    		for (i = 0; i < block_VCSIZE; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
 	    		}
@@ -451,7 +451,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 		theta_computed = true;
 	}
 
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     VectorClass my_df = 0.0, my_ddf = 0.0;
     VectorClass dad_length = dad_branch->length;
     VectorClass unit = 1.0;
@@ -467,7 +467,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         VectorClass lh_ptn[VCSIZE];
         VectorClass df_ptn[VCSIZE];
         VectorClass ddf_ptn[VCSIZE];
-		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);        
+		VectorClass *theta = static_cast<VectorClass*>(theta_all + ptn*block);        
         VectorClass* eval;
         
         for (j = 0; j < VCSIZE; j++) {
@@ -475,10 +475,10 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
             df_ptn[j] = 0.0;
             ddf_ptn[j] = 0.0;
             if (ptn+j < nptn) {
-                eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                eval = static_cast<VectorClass*>(models->at(ptn+j)->getEigenvalues());
             } else {
-                eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
-            }                
+                eval = static_cast<VectorClass*>(models->at(nptn-1)->getEigenvalues());
+            }
             for (c = 0; c < ncat; c++) {
                 VectorClass cat_rate = site_rate->getRate(c);
                 VectorClass lh_cat = 0.0, df_cat = 0.0, ddf_cat = 0.0;
@@ -537,8 +537,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -561,7 +561,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
     size_t nptn = aln->size();
     size_t maxptn = get_safe_upper_limit(nptn);
 
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     VectorClass tree_lh = 0.0;
     VectorClass *cat_length = aligned_alloc<VectorClass>(ncat);
     VectorClass *cat_prop = aligned_alloc<VectorClass>(ncat);
@@ -586,16 +586,16 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
         for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
             VectorClass lh_ptn[VCSIZE];
             VectorClass* eval;
-			VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-			VectorClass *partial_lh_node = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
+			VectorClass *partial_lh_dad = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_node = static_cast<VectorClass*>(tip_partial_lh_node + ptn*nstates);
             
             for (j = 0; j < VCSIZE; j++) {
                 lh_ptn[j] = 0.0;
                 if (ptn+j < nptn) {
-                    eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                    eval = static_cast<VectorClass*>(models->at(ptn+j)->getEigenvalues());
                 } else {
-                    eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
-                }                
+                    eval = static_cast<VectorClass*>(models->at(nptn-1)->getEigenvalues());
+                }
                 for (c = 0; c < ncat; c++) {
                     VectorClass lh_cat = 0.0;
                     for (i = 0; i < nstates/VCSIZE; i++) {
@@ -645,16 +645,16 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
         for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
             VectorClass lh_ptn[VCSIZE];
             VectorClass* eval;
-			VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-			VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_dad = static_cast<VectorClass*>(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_node = static_cast<VectorClass*>(node_branch->partial_lh + ptn*block);
             
             for (j = 0; j < VCSIZE; j++) {
                 lh_ptn[j] = 0.0;
                 if (ptn+j < nptn) {
-                    eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                    eval = static_cast<VectorClass*>(models->at(ptn+j)->getEigenvalues());
                 } else {
-                    eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
-                }                
+                    eval = static_cast<VectorClass*>(models->at(nptn-1)->getEigenvalues());
+                }
                 for (c = 0; c < ncat; c++) {
                     VectorClass lh_cat = 0.0;
                     for (i = 0; i < nstates/VCSIZE; i++) {
@@ -737,7 +737,7 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
     size_t c, i, j;
     size_t nptn = aln->size();
 
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     
     VectorClass tree_lh = 0.0;
     VectorClass *cat_length = aligned_alloc<VectorClass>(ncat);
@@ -756,15 +756,15 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
     for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
         VectorClass lh_ptn[VCSIZE];
         VectorClass* eval;
-        VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+        VectorClass *theta = static_cast<VectorClass*>(theta_all + ptn*block);
         
         for (j = 0; j < VCSIZE; j++) {
             lh_ptn[j] = 0.0;
             if (ptn+j < nptn) {
-                eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                eval = static_cast<VectorClass*>(models->at(ptn+j)->getEigenvalues());
             } else {
-                eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
-            }                
+                eval = static_cast<VectorClass*>(models->at(nptn-1)->getEigenvalues());
+            }
             for (c = 0; c < ncat; c++) {
                 VectorClass lh_cat = 0.0;
                 for (i = 0; i < nstates/VCSIZE; i++) {

@@ -18,7 +18,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
-    PhyloNode *node = (PhyloNode*)(dad_branch->node);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
 
 
     size_t nstates = aln->num_states;
@@ -27,7 +27,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
     size_t ncat = site_rate->getNRate();
     size_t i, x;
     size_t block = nstates * ncat;
-    ModelSet *models = (ModelSet*) model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     ASSERT(models->size() == nptn);
 
 
@@ -47,8 +47,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *nei = (PhyloNeighbor*)*it;
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+        PhyloNeighbor *nei = static_cast<PhyloNeighbor*>(*it);
+		if (!left) left = static_cast<PhyloNeighbor*>(*it); else right = static_cast<PhyloNeighbor*>(*it);
         if ((nei->partial_lh_computed & 1) == 0)
             computePartialLikelihood(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
@@ -58,7 +58,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
         // re-orient partial_lh
         bool done = false;
         FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            PhyloNeighbor *backnei = (static_cast<PhyloNeighbor*>((*it2)->node->findNeighbor(node)));
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
@@ -101,7 +101,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
             double *inv_evec = models->at(ptn)->getInverseEigenvectors();
 
             FOR_NEIGHBOR_IT(node, dad, it) {
-                PhyloNeighbor *child = (PhyloNeighbor*)*it;
+                PhyloNeighbor *child = static_cast<PhyloNeighbor*>(*it);
                 if (child->node->isLeaf()) {
                     // external node
                     double *tip_partial_lh_child = tip_partial_lh + (child->node->id*tip_block_size)+ptn*nstates;
@@ -441,8 +441,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 
 //template <const int nstates>
 void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -511,7 +511,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 		theta_computed = true;
 	}
 
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     double my_df = 0.0, my_ddf = 0.0;
     
 #ifdef _OPENMP
@@ -562,8 +562,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 
 //template <const int nstates>
 double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    PhyloNode *node = static_cast<PhyloNode*>(dad_branch->node);
+    PhyloNeighbor *node_branch = static_cast<PhyloNeighbor*>(node->findNeighbor(dad));
     if (!central_partial_lh)
         initializeAllPartialLh();
     if (node->isLeaf()) {
@@ -591,7 +591,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 
 
 	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat);
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -697,7 +697,7 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
     size_t c, i;
     size_t nptn = aln->size();
 
-    ModelSet *models = (ModelSet*)model;
+    ModelSet *models = static_cast<ModelSet*>(model);
     
     double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 

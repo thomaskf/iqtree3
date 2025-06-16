@@ -65,9 +65,9 @@ struct IntBranchInfo {
     double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
 
-inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
+/* inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
     return (a.lh_contribution < b.lh_contribution);
-}
+}*/
 
 /**
         Representative Leaf Set, stored as a multiset template of STL,
@@ -92,25 +92,25 @@ public:
     /**
             destructor
      */
-    virtual ~IQTree();
+    virtual ~IQTree() override;
 
     void init();
 
     /**
         set checkpoint object
-        @param checkpoint
+        @param checkpoint a checkpoint pointer
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
         save UFBoot_trees.
@@ -141,12 +141,11 @@ public:
 
     /**
             print tree to .treefile
-            @param params program parameters, field root is taken
+            @param suffix suffix
      */
     virtual void printResultTree(string suffix = "");
     /**
             print tree to out
-            @param params program parameters, field root is taken
             @param out (OUT) output stream
      */
     void printResultTree(ostream &out);
@@ -157,7 +156,7 @@ public:
      * print phylolib tree to a file.
      * @param suffix suffix string for the tree file
      */
-    void printPhylolibTree(const char* suffix);
+    // void printPhylolibTree(const char* suffix);
 
 
     /**
@@ -185,8 +184,8 @@ public:
 
     double getProbDelete();
 
-    void resetKDelete();
-    void increaseKDelete();
+    // void resetKDelete();
+    // void increaseKDelete();
 
     /**
             set the number of iterations for the IQPNNI algorithm
@@ -203,7 +202,7 @@ public:
 
     /**
             find the k-representative leaves under the node
-            @param node the node at which the subtree is rooted
+            @param nei_id the id of the neighbor object
             @param dad the dad node of the considered subtree, to direct the search
             @param leaves (OUT) the k-representative leaf set
      */
@@ -214,7 +213,7 @@ public:
             clear representative leave sets iteratively, called once a leaf is re-inserted into the tree
             @param node the node at which the subtree is rooted
             @param dad the dad node of the considered subtree, to direct the search
-            @param leaves (OUT) the k-representative leaf set
+            @param leaves_vec (OUT) the k-representative leaf set
      */
     void clearRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, Node *node, Node *dad);
 
@@ -227,22 +226,22 @@ public:
      *  @brief get non-tabu branches from a set of branches
      *
      *  @param
-     *      allBranches[IN] the inital branches
+     *      allBranches [IN] the inital branches
      *  @param
-     *      initTabuSplits[IN] the tabu splits
+     *      tabuSplits [IN] the tabu splits
      *  @param
-     *        nonTabuBranches[OUT] non-tabu branches from \a allBranches
+     *        nonTabuBranches [OUT] non-tabu branches from \a allBranches
      *    @param[OUT]
      *        tabuBranches branches that are tabu
      */
-    void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = nullptr);
+    // void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = nullptr);
 
     /**
      * @brief remove all branches corresponding to nnis
      * @param nodes1 node vector containing one end of the branches
      * @param nodes2 node vector containing the other end of the branches
-     * @param nnis
-     * @return
+     * @param nnis an unordered map of NNI moves
+     * @return an integer
      */
     int removeNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove> nnis);
 
@@ -288,7 +287,7 @@ public:
 
     /**
      * input the tree string from IQTree kernel to PLL kernel
-     * @return
+     * @return a double
      */
     double inputTree2PLL(string treestring, bool computeLH = true);
 
@@ -296,17 +295,16 @@ public:
 
     /**
      * Perturb the tree for the next round of local search by swaping position of 2 random leaves
-     * @param nbDist The minimum distance between the 2 nodes that are swapped
-     * @param nbTimes Number of times that the swap operations are carried out
+     * @param times Number of times that the swap operations are carried out
      * @return The new loglikelihood of the tree
      */
     double perturb(int times);
 
     /**
      * TODO
-     * @param node1
-     * @param node2
-     * @return
+     * @param node1 one node
+     * @param node2 another node
+     * @return a double
      */
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
@@ -366,8 +364,7 @@ public:
      * @param
      *      dad [IN] for navigation
      * @param
-     *      node[IN] for navigation
-     * @return A list of branches for evaluating NNIs
+     *      node [IN] for navigation
      */
     void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
@@ -375,15 +372,13 @@ public:
      *  Return internal branches that appear in \a candidateSplitHash
      *  and has support value >= \a supportValue.
      *  @param
-     *      candidateSplitHash [IN]   A set of splits with the number of occurences.
+     *      candSplits [IN]   A set of splits with the number of occurences.
      *  @param
      *      supportValue [IN]  Only consider split whose support value is higher than this number
      *  @param
      *      dad [IN] for navigation
      *  @param
-     *      node[IN] for navigation
-     *  @return
-     *      A list of branches fufilling the aforementioned conditions.
+     *      node [IN] for navigation
      */
     void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
@@ -395,8 +390,6 @@ public:
      *  @param curSplit [IN] the split that correspond to the current branch
      *  @param tabuSplits [IN] tabu splits
      *  @param candSplits [IN] splits contained in all candidate trees
-     *  @param nonNNIBranches [OUT] branches that are not inserted to nniBranches are store here
-     *  @param nniBranches [OUT] if the split is neither stable nor tabu it is inserted in this list
      */
     bool shouldEvaluate(Split* curSplit, SplitIntMap &tabuSplits, SplitIntMap &candSplits);
 
@@ -406,8 +399,8 @@ public:
      *  appied NNIs
      *  @param
      *      appliedNNIs List of previously applied NNIs
-     *  @return
-     *      List of branches to be evaluated
+     *  @param
+     *      outBranches List of branches to be evaluated
      */
     void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
 
@@ -445,11 +438,11 @@ public:
      * @brief Evaluate all NNIs on branch defined by \a branches
      *
      * @param nniBranches [IN] branches the branches on which NNIs will be evaluated
-     * @return list positive NNIs
+     * @param outNNIMoves positive NNIs
      */
     void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &outNNIMoves);
 
-    double optimizeNNIBranches(Branches &nniBranches);
+    // double optimizeNNIBranches(Branches &nniBranches);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -475,7 +468,6 @@ public:
     /**
      *  @brief get a list of compatible NNIs from a list of NNIs
      *  @param nniMoves [IN] list of NNIs
-     *  @return list of compatible NNIs
      */
     void getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compatibleNNIs);
 
@@ -496,14 +488,14 @@ public:
                                                            details)
      * @return the estimated value
      */
-    double getAvgNumNNI(void);
+    // double getAvgNumNNI(void);
 
     /**
      * Estimate the median of the distribution of N (see paper for more d
                                                           details)
      * @return the estimated value
      */
-    double estDeltaMedian(void);
+    // double estDeltaMedian(void);
 
     /**
      * Estimate the 95% quantile of the distribution of DELTA (see paper for
@@ -542,9 +534,9 @@ public:
     Linear* linRegModel;
 
 
-    inline double getNNICutoff() {
+    /* inline double getNNICutoff() {
         return nni_cutoff;
-    }
+    }*/
 
     /*
      *  Contains a sorted list of all NNIs (2n-6) evaluated for the current best tree
@@ -578,8 +570,8 @@ public:
      * DTH:
      * Substitute bases in seq according to PLL's rules
      * This function should be updated if PLL's rules change.
-     * @param seq: data of some sequence to be substituted
-     * @param dataType: PLL_DNA_DATA or PLL_AA_DATA
+     * @param str data of some sequence to be substituted
+     * @param dataType PLL_DNA_DATA or PLL_AA_DATA
      */
    void pllBaseSubstitute (char *str, int dataType);
 
@@ -601,7 +593,7 @@ public:
     * Write to log file the freq of pllAlignment sites, and
     * freq of bootstrap site stored in pllUFBootDataPtr->boot_samples
     */
-   void pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns);
+   // void pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns);
 
    /**
     * Convert certain arrays in pllUFBootDataPtr
@@ -694,7 +686,6 @@ public:
     /**
         MPI: synchronize tree of current iteration with master
         will update candidateset_changed
-        @param curTree current tree
 
     */
     void syncCurrentTree();
@@ -837,7 +828,7 @@ public:
     void computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, bool use_taxid);
 
     int getDelete() const;
-    void setDelete(int _delete);
+    // void setDelete(int _delete);
 
 protected:
     /**** NNI cutoff heuristic *****/
@@ -865,7 +856,7 @@ protected:
 
     void estimateNNICutoff(Params* params);
 
-    virtual void saveCurrentTree(double logl); // save current tree
+    virtual void saveCurrentTree(double logl) override; // save current tree
 
 
     void saveNNITrees(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
@@ -901,7 +892,7 @@ protected:
      *         non-cherry leaves are selected first
      *         @param del_leaves (OUT) the list of deleted leaves
      */
-    void deleteNonCherryLeaves(PhyloNodeVector &del_leaves);
+    // void deleteNonCherryLeaves(PhyloNodeVector &del_leaves);
 
     /**
             reinsert the whole list of leaves back into the tree
@@ -912,7 +903,7 @@ protected:
     void reinsertLeavesByParsimony(PhyloNodeVector &del_leaves);
 
 
-    void doParsimonyReinsertion();
+    // void doParsimonyReinsertion();
 
 
     /**
@@ -954,7 +945,7 @@ protected:
 
     /**
             raise the bonus points for all branches in the subtree rooted at a node
-            @param node the root of the sub-tree
+            @param nei the neighbor object
             @param dad dad of 'node', used to direct the recursion
      */
     void raiseBonus(Neighbor *nei, Node *dad, double bonus);
@@ -970,7 +961,7 @@ protected:
 
     /**
             determine the list of branches with the same best bonus point
-            @param best_bonus the best bonus determined by findBestBonus()
+            @param best_score the best score
             @param best_nodes (OUT) vector of one ends of the branches with highest bonus point
             @param best_dads (OUT) vector of the other ends of the branches with highest bonus point
             @param node the root of the sub-tree
@@ -980,9 +971,9 @@ protected:
 
     void estDeltaMin();
 
-    void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
+    // void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
 
-    string generateParsimonyTree(int randomSeed);
+    // string generateParsimonyTree(int randomSeed);
 
     double doTreePerturbation();
 
@@ -1010,7 +1001,7 @@ public:
      *  Return branches that are 2 branches away from the branches, on which NNIs were applied
      *  in the previous NNI steps.
      *  @param
-     *      previousNNIBranches[IN] a set of branches on which NNIs were performed in the previous NNI step.
+     *      previousNNIBranches a set of branches on which NNIs were performed in the previous NNI step.
      *  @return
      *      a set of branches, on which NNIs should be evaluated for the current NNI steps
      */

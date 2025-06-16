@@ -290,7 +290,7 @@ public:
      * @param tree the other tree to compare with
      * @return TRUE if this tree is topologically equal to tree
      */
-    bool equalTopology(MTree *tree);
+    // bool equalTopology(MTree *tree);
 
     /********************************************************
             READ TREE FROM FILE
@@ -329,9 +329,10 @@ public:
     void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
     
     /**
-            parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
-            @param in_comment the input comment extract from tree file
-            @param node1, node2 the nodes that the branch connects to
+        parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
+        @param in_comment the input comment extract from tree file
+        @param node1 the first node that the branch connects to
+        @param node2 the second node that the branch connects to
      */
     void parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2);
 
@@ -453,7 +454,7 @@ public:
             name to the corresponding leaf node
             @param node the starting node, nullptr to start from the root
             @param dad dad of the node, used to direct the search
-            @param[out] map, from taxon name to corresponding node
+            @param[out] map from taxon name to corresponding node
      */
 
     void getMapOfTaxonNameToNode(Node* node, Node* dad
@@ -536,7 +537,7 @@ public:
     /**
      get all branches below the node
      @param branches the branches are stored here
-     @param post_traveral true for post-traversal, false for pre-traversal
+     @param post_traversal true for post-traversal, false for pre-traversal
      */
     void getBranches(BranchVector& branches, Node *node = nullptr, Node *dad = nullptr, bool post_traversal = false);
 
@@ -549,7 +550,7 @@ public:
     /**
      get all inner branches below the node
      @param branches the branches are stored here
-     @param post_traveral true for post-traversal, false for pre-traversal
+     @param post_traversal true for post-traversal, false for pre-traversal
      */
     void getInnerBranches(BranchVector& branches, Node *node = nullptr, Node *dad = nullptr, bool post_traversal = false);
 
@@ -631,7 +632,7 @@ public:
 
     /**
             scale the length of all branches for RAxML internal presentation
-            @param norm normalized factor
+            @param factor normalized factor
             @param node the starting node, nullptr to start from the root
             @param dad dad of the node, used to direct the search
      */
@@ -741,7 +742,7 @@ public:
      *  @param splits list of splits to check
      *  @return true or false
      */
-    bool containsSplits(SplitGraph& splits);
+    // bool containsSplits(SplitGraph& splits);
 
     /********************************************************
             CONVERT SPLIT SYSTEM INTO TREE
@@ -840,9 +841,9 @@ public:
     Node *findFarthestLeaf(Node *node = nullptr, Node *dad = nullptr);
         
     /** 
-        @get pre-order branches going into swallow subtrees first
+        get pre-order branches going into swallow subtrees first
         @param nodes one endpoint of branch
-        @params nodes2 other endpoint of branch
+        @param nodes2 other endpoint of branch
         @param node the starting node, nullptr to start from the root
         @param dad dad of the node, used to direct the search
     */
@@ -911,12 +912,12 @@ public:
      */
     int freeNode(Node *node = nullptr, Node *dad = nullptr);
 
-    void setExtendedFigChar();
+    // void setExtendedFigChar();
 
     /** set pointer of params variable */
     virtual void setParams(Params* params) {
         this->params = params;
-    };
+    }
 
     /********************************************************
         BOOTSTRAP
@@ -926,7 +927,7 @@ public:
 		create support value for each internal node to the weight of split in the split graph
 		@param node the starting node, nullptr to start from the root
 		@param dad dad of the node, used to direct the search
-		@param sg split graph
+		@param tag tag
 		@param hash_ss hash split set
 		@param taxname vector of taxa names
 		@param trees set of trees
@@ -1018,12 +1019,13 @@ protected:
     /**
      * Convert node IDs of a pair of nodes to a string in form "id1-id2"
      * where id1 is smaller than id2. This is done to create a key for the map data structure
-     * @param node1
-     * @param node2
+     * @param node1 one node
+     * @param node2 another node
      * @return the string key for the node pair
      */
     inline string getBranchID(Node* node1, Node* node2) {
         string key("");
+        ASSERT(node1 && node2);
         if (node1->id < node2->id) {
             key += convertIntToString(node1->id) + "-"
                     + convertIntToString(node2->id);
@@ -1060,7 +1062,6 @@ public:
             assign subtree string
             @param tree a MTree class
             @param subtree list of nodes (internal & external) contained in the tree
-            @return score and tree_str variables of this class
      */
     void setSubTree(MTree &tree, NodeVector &subtree);
 

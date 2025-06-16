@@ -25,7 +25,7 @@
 #include "pda/splitgraph.h"
 #include "utils/tools.h"
 #include "mtreeset.h"
-using namespace std;
+// using namespace std;
 
 /*********************************************
 	class MTree
@@ -40,7 +40,7 @@ MTree::MTree() {
     nodeNum = 0;
     rooted = false;
     if (Params::getInstance().min_branch_length <= 0)
-        num_precision = 6;
+        num_precision = NUM_SIX;
     else
         num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
@@ -54,7 +54,7 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
     if (Params::getInstance().min_branch_length <= 0)
-        num_precision = 6;
+        num_precision = NUM_SIX;
     else
         num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
@@ -465,12 +465,12 @@ typedef set<IntString*, IntStringCmp> IntStringSet;
 void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
     if (length_nei->length == -1.0)
         return; // NA branch length
-    int prec = 10;
+    int prec = NUM_TEN;
     if (Params::getInstance().numeric_precision > 0)
         prec = Params::getInstance().numeric_precision;
 	double length = length_nei->length;
     if (brtype & WT_BR_SCALE) length *= len_scale;
-    if (brtype & WT_BR_LEN_SHORT) prec = 6;
+    if (brtype & WT_BR_LEN_SHORT) prec = NUM_SIX;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
     out.precision(prec);
     
@@ -878,7 +878,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
 void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len)
 {
     Node *node;
-    int maxlen = 1000;
+    int maxlen = NUM_ONE_E_THREE;
     string seqname;
     int seqlen;
     DoubleVector brlen;
@@ -1019,7 +1019,8 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
 /**
         parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
         @param in_comment the input comment extract from tree file
-        @param node1, node2 the nodes that the branch connects to
+        @param node1 the nodes that the branch connects to
+        @param node2 the nodes that the branch connects to
  */
 void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2)
 {
@@ -1529,7 +1530,7 @@ void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     }
 }
 
-bool MTree::containsSplits(SplitGraph& splits) {
+/* bool MTree::containsSplits(SplitGraph& splits) {
 	SplitGraph treeSplits;
 	convertSplits(treeSplits);
 	//check if treeSplits contains all splits in splits
@@ -1540,7 +1541,7 @@ bool MTree::containsSplits(SplitGraph& splits) {
 	//treeSplits.report(cout);
 	//splits.report(cout);
 	return true;
-}
+}*/
 
 Split* MTree::getSplit(Node* node1, Node* node2) {
     Neighbor* node12 = node1->findNeighbor(node2);
@@ -1909,7 +1910,7 @@ char MTree::readNextChar(istream &in, char current_ch) {
     else {
         in.get(ch);
         in_column++;
-        if (ch == 10) {
+        if (ch == NUM_TEN) {
             in_line++;
             in_column = 1;
         }
@@ -1917,7 +1918,7 @@ char MTree::readNextChar(istream &in, char current_ch) {
     while (controlchar(ch) && !in.eof()) {
         in.get(ch);
         in_column++;
-        if (ch == 10) {
+        if (ch == NUM_TEN) {
             in_line++;
             in_column = 1;
         }
@@ -1930,7 +1931,7 @@ char MTree::readNextChar(istream &in, char current_ch) {
             if (ch != ']')
                 in_comment += ch;
             in_column++;
-            if (ch == 10) {
+            if (ch == NUM_TEN) {
                 in_line++;
                 in_column = 1;
             }
@@ -1938,14 +1939,14 @@ char MTree::readNextChar(istream &in, char current_ch) {
         if (ch != ']') throw "Comments not ended with ]";
         in_column++;
         in.get(ch);
-        if (ch == 10) {
+        if (ch == NUM_TEN) {
             in_line++;
             in_column = 1;
         }
         while (controlchar(ch) && !in.eof()) {
             in_column++;
             in.get(ch);
-            if (ch == 10) {
+            if (ch == NUM_TEN) {
                 in_line++;
                 in_column = 1;
             }
@@ -1978,6 +1979,7 @@ void MTree::convertToUnrooted() {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
         }
+        ASSERT(node1 && node2);
         node1->updateNeighbor(node, node2, len);
         node2->updateNeighbor(node, node1, len);
         delete node;
@@ -2021,13 +2023,13 @@ int MTree::sortTaxa(Node *node, Node *dad) {
     return taxid_nei_map.begin()->first;
 }
 
-void MTree::setExtendedFigChar() {
+/* void MTree::setExtendedFigChar() {
 	//fig_char[0] = 179;
 	//fig_char[1] = 196;
 	fig_char[2] = '/';
 	//fig_char[3] = 195;
 	fig_char[4] = '\\';
-}
+}*/
 
 void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
     IntVector sub_tree_br;
@@ -2118,10 +2120,10 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     }
     if (node->isLeaf()) {
         for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
-            if (abs(*(ii-1)) > 1000) out << ' ';
+            if (abs(*(ii-1)) > NUM_ONE_E_THREE) out << ' ';
             else out << fig_char[0];
             int num = abs(*ii);
-            if (num > 1000) num -= 1000;
+            if (num > NUM_ONE_E_THREE) num -= NUM_ONE_E_THREE;
             for (i = 0; i < num; i++) out << ' ';
         }
         out << ((node==dad->neighbors.front()->node) ? fig_char[2] : ((node==dad->neighbors.back()->node) ? fig_char[4] : fig_char[3]));
@@ -2144,7 +2146,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     int cnt = 0;
     bool first = true;
 
-    br_len = br_len+1000;
+    br_len = br_len+NUM_ONE_E_THREE;
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (cnt == descendant_cnt-1)
             br_len = -br_len;
@@ -2152,16 +2154,16 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 
         drawTree2(out, brtype, brscale, subtree_br, zero_epsilon, (*it)->node, node);
         subtree_br.pop_back();
-        if (br_len > 1000) br_len -= 1000;
+        if (br_len > NUM_ONE_E_THREE) br_len -= NUM_ONE_E_THREE;
         cnt++;
         if (cnt == descendant_cnt) break;
         if (subtree_br.size() > 1)
             for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
-                if (abs(*(ii-1)) > 1000) out << ' ';
+                if (abs(*(ii-1)) > NUM_ONE_E_THREE) out << ' ';
                 else out << fig_char[0];
                 if (ii == subtree_br.begin()) continue;
                 int num = abs(*ii);
-                if (num > 1000) num -= 1000;
+                if (num > NUM_ONE_E_THREE) num -= NUM_ONE_E_THREE;
                 for (i = 0; i < num; i++) out << ' ';
             }
         if (first) {
@@ -2181,14 +2183,14 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
             if (brtype & WT_BR_ID && dad)
                 out << " [" << node->findNeighbor(dad)->id << "]";
             if (!subtree_br.empty()) {
-                if (subtree_br.back() >1000)
-                    subtree_br.back() -= 1000;
+                if (subtree_br.back() > NUM_ONE_E_THREE)
+                    subtree_br.back() -= NUM_ONE_E_THREE;
                 else if (subtree_br.back() < 0)
-                    subtree_br.back() -= 1000;
+                    subtree_br.back() -= NUM_ONE_E_THREE;
             }
         } else {
             if (dad) {
-                if (abs(subtree_br.back()) > 1000) out << ' ';
+                if (abs(subtree_br.back()) > NUM_ONE_E_THREE) out << ' ';
                 else out << fig_char[0];
                 for (i = 0; i < abs(br_len); i++)
                     out << ' ';
@@ -2202,7 +2204,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     }
 }
 
-bool MTree::equalTopology(MTree *tree) {
+/* bool MTree::equalTopology(MTree *tree) {
 	ASSERT(root->isLeaf());
 	Node *root2 = tree->findLeafName(root->name);
 	if (!root2) return false;
@@ -2210,7 +2212,7 @@ bool MTree::equalTopology(MTree *tree) {
 	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	tree->printTree(ostr2, WT_TAXON_ID | WT_SORT_TAXA, root2);
 	return ostr.str() == ostr2.str();
-}
+}*/
 
 void MTree::calcDist(char *filename) {
     vector<string> taxname;
@@ -2235,7 +2237,7 @@ void MTree::calcDist(char *filename) {
         for (i = 0; i < leafNum; i++) {
             out << taxname[i] << "   ";
             for (j = 0; j < leafNum; j++) {
-                out << dist[i*leafNum + j] << "  ";
+                out << dist[(i*leafNum) + j] << "  ";
             }
             out << endl;
         }
@@ -2262,8 +2264,8 @@ void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Nod
     double branch_length;
 	if (!node) node = root;
     if (node->isLeaf()) {
-        dist[static_cast<size_t>(aroot->id * leafNum + node->id)] = cur_len;
-        dist[static_cast<size_t>(node->id * leafNum + aroot->id)] = cur_len;
+        dist[static_cast<size_t>((aroot->id * leafNum) + node->id)] = cur_len;
+        dist[static_cast<size_t>((node->id * leafNum) + aroot->id)] = cur_len;
     }
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
@@ -2696,7 +2698,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 
 		//cout << "common_splits = " << common_splits << endl;
         double max_dist = branchNum-leafNum + tree.branchNum-tree.leafNum;
-        double rf_val = max_dist - 2*common_splits;
+        double rf_val = max_dist - (2*common_splits);
         if (Params::getInstance().normalize_tree_dist) {
             rf_val = rf_val / max_dist;
         }

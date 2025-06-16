@@ -85,7 +85,7 @@ public:
 
 	/**
 		convert the tree into SplitIntMap, iterative procedure
-		@param sim (OUT) resulting splitIntMap
+		@param sg (OUT) resulting splitIntMap
 		@param resp (internal) set of taxa below node
 		@param node the starting node, nullptr to start from the root
 		@param dad dad of the node, used to direct the search

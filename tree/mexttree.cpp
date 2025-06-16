@@ -218,7 +218,7 @@ void MExtTree::generateUniform(Params &params, bool binary)
 	for (i = 2; i < size; i++)
 	{
 		int index;
-		index = random_int(2*i-3);
+		index = random_int((2*i)-3);
 		//cout << "step " << i << " left = " << leftend[index]->id << " right = " << rightend[index]->id << endl;
 
 		// add an internal node
@@ -276,9 +276,7 @@ void MExtTree::generateUniform(Params &params, bool binary)
 
 /**
     generate a random tree following birth-death model
-    @param size number of taxa
-    @param rescale_birth_rate (birth_rate/(birth_rate+death_rate)
-    @param binary TRUE if you want to generate a binary tree
+    @param param program parameters
 */
 void MExtTree::generateBirthDeath(Params &params)
 {
@@ -298,7 +296,7 @@ void MExtTree::generateBirthDeath(Params &params)
     int i;
     
     // retry the birth-death process (up to 1000 times) until successfully generating the tree
-    for (int retry = 0; retry < 1000; retry++)
+    for (int retry = 0; retry < NUM_ONE_E_THREE; retry++)
     {
         i  = 0;
         myleaves.clear();

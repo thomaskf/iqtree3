@@ -126,7 +126,6 @@ public:
 		@param taxname certain taxa name
 		@param sg (OUT) resulting split graph
 		@param hash_ss (OUT) hash split set
-		@param lensum TRUE if summing split length, FALSE to increment only
 		@param weight_threshold minimum weight cutoff
         @param tag_str TRUE to tag for each split, which trees it appears.
 		@param sort_taxa TRUE to sort taxa alphabetically
@@ -138,8 +137,7 @@ public:
 		convert all trees into the split system
 		@param sg (OUT) resulting split graph
 		@param hash_ss (OUT) hash split set
-		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
-			Otherwise just count the number of branches.
+		@param weighting_type type of weighting
 		@param weight_threshold minimum weight cutoff
 	*/
 	void convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
@@ -149,8 +147,7 @@ public:
 		convert all trees into the split system
 		@param sg (OUT) resulting split graph
 		@param split_threshold only keep those splits which appear more than this threshold 
-		@param lensum TRUE to assign split weight as sum of corresponding branch lengths. 
-			Otherwise just count the number of branches.
+        @param weighting_type type of weighting
 		@param weight_threshold minimum weight cutoff
 	*/
 	void convertSplits(SplitGraph &sg, double split_threshold, 

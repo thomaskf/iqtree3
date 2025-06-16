@@ -89,7 +89,7 @@ public:
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual Neighbor* newNeighbor() {
+    virtual Neighbor* newNeighbor() override {
         return (new PhyloNeighbor(this));
     }
 
@@ -127,9 +127,10 @@ public:
 	return partial_lh;
 	}
 
-	double get_lh_scale_factor(){
+    // get_lh_scale_factor is only used in upperbounds.cpp but that function was commented so get_lh_scale_factor is never used anywhere else
+	/* double get_lh_scale_factor(){
 	return lh_scale_factor;
-	}
+	}*/
 
 	int get_partial_lh_computed(){
 	return partial_lh_computed;
@@ -138,10 +139,10 @@ public:
 	/**
 	 * true if this Neighbor is directed towards the root
 	 */
-	bool isTowardsRoot() {
+	/* bool isTowardsRoot() {
 		ASSERT(direction != UNDEFINED_DIRECTION);
 		return (direction == TOWARD_ROOT);
-	}
+	}*/
 
     int getSize() {
         return size;
@@ -229,7 +230,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    virtual void addNeighbor(Node *node, double length, int id = -1);
+    virtual void addNeighbor(Node *node, double length, int id = -1) override;
 
 
 

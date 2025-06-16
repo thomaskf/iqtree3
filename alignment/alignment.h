@@ -417,8 +417,9 @@ public:
      */
     inline size_t getNSite() {
         // if expected_num_sites is specified -> resizing site_pattern
-        if (expected_num_sites > -1)
+        if (expected_num_sites > -1) {
             site_pattern.resize(static_cast<size_t>(expected_num_sites));
+        }
         
         return site_pattern.size();
     }

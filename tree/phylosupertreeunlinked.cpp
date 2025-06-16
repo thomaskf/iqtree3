@@ -27,7 +27,7 @@ void PhyloSuperTreeUnlinked::readTree(istream &in, bool &is_rooted) {
 
 void PhyloSuperTreeUnlinked::setAlignment(Alignment *alignment) {
     ASSERT(alignment->isSuperAlignment());
-    SuperAlignment *saln = (SuperAlignment*)alignment;
+    SuperAlignment *saln = static_cast<SuperAlignment*>(alignment);
     ASSERT(saln->partitions.size() == size());
     for (size_t i = 0; i < size(); i++)
         at(i)->setAlignment(saln->partitions[i]);
@@ -47,7 +47,7 @@ void PhyloSuperTreeUnlinked::mapTrees() {
 }
 
 int PhyloSuperTreeUnlinked::computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream) {
-    SuperAlignment *saln = (SuperAlignment*)alignment;
+    SuperAlignment *saln = static_cast<SuperAlignment*>(alignment);
     int score = 0;
     int i;
     ASSERT(saln->partitions.size() == size());
@@ -201,7 +201,7 @@ pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info) {
     double score = 0.0;
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
     for (size_t i = 0; i < size(); i++) {
-        IQTree *part_tree = (IQTree*)at(part_order[i]);
+        IQTree *part_tree = static_cast<IQTree*>(at(part_order[i]));
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);
@@ -243,7 +243,7 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
     for (size_t i = 0; i < size(); i++) {
-        IQTree *part_tree = (IQTree*)at(part_order[i]);
+        IQTree *part_tree = static_cast<IQTree*>(at(part_order[i]));
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);
