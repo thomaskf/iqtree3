@@ -2282,6 +2282,15 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
         initTree = getTreeString();
         cout << "CHECKPOINT: Model parameters restored, LogL: " << getCurScore() << endl;
     } else {
+        // for mixtureFinder, verify whether the likelihood is the same as the best likelihood obtained in mixtureFinder
+        double mixFinderLogL;
+        if (getCheckpoint()->get("MixFinderLogL", mixFinderLogL)) {
+            double allowableDiff = 0.01;
+            double currLogL = computeLikelihood();
+            ASSERT(fabs(currLogL - mixFinderLogL) < allowableDiff);
+            getCheckpoint()->eraseKeyPrefix("MixFinderLogL");
+        }
+        
         initTree = optimizeModelParameters(true, initEpsilon);
         if (isMixlen()) {
             initTree = (static_cast<ModelFactoryMixlen*>(getModelFactory()))->sortClassesByTreeLength();
