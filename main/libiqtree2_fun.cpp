@@ -466,10 +466,10 @@ extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst
         
         if (insertion_rate < 0)
             throw "Insertion rate must not be negative.";
-        params.alisim_insertion_rate = insertion_rate;
+        params.alisim_insertion_ratio = insertion_rate;
         if (deletion_rate < 0)
             throw "Deletion rate must not be negative.";
-        params.alisim_deletion_rate = deletion_rate;
+        params.alisim_deletion_ratio = deletion_rate;
         
         if(root_seq != nullptr && strcmp(root_seq, "") != 0) {
             params.root_ref_seq_aln = "AliSimRootSequence.fasta";
