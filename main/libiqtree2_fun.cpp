@@ -402,13 +402,13 @@ extern "C" StringResult version() {
 // partition_info -- partition information
 // partition_type -- partition type is either ‘equal’, ‘proportion’, or ‘unlinked’
 // seq_length -- the length of sequences
-// insertion_ratio -- the insertion rate
-// deletion_ratio -- the deletion rate
+// insertion_rate -- the insertion rate
+// deletion_rate -- the deletion rate
 // root_seq -- the root sequence
 // num_threads -- the number of threads
 // insertion_size_distribution -- the insertion size distribution
 // deletion_size_distribution -- the deletion size distribution
-extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst_model, int seed, StringArray& partition_info, const char* partition_type, int seq_length, double insertion_ratio, double deletion_ratio, const char* root_seq, int num_threads, const char* insertion_size_distribution, const char* deletion_size_distribution) {
+extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst_model, int seed, StringArray& partition_info, const char* partition_type, int seq_length, double insertion_rate, double deletion_rate, const char* root_seq, int num_threads, const char* insertion_size_distribution, const char* deletion_size_distribution) {
     StringResult output;
     output.errorStr = strdup("");
     
@@ -464,12 +464,12 @@ extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst
             throw "Positive sequence please.";
         params.alisim_sequence_length = seq_length;
         
-        if (insertion_ratio < 0)
-            throw "Insertion ratio must not be negative.";
-        params.alisim_insertion_ratio = insertion_ratio;
-        if (deletion_ratio < 0)
-            throw "Deletion ratio must not be negative.";
-        params.alisim_deletion_ratio = deletion_ratio;
+        if (insertion_rate < 0)
+            throw "Insertion rate must not be negative.";
+        params.alisim_insertion_rate = insertion_rate;
+        if (deletion_rate < 0)
+            throw "Deletion rate must not be negative.";
+        params.alisim_deletion_rate = deletion_rate;
         
         if(root_seq != nullptr && strcmp(root_seq, "") != 0) {
             params.root_ref_seq_aln = "AliSimRootSequence.fasta";
