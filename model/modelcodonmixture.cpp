@@ -36,17 +36,27 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     
     string model_list = "";
     bool user_input_param = false;
-    /* setting fix_kappa for class 2 and 3 */
+    
     if (vec.size() == 0) {
+        string kappa_str = "";
+        if (model_name == "GY0K") {
+            /* setting fix_kappa for class 2 and 3 for GY0K model */
+            kappa_str = ",1.0";
+        } else {
+            // kappa is not fixed, thus cannot use EM algorithm
+            if (Params::getInstance().optimize_alg_qmix == "EM") {
+                outError("EM algorithm cannot be used for the codon mixture model with unfixed kappa value.");
+            }
+        }
         if (cmix_type == "1a") {
             // M1a neural model with 2 classes, omega2 = 1.0
-            model_list = model_name + "{<0.999}," + model_name + "{1.0,1.0}";
+            model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}";
         } else if (cmix_type == "2a") {
             // M2a selection model with 3 classes
-            model_list = model_name + "{<0.999}," + model_name + "{1.0,1.0}," + model_name + "{>1.001,1.0}";
+            model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}," + model_name + "{>1.001" + kappa_str + "}";
         } else if (cmix_type == "3") {
             // M3 model with 3 classes with no constraint
-            model_list = model_name + "{>0.001}," + model_name + "{>0.001,1.0}," + model_name + "{>0.001,1.0}";
+            model_list = model_name + "{>0.001}," + model_name + "{>0.001" + kappa_str + "}," + model_name + "{>0.001" + kappa_str + "}";
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
