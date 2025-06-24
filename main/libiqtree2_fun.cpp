@@ -413,7 +413,7 @@ extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst
     output.errorStr = strdup("");
     
     try {
-        Params params = Params::getInstance();
+        Params& params = Params::getInstance();
         params.setDefault();
         
         params.user_file = "AliSimTrees.nwk";
@@ -493,6 +493,8 @@ extern "C" StringResult simulate_alignment(StringArray& trees, const char* subst
         
         params.alisim_active = true;
         params.alisim_output_filename = "AliSimAlignment";
+        params.out_prefix= params.user_file;
+        init_random(Params::getInstance().ran_seed);
         
         IQTree* iqtree_ptr = nullptr;
         executeSimulation(params, iqtree_ptr);
