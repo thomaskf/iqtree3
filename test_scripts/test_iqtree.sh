@@ -66,7 +66,7 @@ ${BUILD_DIR}/iqtree3 -t $AA_FASTA.treefile --gcf ${WD}/turtle_aa.loci.treefile -
 
 # link-exchange-rates model
 
-${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX{LG+F,LG+F}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.link -seed $SEED -T 1
+${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX{LG+F,WAG+F}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.link -seed $SEED -T 1
 
 #${BUILD_DIR}/iqtree3 -s $AA_FASTA -m "MIX{GTR{1,1,1,1,1,1}+FO,GTR{1,1,1,1,1,1}+FO}" --link-exchange-rates --prefix ${WD}/turtle_aa.mix.jc.link -seed $SEED -T 1
 

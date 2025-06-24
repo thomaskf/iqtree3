@@ -60,7 +60,7 @@ Get-Content test_scripts/test_data/turtle_aa.fasta.treefile, test_scripts/test_d
 
 # link-exchange-rates model
 
-./build/iqtree3  -s test_scripts/test_data/turtle_aa.fasta -m "MIX{LG+F,LG+F}" --link-exchange-rates --prefix test_scripts/test_data/turtle_aa.mix.link -seed $SEED -T 1
+./build/iqtree3  -s test_scripts/test_data/turtle_aa.fasta -m "MIX{LG+F,WAG+F}" --link-exchange-rates --prefix test_scripts/test_data/turtle_aa.mix.link -seed $SEED -T 1
 
 #./build/iqtree3  -s test_scripts/test_data/turtle_aa.fasta -m "MIX{GTR{1,1,1,1,1,1}+FO,GTR{1,1,1,1,1,1}+FO}" --link-exchange-rates --prefix test_scripts/test_data/turtle_aa.mix.jc.link -seed $SEED -T 1
 
