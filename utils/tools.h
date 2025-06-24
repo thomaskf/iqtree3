@@ -791,6 +791,11 @@ public:
     double treemixhmm_eps;
 
     /**
+     logl epsilon for MixtureFinder without tree search
+     */
+    double mixfindernotree_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;

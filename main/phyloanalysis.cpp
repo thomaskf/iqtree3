@@ -3587,6 +3587,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         else
             initEpsilon = params.treemix_eps;
     }
+    // for mixturefinder without tree search
+    if (params.model_name == "MIX+MF" || params.model_name == "MF+MIX") {
+        initEpsilon = params.mixfindernotree_eps;
+    }
     string initTree;
     
     //None of his will work until there is actually a tree
