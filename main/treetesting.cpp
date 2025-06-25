@@ -108,10 +108,10 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     
     double partition_lh[stree->size()];
     double *pattern_lh_ptr = pattern_lh;
-    for (int part = 0; part < stree->size(); part++) {
+    for (size_t part = 0; part < stree->size(); part++) {
         size_t nptn = stree->at(part)->getAlnNPattern();
         partition_lh[part] = 0.0;
-        for (int i = 0; i < nptn; i++)
+        for (size_t i = 0; i < nptn; i++)
             partition_lh[part] += pattern_lh_ptr[i] * stree->at(part)->ptn_freq[i];
         pattern_lh_ptr += nptn;
     }
@@ -131,7 +131,7 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             out.width(10);
             out << left << linename;
         }
-        for (int i = 0; i < stree->size(); ++i) {
+        for (size_t i = 0; i < stree->size(); ++i) {
             out << " " << partition_lh[i];
         }
         out << endl;
@@ -229,7 +229,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
     
-    //    int *joint_ancestral = NULL;
+    //    int *joint_ancestral = nullptr;
     //
     //    if (tree->params->print_ancestral_sequence == AST_JOINT) {
     //        joint_ancestral = new int[nptn*tree->leafNum];
@@ -620,7 +620,7 @@ public:
         d = x[1];
         c = x[2];
         double res = 0.0;
-        for (int k = 0; k < nscales; k++) {
+        for (size_t k = 0; k < nscales; k++) {
             double cdf = gsl_cdf_ugaussian_P(d*rr[k] + c*rr_inv[k]);
             res += bp[k] * log(1.0 - cdf) + (1.0-bp[k])*log(cdf);
         }
@@ -859,7 +859,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 #ifdef _OPENMP
 #pragma omp for schedule(dynamic)
 #endif
-    for (int k = 0; k < nscales; ++k) {
+    for (size_t k = 0; k < nscales; ++k) {
         string str = "SCALE=" + convertDoubleToString(r[k]);
         for (boot = 0; boot < nboot; boot++) {
             if (r[k] == 1.0 && boot == 0)
@@ -1123,14 +1123,14 @@ void evaluateTrees(istream &in, Params &params, IQTree *tree, vector<TreeInfo> &
     
     double time_start = getRealTime();
     
-    int *boot_samples = NULL;
-    //double *saved_tree_lhs = NULL;
-    double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
-    double *pattern_lh = NULL;
-    double *pattern_lhs = NULL;
-    double *orig_tree_lh = NULL; // Original tree log-likelihoods
-    double *max_lh = NULL;
-    double *lhdiff_weights = NULL;
+    int *boot_samples = nullptr;
+    //double *saved_tree_lhs = nullptr;
+    double *tree_lhs = nullptr; // RELL score matrix of size #trees x #replicates
+    double *pattern_lh = nullptr;
+    double *pattern_lhs = nullptr;
+    double *orig_tree_lh = nullptr; // Original tree log-likelihoods
+    double *max_lh = nullptr;
+    double *lhdiff_weights = nullptr;
     size_t nptn = tree->getAlnNPattern();
     size_t maxnptn = get_safe_upper_limit(nptn);
     

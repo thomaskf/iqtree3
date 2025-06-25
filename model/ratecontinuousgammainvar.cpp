@@ -42,7 +42,7 @@ void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specifi
     // rescale ratio due to invariant sites
     double scale = 1.0/(1 - p_invar);
     
-    for (int i = 0; i < sequence_length; i++)
+    for (size_t i = 0; i < sequence_length; i++)
     {
         // if this site is invariant -> its rate is zero
         if (random_double() <= p_invar)

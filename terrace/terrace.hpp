@@ -55,8 +55,8 @@ public:
     PresenceAbsenceMatrix *matrix;
     StrVector terrace_trees;
     
-    int taxa_num;
-    int part_num;
+    size_t taxa_num;
+    size_t part_num;
     
     /**
      to track, if the initial tree was generate using backward approach: remove m leaves instead of take induced partition tree
@@ -92,7 +92,7 @@ public:
     string out_file;
     ofstream out;
     bool terrace_out;
-    int trees_out_lim;
+    unsigned int  trees_out_lim;
     
     // Stopping rules
     unsigned int terrace_max_trees;
@@ -125,18 +125,18 @@ public:
     /*
      * link parent tree and a single induced partition tree
      */
-    void linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node = nullptr, TerraceNode *dad = nullptr);
+    void linkTree(size_t part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node = nullptr, TerraceNode *dad = nullptr);
     
     /*
      *  link one branch of parent tree on partition tree part (for internal branches only, oder?)
      */
-    void linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_nei, bool back_branch_map, bool back_taxon_map);
+    void linkBranch(size_t part, TerraceNeighbor *nei, TerraceNeighbor *dad_nei, bool back_branch_map, bool back_taxon_map);
     
     /*
      *  Local map update after insertion/deletion of the taxon
      */
     
-    void update_map(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad = nullptr);
+    void update_map(size_t part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad = nullptr);
     
     /*
      *  Print Info about the branch between parent tree and induced partition trees

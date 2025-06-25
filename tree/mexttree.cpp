@@ -21,7 +21,7 @@
 #include "alignment/alignment.h"
 
 void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool binary) {
-	Alignment *alignment = NULL;
+	Alignment *alignment = nullptr;
 	if (params.aln_file) {
 		// generate random tree with leaf sets taken from an alignment
 		alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
@@ -66,13 +66,13 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	generateNNIBraches(nodes, nodes2);
 	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
 	for (int i = 0; i < num_zero_len;) {
-		int id = random_int(nodes.size());
+		size_t id = static_cast<size_t>(random_int(nodes.size()));
 		if (!nodes[id]) continue;
 		i++;
 		nodes[id]->findNeighbor(nodes2[id])->length = 0.0;
 		nodes2[id]->findNeighbor(nodes[id])->length = 0.0;
-		nodes[id] = NULL;
-		nodes2[id] = NULL;
+		nodes[id] = nullptr;
+		nodes2[id] = nullptr;
 	}
 }
 
@@ -293,7 +293,7 @@ void MExtTree::generateBirthDeath(Params &params)
     
     // list of leaves
     NodeVector myleaves;
-    Node *node = NULL, *new_node = NULL;
+    Node *node = nullptr, *new_node = nullptr;
     double len, random_num;
     int i;
     
@@ -339,7 +339,7 @@ void MExtTree::generateBirthDeath(Params &params)
             // death event occurs
             else
             {
-                Node *dad_node = NULL;
+                Node *dad_node = nullptr;
                 
                 // if the death event occurs when the tree has only root node -> restart
                 if (node->neighbors.size() == 0)
@@ -352,7 +352,7 @@ void MExtTree::generateBirthDeath(Params &params)
                 len = randomLen(params);
 
                 // detect the two siblings of the current node
-                Node *sibling_node1 = NULL, *sibling_node2 = NULL;
+                Node *sibling_node1 = nullptr, *sibling_node2 = nullptr;
                 for (NeighborVec::iterator it = dad_node->neighbors.begin(); it != dad_node->neighbors.end(); it++)
                 {
                     if ((*it)->node == node)
@@ -557,7 +557,7 @@ void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_
     myleaves.clear();
     innodes.clear();
     getBranches(myleaves, innodes);
-    for (int i = 0; i < myleaves.size(); i++) {
+    for (size_t i = 0; i < myleaves.size(); i++) {
         double len = randomLen(params);
         myleaves[i]->findNeighbor(innodes[i])->length = len;
         innodes[i]->findNeighbor(myleaves[i])->length = len;
@@ -573,7 +573,7 @@ void MExtTree::generateStarTree(Params &params) {
 	generateYuleHarding(params);
 	NodeVector nodes, nodes2;
 	generateNNIBraches(nodes, nodes2);
-	for (int i = 0; i < nodes.size(); i++) {
+	for (size_t i = 0; i < nodes.size(); i++) {
 		nodes[i]->findNeighbor(nodes2[i])->length = 0.0;
 		nodes2[i]->findNeighbor(nodes[i])->length = 0.0;
 	}
@@ -592,7 +592,7 @@ void MExtTree::generateRandomBranchLengths(Params &params, Node *node, Node *dad
 
 
 void MExtTree::setLeavesName(NodeVector &myleaves) {
-	for (int i = 0; i < myleaves.size(); i++)
+	for (size_t i = 0; i < myleaves.size(); i++)
 	{
 		myleaves[i]->id = i;
 		stringstream str;
@@ -603,7 +603,7 @@ void MExtTree::setLeavesName(NodeVector &myleaves) {
 
 
 void MExtTree::createCluster(NodeVector &taxa, mmatrix(int) &clusters, Node *node, Node *dad) {
-	if (node == NULL) node = root;
+	if (node == nullptr) node = root;
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		// if both end-nodes are bifurcating
 		Node *child = (*it)->node;
@@ -649,7 +649,7 @@ void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *
             cout << "Branch with name " << node->name << " ignored" << endl;
             return;
         }
-        for (int i = 0; i < vec.size(); i++)
+        for (size_t i = 0; i < vec.size(); i++)
             if (vec[i] < minsup[i]) {
                 // support smaller than threshold, mark this branch for deletion
                 dad->findNeighbor(node)->length = -1.0;

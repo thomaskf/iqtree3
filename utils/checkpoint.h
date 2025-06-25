@@ -17,8 +17,6 @@
 #include <typeinfo>
 #include "tools.h"
 
-using namespace std;
-
 #define CKP_PRECISION 10
 
 // several useful declaration to save to or restore from a checkpoint

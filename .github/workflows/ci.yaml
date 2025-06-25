@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: ["master"]
+    branches: ["github-workflow", "master"]
   pull_request:
-    branches: ["master"]
+    branches: ["github-workflow", "master"]
 
 # If a Second Commit is Pushed After, and Build is Not Complete, Cancel
 # Extremely Important with the High Computation Time and Power Required of Arm Linux Builds
@@ -74,6 +74,11 @@ jobs:
           chmod +x test_scripts/verify_results.sh
           ./test_scripts/verify_results.sh
 
+      - name: Run verify_runtimes.sh
+        run: |
+          chmod +x test_scripts/verify_runtime.sh
+          ./test_scripts/verify_runtime.sh
+
   build-linux-aarch64:
     name: Linux aarch64
     runs-on: ubuntu-22.04-arm
@@ -114,6 +119,11 @@ jobs:
         run: |
           chmod +x test_scripts/verify_results.sh
           ./test_scripts/verify_results.sh
+
+      - name: Run verify_runtimes.sh
+        run: |
+          chmod +x test_scripts/verify_runtime.sh
+          ./test_scripts/verify_runtime.sh
 
   compile-linux-universal:
     name: Linux Universal
@@ -195,6 +205,11 @@ jobs:
           chmod +x test_scripts/verify_results.sh
           ./test_scripts/verify_results.sh
 
+      - name: Run verify_runtimes.sh
+        run: |
+          chmod +x test_scripts/verify_runtime.sh
+          ./test_scripts/verify_runtime.sh
+
   build-macos-arm:
     name: Mac OS ARM64
     runs-on: macos-14
@@ -237,6 +252,11 @@ jobs:
         run: |
           chmod +x test_scripts/verify_results.sh
           ./test_scripts/verify_results.sh
+
+      - name: Run verify_runtimes.sh
+        run: |
+          chmod +x test_scripts/verify_runtime.sh
+          ./test_scripts/verify_runtime.sh
 
   compile-mac-universal:
     name: Mac OS Universal
@@ -344,3 +364,8 @@ jobs:
         shell: pwsh
         run: |
           ./test_scripts/verify_results.ps1
+
+      - name: Run verify_runtimes.ps1
+        shell: pwsh
+        run: |
+          ./test_scripts/verify_runtime.ps1

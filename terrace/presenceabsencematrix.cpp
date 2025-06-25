@@ -175,7 +175,7 @@ void PresenceAbsenceMatrix::getPartTaxa(int part, MTree *tree, MTree *part_tree,
         cout<<"\n";
         
         cout<<"Partition taxa info:"<<"\n";
-        for(int i=0; i<taxa_num; i++){
+        for(size_t i=0; i<taxa_num; i++){
             if(part_taxa[i]){
                 cout<<part_taxa[i]->name<<"("<<part_taxa[i]->id<<") ";
             }else{
@@ -701,7 +701,7 @@ void PresenceAbsenceMatrix::orderPartByOverlap_within(int upper_lim, IntVector &
         for(k=j+1; k<group.size(); k++){
             
             val=0;
-            for(int t=0; t<taxa_num; t++){
+            for(size_t t=0; t<taxa_num; t++){
                 if(pr_ab_matrix[t][group[j]]==pr_ab_matrix[t][group[k]] && pr_ab_matrix[t][group[j]]==1){
                     val=val+1;
                     if(val==part_cov[group[j]] or val==part_cov[group[k]]){

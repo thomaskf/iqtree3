@@ -60,14 +60,14 @@ public:
     virtual int getNumLhCat(SiteLoglType wsl);
 
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
-    double computeLikelihood_combine(double *pattern_lh = NULL, bool save_log_value = true);
+    double computeLikelihood_combine(double *pattern_lh = nullptr, bool save_log_value = true);
 
     // compute the log-likelihood values for every site and tree
     // updated array: _ptn_like_cat
     // update_which_tree: only that tree has been updated
     void computeSiteTreeLogLike(int update_which_tree);
 
-    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
+    virtual double computeLikelihood(double *pattern_lh = nullptr, bool save_log_value = true);
 
     virtual double computePatternLhCat(SiteLoglType wsl);
 
@@ -77,10 +77,10 @@ public:
      @param pattern_lh (OUT) pattern log-likelihoods,
      assuming pattern_lh has the size of the number of patterns
      @param cur_logl current log-likelihood (for sanity check)
-     @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
+     @param pattern_lh_cat (OUT) if not nullptr, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh = NULL, double *cur_logl = NULL,
-                                          double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+    virtual void computePatternLikelihood(double *pattern_lh = nullptr, double *cur_logl = nullptr,
+                                          double *pattern_lh_cat = nullptr, SiteLoglType wsl = WSL_RATECAT);
 
     virtual void initializeAllPartialLh();
 
@@ -119,12 +119,12 @@ public:
     double optimizeBranchLensByBFGS(double gradient_epsilon);
 
     // save branch lengths of all trees
-    // node and dad are always NULL
-    void getBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
+    // node and dad are always nullptr
+    void getBranchLengths(vector<DoubleVector> &len, Node *node = nullptr, Node *dad = nullptr);
 
     // restore branch lengths of all trees
-    // node and dad are always NULL
-    void setBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
+    // node and dad are always nullptr
+    void setBranchLengths(vector<DoubleVector> &len, Node *node = nullptr, Node *dad = nullptr);
     
     virtual void showTree();
     
@@ -165,7 +165,7 @@ public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
-    void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
+    void computeInitialTree(LikelihoodKernel kernel, istream* in = nullptr);
 
     /**
      * setup all necessary parameters
@@ -218,17 +218,17 @@ public:
 
     /**
      @return the weighted sum of the tree lengths
-     @param node the starting node, NULL to start from the root
+     @param node the starting node, nullptr to start from the root
      @param dad dad of the node, used to direct the search
      */
-    virtual double treeLength(Node *node = NULL, Node *dad = NULL);
+    virtual double treeLength(Node *node = nullptr, Node *dad = nullptr);
 
     /**
      @return the weighted sum of the lengths of all internal branches
-     @param node the starting node, NULL to start from the root
+     @param node the starting node, nullptr to start from the root
      @param dad dad of the node, used to direct the search
      */
-    virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
+    virtual double treeLengthInternal(double epsilon, Node *node = nullptr, Node *dad = nullptr);
 
     virtual int getNParameters();
 
@@ -237,12 +237,12 @@ public:
     /**
      print the tree to the output file in newick format
      @param out the output file.
-     @param node the starting node, NULL to start from the root
+     @param node the starting node, nullptr to start from the root
      @param dad dad of the node, used to direct the search
      @param brtype type of branch to print
      @return ID of the taxon with smallest ID
      */
-    // virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
+    // virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = nullptr);
     /**
             print the tree to the output file in newick format
             @param out the output stream.

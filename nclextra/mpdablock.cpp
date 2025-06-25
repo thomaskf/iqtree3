@@ -189,7 +189,7 @@ void MPdaBlock::Read(NxsToken &token)
 
 		else if (token.Equals("TAXCOSTS")) {
 
-			costs.resize(ntax, -1);
+			costs.resize(static_cast<size_t>(ntax), -1);
 			// This should be taxon name
 			//
 			token.GetNextToken();
@@ -198,7 +198,7 @@ void MPdaBlock::Read(NxsToken &token)
 				int tax_id = -1;
 
 				try {
-					tax_id = sgraph->getTaxa()->FindTaxon(token.GetToken());
+					tax_id = static_cast<int>(sgraph->getTaxa()->FindTaxon(token.GetToken()));
 				} catch (NxsTaxaBlock::NxsX_NoSuchTaxon) {
 					tax_id = -1;
 				}
@@ -215,7 +215,7 @@ void MPdaBlock::Read(NxsToken &token)
 				//
 				token.GetNextToken();
 
-				int taxcost = convert_double(token.GetToken().c_str());
+				int taxcost = static_cast<int>(convert_double(token.GetToken().c_str()));
 				if (taxcost < 0)
 				{
 					errormsg = "Taxon cost should be greater than or equal to zero (";
@@ -223,7 +223,7 @@ void MPdaBlock::Read(NxsToken &token)
 					errormsg += " was specified)";
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
-				costs[tax_id] = taxcost;
+				costs[static_cast<size_t>(tax_id)] = taxcost;
 
 				token.GetNextToken();
 			} while (!token.AtEOF() && !token.Equals(";"));
@@ -240,7 +240,7 @@ void MPdaBlock::Read(NxsToken &token)
 				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 			}
 
-			for (int i = 0; i < ntax; i++)
+			for (size_t i = 0; i < static_cast<size_t>(ntax); i++)
 				if (costs[i] < 0) {
 					costs[i] = 0;
 					cout << "WARNING: taxon " << sgraph->getTaxa()->GetTaxonLabel(i)
@@ -289,8 +289,9 @@ void MPdaBlock::readBudgetFile(Params &params) {
 	in.exceptions(ios::failbit | ios::badbit);
 	cout << "Reading budget information file " << params.budget_file << "..." << endl;
 	NxsString taxname;
-	int ntaxa = sgraph->getNTaxa() - params.is_rooted;
-	int i;
+    ASSERT(sgraph->getNTaxa() - params.is_rooted >= 0);
+	size_t ntaxa = static_cast<size_t>(sgraph->getNTaxa() - params.is_rooted);
+	size_t i;
 
 	try {
 		costs.resize(ntaxa, -1);
@@ -310,7 +311,8 @@ void MPdaBlock::readBudgetFile(Params &params) {
 			if (taxcost < 0) 
 				throw "Negative taxa preservation cost.";
 			tax_id = sgraph->getTaxa()->FindTaxon(taxname);
-			costs[tax_id] = taxcost;
+            ASSERT(tax_id >= 0);
+			costs[static_cast<size_t>(tax_id)] = taxcost;
 		}
 		in.close();
 	} catch (ios::failure) {
@@ -338,8 +340,9 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 	in.exceptions(ios::failbit | ios::badbit);
 	cout << "Reading budget for areas information file " << params.budget_file << "..." << endl;
 	string areaname;
-	int nareas = sgraph->getNAreas();
-	int i;
+    ASSERT(sgraph->getNAreas() >= 0);
+	size_t nareas = sgraph->getNAreas();
+	size_t i;
 
 	try {
 		costs.resize(nareas, -1);
@@ -361,7 +364,7 @@ void MPdaBlock::readBudgetAreaFile(Params &params) {
 			area_id = sgraph->getSetsBlock()->findArea(areaname);
 			if (area_id < 0)
 				outError(ERR_NO_AREA, areaname);
-			costs[area_id] = areacost;
+			costs[static_cast<size_t>(area_id)] = areacost;
 		}
 		in.close();
 	} catch (ios::failure) {

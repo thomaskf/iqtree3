@@ -85,7 +85,7 @@ public:
     */
     virtual void getLength(DoubleVector &vec, int start_pos) { 
         ASSERT(start_pos+lengths.size() <= vec.size());
-        for (int i = 0; i < lengths.size(); i++)
+        for (size_t i = 0; i < lengths.size(); i++)
             vec[start_pos+i] = lengths[i];
     }
 

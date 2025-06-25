@@ -77,7 +77,7 @@ void MTreeSet::init(const char *userTreeFile, bool &is_rooted, int burnin, int m
 }
 
 void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
-	//resize(treels.size(), NULL);
+	//resize(treels.size(), nullptr);
 	int count = 0;
 	//IntVector ok_trees;
 	//ok_trees.resize(treels.size(), 0);
@@ -106,7 +106,7 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 }
 
 void MTreeSet::init(StrVector &treels, bool &is_rooted) {
-	//resize(treels.size(), NULL);
+	//resize(treels.size(), nullptr);
 	int count = 0;
 	//IntVector ok_trees;
 	//ok_trees.resize(treels.size(), 0);
@@ -210,7 +210,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 				//" taxa and " << tree->nodeNum-1-tree->rooted << " branches" << endl;
 			} else {
 				// omit the tree
-				//push_back(NULL);
+				//push_back(nullptr);
 				//in->exceptions(ios::badbit);
 				while (!in->eof()) {
 					char ch;
@@ -364,7 +364,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 		//SplitIntMap::iterator ass_it = hash_ss.find(*it);
 		int freq_value;
 		Split *sp = hash_ss.findSplit(*it, freq_value);
-		ASSERT(sp != NULL);
+		ASSERT(sp != nullptr);
 		ASSERT(*sp == *(*it));
 		//Split *sp = ass_it->first;
 		if (freq_value <= threshold) {
@@ -392,11 +392,11 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 	sg.pda = temp.pda;
 	sg.sets = temp.sets;
 	sg.trees = temp.trees;
-	temp.taxa = NULL;
-	temp.splits = NULL;
-	temp.pda = NULL;
-	temp.sets = NULL;
-	temp.trees = NULL;
+	temp.taxa = nullptr;
+	temp.splits = nullptr;
+	temp.pda = nullptr;
+	temp.sets = nullptr;
+	temp.trees = nullptr;
 	*/
 	cout << nsplits - sg.getNSplits() << " split(s) discarded because frequency <= " << split_threshold << endl;
 }
@@ -409,7 +409,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting
 		return;
 	
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, NULL);
+	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, nullptr);
 }
 
 void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
@@ -444,7 +444,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 
 	SplitGraph *isg;
-	int tree_id = 0;
+    // tree_id is always >= 0: starting at 0 and being used in an incremental loop
+	size_t tree_id = 0;
 //	cout << "Number of trees: " << size() << endl;
 //	cout << "Number of weight: " << tree_weights.size() << endl;
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
@@ -476,7 +477,7 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			int value;
 			//if ((*itg)->getWeight()==0.0) cout << "zero weight!" << endl;
 			Split *sp = hash_ss.findSplit(*itg, value);
-			if (sp != NULL) {
+			if (sp != nullptr) {
 				//Split *sp = ass_it->first;
 				if (weighting_type != SW_COUNT)
 					sp->setWeight(sp->getWeight() + (*itg)->getWeight() * tree_weights[tree_id]);
@@ -759,7 +760,8 @@ int MTreeSet::categorizeDistinctTrees(IntVector &category) {
 	int ncat = 0;
 	category.resize(size(),-1);
 
-	int id = 0;
+    // NHANLT: id is always >= 0: starting at 0 and being used in an incremental loop
+	size_t id = 0;
 	for (iterator it = begin(); it != end(); it++, id++) {
 		(*it)->root = (*it)->findNodeName(root_name);
 		if (!(*it)->root || !(*it)->root->isLeaf()) 

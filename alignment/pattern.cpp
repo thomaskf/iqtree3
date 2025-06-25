@@ -13,6 +13,8 @@
 #include "alignment/alignment.h"
 #include <vectorclass/vectorclass.h>
 
+using namespace std;
+
 Pattern::Pattern()
         : vector<StateType>()
 {

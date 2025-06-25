@@ -50,7 +50,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segmen
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
     
     // estimate the sequence for the current neighbor
-    for (int i = 0; i < node_seq_chunk.size(); i++)
+    for (size_t i = 0; i < node_seq_chunk.size(); i++)
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
@@ -80,7 +80,7 @@ void AliSimulatorInvar::initVariablesRateHeterogeneity(int sequence_length, defa
 void AliSimulatorInvar::initSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length)
 {
     site_specific_rates.resize(sequence_length, 1);
-    for (int i = 0; i < sequence_length; i++)
+    for (size_t i = 0; i < sequence_length; i++)
     {
         // if this site is invariant -> preserve the dad's state
         if (random_double() <= invariant_proportion)

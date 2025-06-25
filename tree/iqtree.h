@@ -235,7 +235,7 @@ public:
      *    @param[OUT]
      *        tabuBranches branches that are tabu
      */
-    void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = NULL);
+    void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = nullptr);
 
     /**
      * @brief remove all branches corresponding to nnis
@@ -369,7 +369,7 @@ public:
      *      node[IN] for navigation
      * @return A list of branches for evaluating NNIs
      */
-    void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
+    void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
     /**
      *  Return internal branches that appear in \a candidateSplitHash
@@ -385,7 +385,7 @@ public:
      *  @return
      *      A list of branches fufilling the aforementioned conditions.
      */
-    void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
+    void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
 
     /**
@@ -415,7 +415,7 @@ public:
     /**
      * @brief get branches that correspond to the splits in \a nniSplits
      */
-    void getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad = NULL, Node *node = NULL);
+    void getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad = nullptr, Node *node = nullptr);
 
     /**
      *         Do fastNNI using PLL
@@ -439,7 +439,7 @@ public:
                             being considered (used for traverse direction)
 
      */
-    //void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    //void evalNNIs(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
      * @brief Evaluate all NNIs on branch defined by \a branches
@@ -720,7 +720,7 @@ public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
-    virtual void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
+    virtual void computeInitialTree(LikelihoodKernel kernel, istream* in = nullptr);
 
     /**
      *  @brief: optimize model parameters on the current tree
@@ -868,7 +868,7 @@ protected:
     virtual void saveCurrentTree(double logl); // save current tree
 
 
-    void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveNNITrees(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     int duplication_counter;
 
@@ -950,7 +950,7 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void initializeBonus(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void initializeBonus(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
     /**
             raise the bonus points for all branches in the subtree rooted at a node
@@ -976,7 +976,7 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node = NULL, Node *dad = NULL);
+    void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, Node *node = nullptr, Node *dad = nullptr);
 
     void estDeltaMin();
 

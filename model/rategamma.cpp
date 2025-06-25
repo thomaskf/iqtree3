@@ -33,7 +33,7 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
 	gamma_shape = max(tree->params->min_gamma_shape, fabs(shape));
 	fix_gamma_shape = false;
-	rates = NULL;
+	rates = nullptr;
 	if (shape > 0.0) {
 		// true unless -optfromgiven cmd line option
 		fix_gamma_shape = !(Params::getInstance().optimize_from_given_params);
@@ -265,10 +265,10 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patte
 	pattern_cat.resize(npattern);
 
 	double *lh_cat = phylo_tree->_pattern_lh_cat;
-	for (int i = 0; i < npattern; i++) {
+	for (size_t i = 0; i < npattern; i++) {
 		double sum_rate = 0.0, sum_lh = 0.0;
 		int best = 0;
-		for (int c = 0; c < ncategory; c++) {
+		for (size_t c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
 			if (lh_cat[c] > lh_cat[best] || (lh_cat[c] == lh_cat[best] && random_double()<0.5))  // break tie at random

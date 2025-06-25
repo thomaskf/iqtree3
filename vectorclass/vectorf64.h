@@ -56,7 +56,7 @@ public:
     bool operator [] (uint32_t index) const {
         return extract(index);
     }
-    static int size() {
+    static size_t size() {
         return 1;
     }
 };
@@ -154,7 +154,7 @@ public:
         return extract(index);
     }
 
-    static int size() {
+    static size_t size() {
         return 1;
     }
 };
