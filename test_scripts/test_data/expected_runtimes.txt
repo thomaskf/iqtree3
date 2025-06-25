@@ -19,4 +19,4 @@ turtle_aa.nex.constr2.iqtree	Total CPU time used	49.455	100
 turtle_aa.nex.iqtree	Total CPU time used	42.546	100
 turtle_aa.test.iqtree	Total CPU time used	0.974	100
 turtle_aa.wpl.iqtree	Total CPU time used	1.032	100
-turtle_aa.mix.iqtree	Total CPU time used	842.542	100
+turtle_aa.mix.iqtree	Total CPU time used	7.20312	100
