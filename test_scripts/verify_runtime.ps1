@@ -23,7 +23,7 @@ Get-Content $input_file | ForEach-Object {
     $iqtree_file = Join-Path "test_scripts/test_data" $columns[0]
     $field_name = $columns[1]
     $expected_value = [double]$columns[$ExpectedColumn]
-    $threshold = [double]$columns[3]
+    $threshold = [double]$columns[2]
 
     if (-not (Test-Path $iqtree_file)) {
         Write-Host "File not found: ${iqtree_file}"
