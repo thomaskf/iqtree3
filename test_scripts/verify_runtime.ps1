@@ -1,5 +1,5 @@
 param(
-    [int]   $ExpectedColumn = 9,                                # 1-based index of the threshold column
+    [int]   $ExpectedColumn = 8,                                # 1-based index of the threshold column
     [string]$input_file     = "test_scripts/test_data/expected_runtimes.tsv"
 )
 
