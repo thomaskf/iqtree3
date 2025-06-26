@@ -1,5 +1,6 @@
-param (
-    [string]$input_file = "test_scripts/test_data/expected_runtimes.txt"
+param(
+    [int]   $ExpectedColumn = 9,                                # 1-based index of the threshold column
+    [string]$InputFile     = "test_scripts/test_data/expected_runtimes.tsv"
 )
 
 $fail_count = 0
@@ -21,7 +22,7 @@ Get-Content $input_file | ForEach-Object {
 
     $iqtree_file = Join-Path "test_scripts/test_data" $columns[0]
     $field_name = $columns[1]
-    $expected_value = [double]$columns[2]
+    $expected_value = [double]$columns[$ExpectedColumn]
     $threshold = [double]$columns[3]
 
     if (-not (Test-Path $iqtree_file)) {
