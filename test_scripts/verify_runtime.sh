@@ -1,11 +1,15 @@
 #!/bin/bash
+expected_column="$1"
 
 WD="test_scripts/test_data"
-input_file="${WD}/expected_runtimes.txt"
+input_file="${WD}/expected_runtimes.tsv"
+selected_colums_file="${WD}/selected_columns.tsv"
+cut -f1,2,3,"$expected_column" "$input_file" > "${selected_colums_file}"
+
 fail_count=0
 line_num=0
 
-while IFS=$'\t' read -r iqtree_file field_name expected_value threshold || [ -n "$iqtree_file" ]; do
+while IFS=$'\t' read -r iqtree_file field_name threshold expected_value || [ -n "$iqtree_file" ]; do
     ((line_num++))
 
     # Skip header (first line)
@@ -45,7 +49,7 @@ while IFS=$'\t' read -r iqtree_file field_name expected_value threshold || [ -n 
         echo "  Expected: ${expected_value}, Reported: ${report_value}, Threshold: $threshold"
         ((fail_count++))
     fi
-done < "$input_file"
+done < "$selected_colums_file"
 
 echo
 if [ "$fail_count" -eq 0 ]; then
