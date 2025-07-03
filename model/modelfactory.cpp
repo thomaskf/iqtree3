@@ -1566,10 +1566,10 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 
     // PRINT Log-Likelihood
     if (verbose_mode >= VB_MED) {
-        cout << "1. Initial log-likelihood: " << cur_lh << " (took " <<
+        cout << "*1. Initial log-likelihood: " << cur_lh << " (took " <<
         (getRealTime() - optimizeStartTime) << " wall-clock sec)" << endl;
     } else {
-        cout << "1. Initial log-likelihood: " << cur_lh << endl;
+        cout << "*1. Initial log-likelihood: " << cur_lh << endl;
     }
         
     // RESTORE previous precision
@@ -1642,6 +1642,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             break;
         }
 
+        
 #ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
@@ -1654,6 +1655,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             if (fixed_len == BRLEN_SCALE)
                 cout << "Scaled tree length: " << tree->treeLength() << endl;
         }
+        cout << "before checking the condition for new_lh" << endl;
         if (new_lh > cur_lh + logl_epsilon) {
             cur_lh = new_lh;
             if (write_info) {
@@ -1667,11 +1669,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             }
         } else {
             site_rate->classifyRates(new_lh);
-            if (fixed_len == BRLEN_OPTIMIZE)
+            if (fixed_len == BRLEN_OPTIMIZE) {
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-            else if (fixed_len == BRLEN_SCALE) {
+                cout << "after optimizeAllBranches" << endl;
+            } else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+                cout << "after optimizeTreeLengthScaling" << endl;
             }
             break;
         }

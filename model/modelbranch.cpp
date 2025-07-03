@@ -1,12 +1,15 @@
 #include "modelbranch.h"
 
 // default constructor
-ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, false) {
+ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree) {
     logl_epsilon = 0.01;
+    
+    /*
     // by default, the root frequency needs to optimize separately
     opt_root_freq = true;
     is_optimizing_root = false;
     rootfreqs = NULL;
+    */
 }
 
 // destructor

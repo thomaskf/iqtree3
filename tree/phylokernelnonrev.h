@@ -1524,5 +1524,487 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     return tree_lh;
 }
 
+// --------------------------------------------------------------------------
+// The following functions are for branch model
+// --------------------------------------------------------------------------
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchGenericBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+#endif
+
+//    assert(rooted);
+
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+    }
+
+#ifdef KERNEL_FIX_STATES
+    computeTraversalInfo<VectorClass, nstates>(node, dad, false);
+#else
+    computeTraversalInfo<VectorClass>(node, dad, false);
+#endif
+
+    ASSERT(dad_branch->branchmodel_id >= 0);
+    ModelSubst* dad_model = getModel(dad_branch->branchmodel_id);
+    ModelFactory* dad_modelfactory = getModelFactory(dad_branch->branchmodel_id);
+
+    double tree_lh = 0.0;
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
+    size_t nstatesqr = nstates*nstates;
+    size_t ncat = site_rate->getNRate();
+    size_t ncat_mix = (dad_modelfactory->fused_mix_rate) ? ncat : ncat*dad_model->getNMixtures();
+    size_t denom = (dad_modelfactory->fused_mix_rate) ? 1 : ncat;
+
+    size_t block = ncat_mix * nstates;
+    size_t orig_nptn = aln->size();
+    size_t max_orig_nptn = roundUpToMultiple(orig_nptn,VectorClass::size());
+    size_t nptn = max_orig_nptn+dad_modelfactory->unobserved_ptns.size();
+    size_t tip_mem_size = max_orig_nptn * nstates;
+    bool isASC = dad_modelfactory->unobserved_ptns.size() > 0;
+
+    vector<size_t> limits;
+    computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
+
+    double *trans_mat = buffer_partial_lh;
+    double *buffer_partial_lh_ptr = buffer_partial_lh + block*nstates;
+    double *state_freq_fundi = nullptr;
+    if (do_fundi) {
+        state_freq_fundi = aligned_alloc<double>(block);
+    }
+    
+    for (size_t c = 0; c < ncat_mix; c++) {
+        size_t mycat = c%ncat;
+        size_t m = c/denom;
+        double len = site_rate->getRate(mycat) * dad_branch->length;
+        double prop = site_rate->getProp(mycat) * dad_model->getMixtureWeight(m);
+        double *this_trans_mat = &trans_mat[c*nstatesqr];
+        dad_model->computeTransMatrix(len, this_trans_mat, m);
+        for (size_t i = 0; i < nstatesqr; i++) {
+            this_trans_mat[i] *= prop;
+        }
+        if (!rooted) {
+            // if unrooted tree, multiply with frequency
+            double state_freq[nstates];
+            dad_model->getStateFrequency(state_freq, m);
+            for (size_t i = 0; i < nstates; i++) {
+                for (size_t x = 0; x < nstates; x++)
+                    this_trans_mat[x] *= state_freq[i];
+                this_trans_mat += nstates;
+            }
+        }
+
+        if (do_fundi) {
+            double *this_state_freq = &state_freq_fundi[c*nstates];
+            dad_model->getStateFrequency(this_state_freq, m);
+            for (size_t j = 0; j < nstates; j++) {
+                this_state_freq[j] *= prop;
+            }
+        }
+    }
+
+    double all_tree_lh(0.0);
+    double all_prob_const(0.0);
+
+    if (dad->isLeaf()) {
+        // special treatment for TIP-INTERNAL NODE case
+//        double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
+        double *partial_lh_node = buffer_partial_lh_ptr;
+        buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block);
+
+        if (isRootLeaf(dad)) {
+            for (size_t c = 0; c < ncat_mix; c++) {
+                double *lh_node = partial_lh_node + c*nstates;
+                size_t m = c/denom;
+                dad_model->getStateFrequency(lh_node, m);
+                double prop = site_rate->getProp(c%ncat) * dad_model->getMixtureWeight(m);
+                for (size_t i = 0; i < nstates; i++)
+                    lh_node[i] *= prop;
+            }
+        } else {
+//            IntVector states_dad = dad_model->seq_states[dad->id];
+//            states_dad.push_back(aln->STATE_UNKNOWN);
+            // precompute information from one tip
+            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+            for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                double *lh_node = partial_lh_node + state*block;
+                double *lh_tip = tip_partial_lh + state*nstates + s;
+                double *trans_mat_tmp = trans_mat;
+                for (size_t c = 0; c < ncat_mix; c++) {
+                    for (size_t i = 0; i < nstates; i++) {
+                        lh_node[i] = 0.0;
+                        for (size_t x = 0; x < nstates; x++)
+                            lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
+                        trans_mat_tmp += nstates;
+                    }
+                    lh_node += nstates;
+                }
+            }
+        }
+
+        // now do the real computation
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++) {
+            VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            // first compute partial_lh
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
+            }
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat+ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
+
+            double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size() * packet_id;
+            auto dadStateRow  = this->getConvertedSequenceByNumber(dad->id);
+            auto unknown  = aln->STATE_UNKNOWN;
+
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
+                VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                VectorClass *lh_node = (VectorClass*)vec_tip;
+
+                //load tip vector
+                for (size_t i = 0; i < VectorClass::size(); i++) {
+                    size_t dadState;
+                    if (isRootLeaf(dad)) {
+                        dadState = 0;
+                    } else if (ptn+i < orig_nptn) {
+                        if ( dadStateRow != nullptr ) {
+                            dadState = dadStateRow[ptn+i];
+                        } else {
+                            dadState = (aln->at(ptn+i))[dad->id]; //FLATTEN
+                        }
+                    } else if (ptn+i < max_orig_nptn) {
+                        dadState = unknown;
+                    } else if (ptn+i < nptn) {
+                        dadState = dad_modelfactory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
+                    } else {
+                        dadState = unknown;
+                    }
+                    double *lh_tip = partial_lh_node + block * dadState;
+                    double *this_vec_tip = vec_tip+i;
+                    for (size_t c = 0; c < block; c++) {
+                        *this_vec_tip = lh_tip[c];
+                        this_vec_tip += VectorClass::size();
+                    }
+                }
+
+                if (_pattern_lh_cat_state) {
+                    // naively compute pattern_lh per category per state
+                    VectorClass *lh_state = (VectorClass*)(_pattern_lh_cat_state + ptn*block);
+                    for (size_t c = 0; c < ncat_mix; c++) {
+                        for (size_t i=0; i < nstates; i++) {
+                            lh_cat[c] += (lh_state[i] = lh_node[i]*partial_lh_dad[i]);
+                        }
+                        lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_state += nstates;
+                        if (!SAFE_NUMERIC)
+                            lh_ptn += lh_cat[c];
+                    }
+                } else {
+                    for (size_t c = 0; c < ncat_mix; c++) {
+    #ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, lh_cat[c]);
+    #else
+                        dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, lh_cat[c], nstates);
+    #endif
+                        lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        if (!SAFE_NUMERIC)
+                            lh_ptn += lh_cat[c];
+                    }
+                }
+                VectorClass vc_min_scale(0.0);
+                double* vc_min_scale_ptr = (double*)&vc_min_scale;
+                if (SAFE_NUMERIC) {
+                    // numerical scaling per category
+                    UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
+                    UBYTE min_scale;
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        min_scale = scale_dad[0];
+                        for (size_t c = 1; c < ncat_mix; c++) {
+                            min_scale = min(min_scale, scale_dad[c]);
+                        }
+                        vc_min_scale_ptr[i] = min_scale;
+                        
+                        double *this_lh_cat = &_pattern_lh_cat[ptn*ncat_mix + i];
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            // rescale lh_cat if neccessary
+                            if (scale_dad[c] == min_scale+1) {
+                                this_lh_cat[c*VectorClass::size()] *= SCALING_THRESHOLD;
+                            } else if (scale_dad[c] > min_scale+1) {
+                                this_lh_cat[c*VectorClass::size()] = 0.0;
+                            }
+                        }
+                        scale_dad += ncat_mix;
+                    }
+                    // now take the sum of (rescaled) lh_cat
+                    sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
+                    
+                } else {
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i];
+                    }
+                }
+                vc_min_scale *= LOG_SCALING_THRESHOLD;
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = lh_ptn + VectorClass().load_a(&ptn_invar[ptn]);
+
+//                lh_ptn = abs(lh_ptn);
+//                assert(horizontal_and(lh_ptn > 0));
+                if (ptn < orig_nptn) {
+                    lh_ptn = log(lh_ptn) + vc_min_scale;
+                    lh_ptn.store_a(&_pattern_lh[ptn]);
+                    vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
+                } else {
+                    // ascertainment bias correction
+                    if (ptn+VectorClass::size() > nptn) {
+                        // cutoff the last entries if going beyond
+                        lh_ptn.cutoff(nptn-ptn);
+                    }
+                    // bugfix 2016-01-21, prob_const can be rescaled
+                    if (horizontal_or(vc_min_scale != 0.0)) {
+                        // some entries are rescaled
+                        double *lh_ptn_dbl = (double*)&lh_ptn;
+                        for (size_t i = 0; i < VectorClass::size(); i++) {
+                            if (vc_min_scale_ptr[i] != 0.0) {
+                                lh_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            }
+                        }
+                    }
+                    vc_prob_const += lh_ptn;
+                }
+            } // FOR ptn
+            {
+                //These additions need not be in a critical section. The
+                //reduction(+:all_tree_lh,all_prob_const) clause in the
+                //omp parallel for takes care of that.
+                all_tree_lh += horizontal_add(vc_tree_lh);
+                if (isASC)
+                    all_prob_const += horizontal_add(vc_prob_const);
+            }
+        } // FOR thread_id
+    } else {
+
+        // both dad and node are internal nodes
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++) {
+            VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            // first compute partial_lh
+            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
+                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
+
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat+ptn_lower*ncat_mix, 0, (ptn_upper-ptn_lower)*ncat_mix*sizeof(double));
+
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
+                VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+                double *trans_mat_tmp = trans_mat;
+                if (_pattern_lh_cat_state) {
+                    VectorClass *lh_state = (VectorClass*)(_pattern_lh_cat_state + ptn*block);
+                    for (size_t c = 0; c < ncat_mix; c++) {
+                        for (size_t i = 0; i < nstates; i++) {
+    #ifdef KERNEL_FIX_STATES
+                            dotProductVec<VectorClass, double, nstates, FMA>(trans_mat_tmp, partial_lh_node, lh_state[i]);
+    #else
+                            dotProductVec<VectorClass, double, FMA>(trans_mat_tmp, partial_lh_node, lh_state[i], nstates);
+    #endif
+                            lh_cat[c] += (lh_state[i] *= partial_lh_dad[i]);
+                            trans_mat_tmp += nstates;
+                        }
+                        if (!SAFE_NUMERIC) {
+                            lh_ptn += lh_cat[c];
+                        }
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_state += nstates;
+                    }
+                } else {
+                    for (size_t c = 0; c < ncat_mix; c++) {
+                        for (size_t i = 0; i < nstates; i++) {
+                            VectorClass lh_state;
+    #ifdef KERNEL_FIX_STATES
+                            dotProductVec<VectorClass, double, nstates, FMA>(trans_mat_tmp, partial_lh_node, lh_state);
+    #else
+                            dotProductVec<VectorClass, double, FMA>(trans_mat_tmp, partial_lh_node, lh_state, nstates);
+    #endif
+                            lh_cat[c] = mul_add(partial_lh_dad[i], lh_state, lh_cat[c]);
+                            trans_mat_tmp += nstates;
+                        }
+                        if (!SAFE_NUMERIC)
+                            lh_ptn += lh_cat[c];
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                    }
+                }
+                
+                if (do_fundi) {
+                    // FunDi likelihood (Gaston, Susko, Roger 2011)
+                    VectorClass total_dad(0.0);
+                    VectorClass total_node(0.0);
+                    partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                    partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+                    double *state_freq = state_freq_fundi;
+                    for (size_t c = 0; c < ncat_mix; c++) {
+                        VectorClass lh_state_node;
+                        VectorClass lh_state_dad;
+    #ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, double, nstates, FMA>(state_freq, partial_lh_node, lh_state_node);
+                        dotProductVec<VectorClass, double, nstates, FMA>(state_freq, partial_lh_dad, lh_state_dad);
+    #else
+                        dotProductVec<VectorClass, double, FMA>(state_freq, partial_lh_node, lh_state_node, nstates);
+                        dotProductVec<VectorClass, double, FMA>(state_freq, partial_lh_dad, lh_state_dad, nstates);
+    #endif
+                        total_node += lh_state_node;
+                        total_dad += lh_state_dad;
+                        state_freq += nstates;
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                    }
+                    double rho = params->alisim_fundi_proportion;
+                    lh_ptn = (1.0-rho)*lh_ptn + (rho)*total_node*total_dad;
+                }
+                VectorClass vc_min_scale(0.0);
+                double* vc_min_scale_ptr = (double*)&vc_min_scale;
+                if (SAFE_NUMERIC) {
+                    UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
+                    UBYTE *scale_node = node_branch->scale_num + ptn*ncat_mix;
+                    UBYTE sum_scale[ncat_mix];
+                    UBYTE min_scale;
+                    
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
+                        for (size_t c = 1; c < ncat_mix; c++) {
+                            sum_scale[c] = scale_dad[c] + scale_node[c];
+                            min_scale = min(min_scale, sum_scale[c]);
+                        }
+                        vc_min_scale_ptr[i] = min_scale;
+                        double *this_lh_cat = &_pattern_lh_cat[ptn*ncat_mix + i];
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            if (sum_scale[c] == min_scale+1) {
+                                this_lh_cat[c*VectorClass::size()] *= SCALING_THRESHOLD;
+                            } else if (sum_scale[c] > min_scale+1) {
+                                // reset if category is scaled a lot
+                                this_lh_cat[c*VectorClass::size()] = 0.0;
+                            }
+                        }
+                        scale_dad += ncat_mix;
+                        scale_node += ncat_mix;
+                    }
+                    sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
+                } else {
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
+                    }
+                }
+                vc_min_scale *= LOG_SCALING_THRESHOLD;
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = lh_ptn + VectorClass().load_a(&ptn_invar[ptn]);
+                if (ptn < orig_nptn) {
+                    lh_ptn = log(lh_ptn) + vc_min_scale;
+                    lh_ptn.store_a(&_pattern_lh[ptn]);
+                    vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
+                } else {
+                    // ascertainment bias correction
+                    if (ptn+VectorClass::size() > nptn) {
+                        // cutoff the last entries if going beyond
+                        lh_ptn.cutoff(nptn-ptn);
+                    }
+                    // bugfix 2016-01-21, prob_const can be rescaled
+                    if (horizontal_or(vc_min_scale != 0.0)) {
+                        // some entries are rescaled
+                        double *lh_ptn_dbl = (double*)&lh_ptn;
+                        for (size_t i = 0; i < VectorClass::size(); i++) {
+                            if (vc_min_scale_ptr[i] != 0.0) {
+                                lh_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            }
+                        }
+                    }
+                    vc_prob_const += lh_ptn;
+                }
+            } // FOR ptn
+            {
+                //These additions need not be in a critical section. The
+                //reduction(+:all_tree_lh,all_prob_const) clause in the
+                //omp parallel for takes care of that.
+                all_tree_lh += horizontal_add(vc_tree_lh);
+                if (isASC)
+                    all_prob_const += horizontal_add(vc_prob_const);
+            }
+        } // FOR thread_id
+    }
+    
+    tree_lh = all_tree_lh;
+    if (!std::isfinite(tree_lh)) {
+        outWarning("Numerical underflow for non-rev lh-branch " + aln->name);
+        if (verbose_mode >= VB_MED) {
+            getRate()->writeInfo(cout);
+            getModel()->writeInfo(cout);
+        }
+    }
+
+    // arbitrarily fix tree_lh if underflown for some sites
+    if (!std::isfinite(tree_lh)) {
+        tree_lh = 0.0;
+        for (size_t ptn = 0; ptn < orig_nptn; ptn++) {
+            if (!std::isfinite(_pattern_lh[ptn])) {
+                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            }
+            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+        }
+    }
+
+    if (isASC) {
+        // ascertainment bias correction
+        if (all_prob_const >= 1.0 || all_prob_const < 0.0) {
+            printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
+            dad_model->writeInfo(cout);
+        }
+        ASSERT(all_prob_const < 1.0 && all_prob_const >= 0.0);
+
+        all_prob_const = log(1.0 - all_prob_const);
+        for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+            (VectorClass().load_a(&_pattern_lh[ptn])-all_prob_const).store_a(&_pattern_lh[ptn]);
+        tree_lh -= aln->getNSite()*all_prob_const;
+        ASSERT(std::isfinite(tree_lh));
+    }
+
+    if (do_fundi) {
+        aligned_free(state_freq_fundi);
+    }
+    
+    return tree_lh;
+}
+
+    
+    
 
 #endif

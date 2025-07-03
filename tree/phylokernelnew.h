@@ -4730,6 +4730,7 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
     size_t nstates = aln->num_states;
 #endif
     
+    ASSERT(dad_branch->branchmodel_id >= 0);
     ModelSubst* dad_model = getModel(dad_branch->branchmodel_id);
     ModelFactory* dad_modelfactory = getModelFactory(dad_branch->branchmodel_id);
     
