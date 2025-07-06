@@ -38,11 +38,9 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     bool user_input_param = false;
     
     if (vec.size() == 0) {
-        string kappa_str = "";
-        if (model_name == "GY0K") {
-            /* setting fix_kappa for class 2 and 3 for GY0K model */
-            kappa_str = ",1.0";
-        } else {
+        /* setting fix_kappa for class 2 and 3 for GY0K model */
+        string kappa_str = ",1.0";
+        if (model_name != "GY0K") {
             // kappa is not fixed, thus cannot use EM algorithm
             if (Params::getInstance().optimize_alg_qmix == "EM") {
                 outError("EM algorithm cannot be used for the codon mixture model with unfixed kappa value.");
