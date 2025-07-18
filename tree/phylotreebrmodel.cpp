@@ -67,7 +67,6 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     size_t p2 = model_name.find_last_of("}");
     ASSERT(p1 != string::npos && p2 != string::npos && p2 > p1 + 3);
     model_name = model_name.substr(p1 + 3, p2 - p1 - 3);
-    cout << "model_name = " << model_name << endl;
     size_t fr_pos = 0;
     size_t p_comma = model_name.find(",", fr_pos);
     while (p_comma != string::npos) {
@@ -76,12 +75,6 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         p_comma = model_name.find(",", fr_pos);
     }
     modelparams.push_back(model_name.substr(fr_pos));
-    
-    // show the content of modelparams
-    cout << "content of modelparams:" << endl;
-    for (size_t i = 0; i < modelparams.size(); i++) {
-        cout << modelparams[i] << endl;
-    }
     
     ASSERT(modelparams.size() > 0);
     
