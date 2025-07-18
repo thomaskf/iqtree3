@@ -717,7 +717,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
         }
     } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
         iqtree = new PhyloTreeMixlen(aln, 0);
-    } else if (params.isBranchModel) {
+    } else if (params.model_name.find("BR{") != string::npos) {
         iqtree = new PhyloTreeBranchModel(aln);
     } else {
         iqtree = new IQTree(aln);
@@ -1859,23 +1859,26 @@ string CandidateModel::evaluate(Params &params,
     IQTree *iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
-        if (params.partition_type == BRLEN_OPTIMIZE)
+        if (params.partition_type == BRLEN_OPTIMIZE) {
             iqtree = new PhyloSuperTree(saln);
-        else
+        } else {
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
+        }
         StrVector subst_names;
         StrVector rate_names;
         convert_string_vec(subst_name.c_str(), subst_names);
         convert_string_vec(rate_name.c_str(), rate_names);
         ASSERT(subst_names.size() == rate_names.size());
-        for (int part = 0; part != subst_names.size(); part++)
+        for (int part = 0; part != subst_names.size(); part++) {
             saln->partitions[part]->model_name = subst_names[part]+rate_names[part];
-    } else if (posRateHeterotachy(getName()) != string::npos)
+        }
+    } else if (posRateHeterotachy(getName()) != string::npos) {
         iqtree = new PhyloTreeMixlen(in_aln, 0);
-    else if (params.isBranchModel)
+    } else if (params.model_name.find("BR{") != string::npos) {
         iqtree = new PhyloTreeBranchModel(in_aln);
-    else
+    } else {
         iqtree = new IQTree(in_aln);
+    }
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
@@ -6675,8 +6678,6 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
         new_iqtree = new PhyloTreeMixlen(iqtree->aln, params.num_mixlen);
     } else if (pos != string::npos) {
         new_iqtree = new PhyloTreeMixlen(iqtree->aln, 0);
-    } else if (params.isBranchModel) {
-        new_iqtree = new PhyloTreeBranchModel(iqtree->aln);
     } else {
         new_iqtree = new IQTree(iqtree->aln);
     }

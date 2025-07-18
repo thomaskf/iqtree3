@@ -107,6 +107,32 @@ int ModelBranch::getNDim() {
     return totndim;
 }
 
+string ModelBranch::getName() {
+    if (name != "") return name;
+    string retname = "BR";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getName();
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
+}
+
+string ModelBranch::getNameParams(bool show_fixed_params) {
+    // if (full_name != "")
+    //    return full_name;
+    string retname = "BR";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getNameParams(show_fixed_params);
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
+}
+
+
 /*
  * initialization of root frequencies
  */

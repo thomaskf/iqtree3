@@ -3987,7 +3987,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
             } else if (pos != string::npos) {
                 iqtree = new PhyloTreeMixlen(alignment, 0);
-            } else if (params.isBranchModel) {
+            } else if (params.model_name.find("BR{") != string::npos) {
                 iqtree = new PhyloTreeBranchModel(alignment);
             } else
                 iqtree = new IQTree(alignment);
@@ -4721,7 +4721,7 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, 0);
         } else if (isTreeMix) {
             tree = new IQTreeMixHmm(params, alignment);
-        } else if (params.isBranchModel) {
+        } else if (params.model_name.find("BR{") != string::npos) {
             tree = new PhyloTreeBranchModel(alignment);
         } else
             tree = new IQTree(alignment);

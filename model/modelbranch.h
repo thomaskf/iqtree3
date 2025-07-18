@@ -41,14 +41,14 @@ public:
     virtual int getNDim();
     
     /**
-     * @return HMM model name
+     * @return model name
      */
-    virtual string getName() { return "BrModel"; }
+    virtual string getName();
     
     /**
-     * @return HMM model full name
+     * @return model name and parameters
      */
-    virtual string getFullName() { return "Branch Model"; }
+    virtual string getNameParams(bool show_fixed_params);
 
     /*
      * initialization of root frequencies

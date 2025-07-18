@@ -61,35 +61,52 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     cout << endl;
     cout << "Number of branch models: " << nBranchModels << endl;
 
-    // dummy model
-    ModelFactory *dm = new ModelFactory(params, model_name, this, models_block);
+    // optain the models
+    vector<string> modelparams;
+    size_t p1 = model_name.find("BR{");
+    size_t p2 = model_name.find_last_of("}");
+    ASSERT(p1 != string::npos && p2 != string::npos && p2 > p1 + 3);
+    model_name = model_name.substr(p1 + 3, p2 - p1 - 3);
+    cout << "model_name = " << model_name << endl;
+    size_t fr_pos = 0;
+    size_t p_comma = model_name.find(",", fr_pos);
+    while (p_comma != string::npos) {
+        modelparams.push_back(model_name.substr(fr_pos, p_comma - fr_pos));
+        fr_pos = p_comma + 1;
+        p_comma = model_name.find(",", fr_pos);
+    }
+    modelparams.push_back(model_name.substr(fr_pos));
+    
+    // show the content of modelparams
+    cout << "content of modelparams:" << endl;
+    for (size_t i = 0; i < modelparams.size(); i++) {
+        cout << modelparams[i] << endl;
+    }
+    
+    ASSERT(modelparams.size() > 0);
+    
+    // dummy model with shared site rate
+    ModelFactory *dm = new ModelFactory(params, modelparams[0], this, models_block);
     orig_sub_model = dm->model;
     dm->model = model_branch;
+    dm->site_rate->setTree(this);
     setModelFactory(dm);
     setModel(model_branch);
     setRate(dm->site_rate);
 
-    // base model
-    ModelFactory *mf = new ModelFactory(params, model_name, this, models_block);
-    model_facts.push_back(mf);
-    model_branch->push_back((ModelMarkov*)mf->model);
-    orig_site_rate_models.push_back(mf->site_rate);
-    // replace the site rate by the site rate which is shared among all the model factories
-    mf->site_rate = getRate();
-    cout << "Base model: " << model_name << endl;
-    
-    // obtain the user input model parameters if exists
-    vector<string> modelparams;
-    getUserInputModelParams(modelparams);
-    
-    for (int i = 1; i < nBranchModels; i++) {
+    // load the models
+    for (int i = 0; i < nBranchModels; i++) {
         string curr_model = model_name;
         if (i < modelparams.size() && modelparams[i] != "") {
             // model with user input parameters
             curr_model = modelparams[i];
         }
-        cout << "Model " << i << "   : " << curr_model << endl;
-        mf = new ModelFactory(params, curr_model, this, models_block);
+        if (i == 0) {
+            cout << "Base model: " << curr_model << endl;
+        } else {
+            cout << "Model " << i << "   : " << curr_model << endl;
+        }
+        ModelFactory *mf = new ModelFactory(params, curr_model, this, models_block);
         model_facts.push_back(mf);
         model_branch->push_back((ModelMarkov*)mf->model);
         orig_site_rate_models.push_back(mf->site_rate);
@@ -341,8 +358,8 @@ double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log
 
 void PhyloTreeBranchModel::computePtnInvar() {
     // store the current pointers of model and model factory
-    ModelSubst* modelo = model;
-    ModelFactory* modelfacto = model_factory;
+    ModelSubst* modelorig = model;
+    ModelFactory* modelfactorig = model_factory;
     // set all pointers to the base model and model factory
     model = br_models->at(0);
     model_factory = model_facts[0];
@@ -350,8 +367,8 @@ void PhyloTreeBranchModel::computePtnInvar() {
     // TODO: may need to update in the future
     PhyloTree::computePtnInvar();
     // restore the original values for the pointers
-    model = modelo = model;
-    model_factory = modelfacto;
+    model = modelorig;
+    model_factory = modelfactorig;
 }
 
 string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl_epsilon) {
