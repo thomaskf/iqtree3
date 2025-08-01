@@ -2671,6 +2671,10 @@ bool ModelMixture::rescale_codon_mix() {
             double sum_freqs = 0.0;
             for (i = 0; i < nstate; i++)
                 sum_freqs += curr_freqs[i];
+
+            // need to recompute the rate according to the omega and kappa value
+            ((ModelCodon*)at(k))->computeCodonRateMatrix();
+
             for (i = 0; i < nstate; i++) {
                 double* curr_rates = at(k)->rates + i * nstate;
                 double row_sum = 0.0;
