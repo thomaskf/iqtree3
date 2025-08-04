@@ -785,7 +785,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
  @param iqtree phylogenetic tree
  @param model_info (IN/OUT) information for all models considered
  */
-void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
+void runMixtureFinder(Params &params, IQTree* iqtree, ModelCheckpoint &model_info);
 
 /**
  perform ModelFinderNN to find the best-fit model (uses neural network for model inference)
