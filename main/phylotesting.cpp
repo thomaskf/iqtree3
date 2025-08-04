@@ -6704,7 +6704,7 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
 void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
 
-    IQTree* new_iqtree;
+    IQTree* orig_iqtree = NULL;
     string model_str;
     Alignment* aln;
     double best_loglike;
@@ -6725,35 +6725,38 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
         if (saln->partitions.size() == 1) {
             aln = saln->partitions[0];
             model_info.startStruct(aln->name);
-        } else
+        } else {
             outError("Error! The option -m '" + params.model_name + "' cannot work on data set with more than one partition");
-    } else {
-        aln = iqtree->aln;
+        }
+        // save the original IQTREE object, and
+        // create a new IQTREE object containing only one partition
+        orig_iqtree = iqtree;
+
+        // create a new IQTree object for this mixture model
+        // allocate heterotachy tree if neccessary
+        int pos = posRateHeterotachy(aln->model_name);
+        if (params.num_mixlen > 1) {
+            iqtree = new PhyloTreeMixlen(aln, params.num_mixlen);
+        } else if (pos != string::npos) {
+            iqtree = new PhyloTreeMixlen(aln, 0);
+        } else {
+            iqtree = new IQTree(aln);
+        }
+        iqtree->setCheckpoint(orig_iqtree->getCheckpoint());
+        if (!orig_iqtree->constraintTree.empty())
+            iqtree->constraintTree.readConstraint(orig_iqtree->constraintTree);
+        iqtree->removed_seqs = orig_iqtree->removed_seqs;
+        iqtree->twin_seqs = orig_iqtree->twin_seqs;
+        if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
+            /* Initialized all data structure for PLL*/
+            iqtree->initializePLL(params);
+        }
+        iqtree->setParams(&params);
     }
     
     if (aln->seq_type != SEQ_DNA)
         outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
 
-    // create a new IQTree object for this mixture model
-    // allocate heterotachy tree if neccessary
-    int pos = posRateHeterotachy(aln->model_name);
-    if (params.num_mixlen > 1) {
-        new_iqtree = new PhyloTreeMixlen(aln, params.num_mixlen);
-    } else if (pos != string::npos) {
-        new_iqtree = new PhyloTreeMixlen(aln, 0);
-    } else {
-        new_iqtree = new IQTree(aln);
-    }
-    new_iqtree->setCheckpoint(iqtree->getCheckpoint());
-    if (!iqtree->constraintTree.empty())
-        new_iqtree->constraintTree.readConstraint(iqtree->constraintTree);
-    new_iqtree->removed_seqs = iqtree->removed_seqs;
-    new_iqtree->twin_seqs = iqtree->twin_seqs;
-    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
-        /* Initialized all data structure for PLL*/
-        new_iqtree->initializePLL(params);
-    }
-    new_iqtree->setParams(&params);
 
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|                Running MixtureFinder                             |" << endl;
@@ -6768,7 +6771,7 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.model_name = "";
 
-    best_loglike = runMixtureFinderMain(params, new_iqtree, model_info, model_str);
+    best_loglike = runMixtureFinderMain(params, iqtree, model_info, model_str);
     
     // transfer models parameters
     Checkpoint *iqtree_chkpt = iqtree->getCheckpoint();
@@ -6802,29 +6805,26 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
     cout << "  Best-fit Q-Mixture model: " << model_str << endl;
     cout << "-------------------------------------------------------" << endl;
 
-    iqtree->aln->model_name = model_str;
-    if (!iqtree->isSuperTree()) {
-        // alignment with no partition
-        iqtree->readTreeString(new_iqtree->getTreeString());
-    } else {
+    if (iqtree->isSuperTree()) {
         // partitioned alignment
-        ((PhyloSuperTree*)iqtree)->at(0)->aln->model_name = model_str;
-        // ((PhyloSuperTree*)iqtree)->at(0)->readTreeString(new_iqtree->getTreeString());
+        orig_iqtree->aln->model_name = model_str;
+        ((PhyloSuperTree*)orig_iqtree)->at(0)->aln->model_name = model_str;
         if (params.partition_type == BRLEN_SCALE || params.partition_type == BRLEN_FIX)
-            ((PhyloSuperTree*)iqtree)->readTreeString(new_iqtree->getTreeString());
+            ((PhyloSuperTree*)orig_iqtree)->readTreeString(iqtree->getTreeString());
         else
-            ((PhyloSuperTreeUnlinked*)iqtree)->readTreeString(new_iqtree->getTreeString()+new_iqtree->getTreeString());
+            ((PhyloSuperTreeUnlinked*)orig_iqtree)->readTreeString(iqtree->getTreeString()+iqtree->getTreeString());
         model_info.endStruct();
         
-        ((SuperAlignment*)iqtree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
-        ((SuperAlignment*)iqtree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+        ((SuperAlignment*)orig_iqtree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+        ((SuperAlignment*)orig_iqtree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+        
+        delete(iqtree);
+        iqtree = orig_iqtree;
     }
     
     params.model_name = orig_model_name;
     iqtree->saveCheckpoint();
     
-    delete(new_iqtree);
-
     if (test_only) {
         params.min_iterations = 0;
         params.dating_mf = true;
