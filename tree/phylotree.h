@@ -935,6 +935,11 @@ public:
     void computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     void computeNonrevPartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
+    
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
+    void computeNonrevPartialLikelihoodBrModelGenericSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
+    void computeNonrevPartialLikelihoodBrModelSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);

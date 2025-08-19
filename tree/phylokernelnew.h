@@ -3695,6 +3695,8 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
 
     size_t c, i, x;
     size_t ncat = site_rate->getNRate();
+    // does not support mixture model for branch model
+    ASSERT(model->getNMixtures() == 1);
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t block = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
@@ -3955,6 +3957,8 @@ void PhyloTree::computePartialLikelihoodBrModelGenericSIMD(TraversalInfo &info
     }
     
     size_t ncat = site_rate->getNRate();
+    // for branch model, cannot support mixture model
+    ASSERT(model->getNMixtures() == 1);
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t mix_addr_nstates_malign[ncat_mix], mix_addr_malign[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;

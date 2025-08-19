@@ -58,7 +58,7 @@ public:
     /**
         @return TRUE if model is time-reversible, FALSE otherwise
     */
-    virtual bool isReversible() { return true;  }
+    virtual bool isReversible() { return false;  }
 
     /**
      * optimization of root frequencies
