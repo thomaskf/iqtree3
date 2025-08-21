@@ -2322,10 +2322,6 @@ void PhyloTree::computeNonrevPartialLikelihoodBrModelGenericSIMD(TraversalInfo &
                         leftState  = unknown;
                         rightState = unknown;
                     }
-                    if (leftState > 3 || leftState < 0)
-                        cout << "*** leftstate = " << leftState << endl;
-                    if (rightState > 3 || rightState < 0)
-                        cout << "*** rightstate = " << rightState << endl;
                     double *tip_left   = partial_lh_left  + block * leftState;
                     double *tip_right  = partial_lh_right + block * rightState;
                     double *this_vec_left = vec_left+x;
