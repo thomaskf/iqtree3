@@ -1533,7 +1533,7 @@ template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const b
 double PhyloTree::computeNonrevLikelihoodBranchBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
-double PhyloTree::computeNonrevLikelihoodBranchGenericBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
 #endif
 
 //    assert(rooted);

@@ -1004,7 +1004,7 @@ public:
     double computeNonrevLikelihoodBranchBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
     
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    double computeNonrevLikelihoodBranchGenericBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    double computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
