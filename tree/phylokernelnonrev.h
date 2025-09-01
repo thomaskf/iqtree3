@@ -2565,6 +2565,486 @@ void PhyloTree::computeNonrevPartialLikelihoodBrModelGenericSIMD(TraversalInfo &
         aligned_free(echildren);
     }
 }
-    
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+void PhyloTree::computeNonrevLikelihoodDervBrModelSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+void PhyloTree::computeNonrevLikelihoodDervBrModelGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
+#endif
+
+//    assert(rooted);
+
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh) {
+        initializeAllPartialLh();
+    }
+    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+    }
+
+#ifdef KERNEL_FIX_STATES
+    computeTraversalInfo<VectorClass, nstates>(node, dad, false);
+#else
+    computeTraversalInfo<VectorClass>(node, dad, false);
+#endif
+
+    ASSERT(dad_branch->branchmodel_id >= 0);
+    ModelSubst* dad_model = getModel(dad_branch->branchmodel_id);
+    ModelFactory* dad_modelfactory = getModelFactory(dad_branch->branchmodel_id);
+
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
+    size_t  nstatesqr = nstates*nstates;
+    size_t  ncat = site_rate->getNRate();
+    size_t  ncat_mix = (dad_modelfactory->fused_mix_rate) ? ncat : ncat*dad_model->getNMixtures();
+    size_t  denom = (dad_modelfactory->fused_mix_rate) ? 1 : ncat;
+    size_t  block = ncat_mix * nstates;
+    size_t  orig_nptn = aln->size();
+    size_t  max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
+    size_t  nptn = max_orig_nptn+dad_modelfactory->unobserved_ptns.size();
+    bool    isASC = dad_modelfactory->unobserved_ptns.size() > 0;
+    double* trans_mat = buffer_partial_lh;
+    double* trans_derv1 = buffer_partial_lh + block*nstates;
+    double* trans_derv2 = trans_derv1 + block*nstates;
+    double* buffer_partial_lh_ptr = buffer_partial_lh + get_safe_upper_limit(3*block*nstates);
+
+    for (size_t c = 0; c < ncat_mix; c++) {
+        size_t  mycat = c%ncat;
+        size_t  m = c/denom;
+        double  cat_rate = site_rate->getRate(mycat);
+        double  len = cat_rate * dad_branch->length;
+        double  prop = site_rate->getProp(mycat) * dad_model->getMixtureWeight(m);
+        double* this_trans_mat = &trans_mat[c*nstatesqr];
+        double* this_trans_derv1 = &trans_derv1[c*nstatesqr];
+        double* this_trans_derv2 = &trans_derv2[c*nstatesqr];
+        dad_model->computeTransDerv(len, this_trans_mat, this_trans_derv1, this_trans_derv2, m);
+        double  prop_rate = prop * cat_rate;
+        double  prop_rate_2 = prop_rate * cat_rate;
+        for (size_t i = 0; i < nstatesqr; i++) {
+            this_trans_mat[i] *= prop;
+            this_trans_derv1[i] *= prop_rate;
+            this_trans_derv2[i] *= prop_rate_2;
+        }
+        if (!rooted) {
+            // for unrooted tree, multiply with state_freq
+            double state_freq[nstates];
+            dad_model->getStateFrequency(state_freq, m);
+            for (size_t i = 0; i < nstates; i++) {
+                for (size_t x = 0; x < nstates; x++) {
+                    this_trans_mat[x] *= state_freq[i];
+                    this_trans_derv1[x] *= state_freq[i];
+                    this_trans_derv2[x] *= state_freq[i];
+                }
+                this_trans_mat += nstates;
+                this_trans_derv1 += nstates;
+                this_trans_derv2 += nstates;
+            }
+        }
+    }
+
+    double all_df(0.0), all_ddf(0.0);
+    double all_prob_const(0.0), all_df_const(0.0), all_ddf_const(0.0);
+    vector<size_t> limits;
+    computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
+
+    if (dad->isLeaf()) {
+         // make sure that we do not estimate the virtual branch length from the root
+        // 2019-05-06: assertion removed as it can happen for partition model with missing data
+        //ASSERT(!isRootLeaf(dad));
+        // special treatment for TIP-INTERNAL NODE case
+//        double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
+        double *partial_lh_node = buffer_partial_lh_ptr;
+        double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block;
+        double *partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block;
+        buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*3);
+        if (isRootLeaf(dad)) {
+            for (size_t c = 0; c < ncat_mix; c++) {
+                double *lh_node = partial_lh_node + c*nstates;
+                double *lh_derv1 = partial_lh_derv1 + c*nstates;
+                double *lh_derv2 = partial_lh_derv2 + c*nstates;
+                size_t m = c/denom;
+                dad_model->getStateFrequency(lh_node, m);
+                double prop = site_rate->getProp(c%ncat) * dad_model->getMixtureWeight(m);
+                for (size_t i = 0; i < nstates; i++) {
+                    lh_node[i] *= prop;
+                    lh_derv1[i] *= prop;
+                    lh_derv2[i] *= prop;
+                }
+            }
+        } else {
+//            IntVector states_dad = dad_model->seq_states[dad->id];
+//            states_dad.push_back(aln->STATE_UNKNOWN);
+            // precompute information from one tip
+            for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
+                double *lh_node  = partial_lh_node +state*block;
+                double *lh_derv1 = partial_lh_derv1 +state*block;
+                double *lh_derv2 = partial_lh_derv2 +state*block;
+                double *lh_tip          = tip_partial_lh + state*nstates;
+                double *trans_mat_tmp   = trans_mat;
+                double *trans_derv1_tmp = trans_derv1;
+                double *trans_derv2_tmp = trans_derv2;
+                for (size_t c = 0; c < ncat_mix; c++) {
+                    for (size_t i = 0; i < nstates; i++) {
+                        lh_node[i] = 0.0;
+                        lh_derv1[i] = 0.0;
+                        lh_derv2[i] = 0.0;
+                        for (size_t x = 0; x < nstates; x++) {
+                            lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
+                            lh_derv1[i] += trans_derv1_tmp[x] * lh_tip[x];
+                            lh_derv2[i] += trans_derv2_tmp[x] * lh_tip[x];
+                        }
+                        trans_mat_tmp += nstates;
+                        trans_derv1_tmp += nstates;
+                        trans_derv2_tmp += nstates;
+                    }
+                    lh_node += nstates;
+                    lh_derv1 += nstates;
+                    lh_derv2 += nstates;
+                }
+            }
+        }
+        
+        // now do the real computation
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++) {
+            VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            // first compute partial_lh
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
+            }
+            double *vec_tip = buffer_partial_lh_ptr + block*3*VectorClass::size() * packet_id;
+            auto dadStateRow  = this->getConvertedSequenceByNumber(dad->id);
+            auto unknown  = aln->STATE_UNKNOWN;
+
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                VectorClass lh_ptn, df_ptn, ddf_ptn;
+                VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                // compute scaling factor per pattern
+                UBYTE min_scale_vec[VectorClass::size()];
+                if (SAFE_NUMERIC) {
+                    // numerical scaling per category
+                    UBYTE *scale_dad;
+                    UBYTE min_scale;
+                    double *partial_lh_scaled = theta_all + ptn*block;
+                    memcpy(partial_lh_scaled, partial_lh_dad, sizeof(VectorClass)*block);
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
+                        min_scale = scale_dad[0];
+                        for (size_t c = 1; c < ncat_mix; c++) {
+                            min_scale = min(min_scale, scale_dad[c]);
+                        }
+                        min_scale_vec[i] = min_scale;
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            if (scale_dad[c] == min_scale+1) {
+                                double *this_lh = partial_lh_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                                }
+                            } else if (scale_dad[c] > min_scale+1) {
+                                double *this_lh = partial_lh_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] = 0.0;
+                                }
+                            }
+                        }
+                    }
+                    partial_lh_dad = (VectorClass*)partial_lh_scaled;
+                } else {
+                    // normal scaling
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        min_scale_vec[i] = dad_branch->scale_num[ptn+i];
+                    }
+                }
+
+                //load tip vector
+                for (size_t i = 0; i < VectorClass::size(); i++) {
+                    size_t state_dad;
+                    if (isRootLeaf(dad)) {
+                        state_dad = 0;
+                    } else if (ptn+i < orig_nptn) {
+                        if ( dadStateRow != nullptr ) {
+                            state_dad = dadStateRow[ptn+i];
+                        } else {
+                            state_dad = (aln->at(ptn+i))[dad->id];
+                        }
+                    } else if (ptn+i < max_orig_nptn) {
+                        state_dad = unknown;
+                    } else if (ptn+i < nptn) {
+                        state_dad = dad_modelfactory->unobserved_ptns[ptn+i-max_orig_nptn][dad->id];
+                    } else {
+                        state_dad = unknown;
+                    }
+                    auto   step_dad  = state_dad * block;
+                    double *lh_tip   = partial_lh_node  + step_dad;
+                    double *lh_derv1 = partial_lh_derv1 + step_dad;
+                    double *lh_derv2 = partial_lh_derv2 + step_dad;
+
+                    double *this_vec_tip = vec_tip+i;
+                    double *this_derv1 = this_vec_tip + block*VectorClass::size();
+                    double *this_derv2 = this_derv1 + block*VectorClass::size();
+                    for (size_t c = 0; c < block; c++) {
+                        *this_vec_tip = lh_tip[c];
+                        *this_derv1 = lh_derv1[c];
+                        *this_derv2 = lh_derv2[c];
+                        this_vec_tip += VectorClass::size();
+                        this_derv1 += VectorClass::size();
+                        this_derv2 += VectorClass::size();
+                    }
+                }
+                VectorClass *lh_node = (VectorClass*)vec_tip;
+                VectorClass *lh_derv1 = (VectorClass*)vec_tip + block;
+                VectorClass *lh_derv2 = (VectorClass*)lh_derv1 + block;
+                
+#ifdef KERNEL_FIX_STATES
+                dotProductTriple<VectorClass, VectorClass, nstates, FMA, false>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block);
+#else
+                dotProductTriple<VectorClass, VectorClass, FMA, false>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+#endif
+                lh_ptn = (lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+                if (ptn < orig_nptn) {
+                    lh_ptn = 1.0 / lh_ptn;
+                    VectorClass df_frac = df_ptn * lh_ptn;
+                    VectorClass ddf_frac = ddf_ptn * lh_ptn;
+                    VectorClass freq;
+                    freq.load_a(&ptn_freq[ptn]);
+                    VectorClass tmp1 = df_frac * freq;
+                    VectorClass tmp2 = ddf_frac * freq;
+                    my_df += tmp1;
+                    my_ddf += nmul_add(tmp1, df_frac, tmp2);
+                } else {
+                    if (ptn+VectorClass::size() > nptn) {
+                        // cutoff the last entries if going beyond
+                        lh_ptn.cutoff(nptn-ptn);
+                        df_ptn.cutoff(nptn-ptn);
+                        ddf_ptn.cutoff(nptn-ptn);
+                    }
+                    // bugfix 2016-01-21, prob_const can be rescaled
+                    double *lh_ptn_ptr = (double*)&lh_ptn;
+                    double *df_ptn_dbl = (double*)&df_ptn;
+                    double *ddf_ptn_dbl = (double*)&ddf_ptn;
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        if (min_scale_vec[i] != 0) {
+                            lh_ptn_ptr[i] *= SCALING_THRESHOLD;
+                            df_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            ddf_ptn_dbl[i] *= SCALING_THRESHOLD;
+                        }
+                    }
+                    vc_prob_const += lh_ptn;
+                    vc_df_const += df_ptn;
+                    vc_ddf_const += ddf_ptn;
+                }
+            } // FOR ptn
+            {
+                //These additions do not need to be in a critical section, because the
+                //reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
+                //clause in the omp parallel for takes care of that.
+                all_df  += horizontal_add(my_df);
+                all_ddf += horizontal_add(my_ddf);
+                if (isASC) {
+                    all_prob_const += horizontal_add(vc_prob_const);
+                    all_df_const   += horizontal_add(vc_df_const);
+                    all_ddf_const  += horizontal_add(vc_ddf_const);
+                }
+            }
+        } // FOR thread_id
+    } else {
+        double *buffer_lh = nullptr;
+        if (SAFE_NUMERIC) {
+            buffer_lh = aligned_alloc<double>(sizeof(VectorClass)*block*num_packets);
+        }
+        // both dad and node are internal nodes
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++) {
+            VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0);
+            VectorClass vc_df_const(0.0), vc_ddf_const(0.0);
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            // first compute partial_lh
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
+            }
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                VectorClass lh_ptn(0.0), df_ptn(0.0), ddf_ptn(0.0);
+                VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+                // compute scaling factor per pattern
+                UBYTE min_scale_vec[VectorClass::size()];
+                if (SAFE_NUMERIC) {
+                    // numerical scaling per category
+                    UBYTE *scale_vec;
+                    UBYTE min_scale;
+                    double *partial_lh_scaled = theta_all + ptn*block;
+                    double *partial_lh_node_scaled = buffer_lh + sizeof(VectorClass)*block * packet_id;
+                    memcpy(partial_lh_scaled, partial_lh_dad, sizeof(VectorClass)*block);
+                    memcpy(partial_lh_node_scaled, partial_lh_node, sizeof(VectorClass)*block);
+                    
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        scale_vec = dad_branch->scale_num+(ptn+i)*ncat_mix;
+                        min_scale = scale_vec[0];
+                        for (size_t c = 1; c < ncat_mix; c++) {
+                            min_scale = min(min_scale, scale_vec[c]);
+                        }
+                        min_scale_vec[i] = min_scale;
+                        
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            if (scale_vec[c] == min_scale+1) {
+                                double *this_lh = partial_lh_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                                }
+                            } else if (scale_vec[c] > min_scale+1) {
+                                double *this_lh = partial_lh_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] = 0.0;
+                                }
+                            }
+                        }
+                    }
+                    partial_lh_dad = (VectorClass*)partial_lh_scaled;
+
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        scale_vec = node_branch->scale_num+(ptn+i)*ncat_mix;
+                        min_scale = scale_vec[0];
+                        for (size_t c = 1; c < ncat_mix; c++) {
+                            min_scale = min(min_scale, scale_vec[c]);
+                        }
+                        min_scale_vec[i] += min_scale;
+                        
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            if (scale_vec[c] == min_scale+1) {
+                                double *this_lh = partial_lh_node_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                                }
+                            } else if (scale_vec[c] > min_scale+1) {
+                                double *this_lh = partial_lh_node_scaled + (c*nstates*VectorClass::size() + i);
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_lh[x*VectorClass::size()] = 0.0;
+                                }
+                            }
+                        }
+                    }
+                    partial_lh_node = (VectorClass*)partial_lh_node_scaled;
+                } else {
+                    // normal scaling
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        min_scale_vec[i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
+                    }
+                }
+                double *trans_mat_tmp = trans_mat;
+                double *trans_derv1_tmp = trans_derv1;
+                double *trans_derv2_tmp = trans_derv2;
+                for (size_t c = 0; c < ncat_mix; c++) {
+                    for (size_t i = 0; i < nstates; i++) {
+                        VectorClass lh_state;
+                        VectorClass lh_derv1;
+                        VectorClass lh_derv2;
+#ifdef KERNEL_FIX_STATES
+                        dotProductTriple<VectorClass, double, nstates, FMA, false>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates);
+#else
+                        dotProductTriple<VectorClass, double, FMA, false>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates, nstates);
+#endif
+                        lh_ptn = mul_add(partial_lh_dad[i], lh_state, lh_ptn);
+                        df_ptn = mul_add(partial_lh_dad[i], lh_derv1, df_ptn);
+                        ddf_ptn = mul_add(partial_lh_dad[i], lh_derv2, ddf_ptn);
+                        trans_mat_tmp += nstates;
+                        trans_derv1_tmp += nstates;
+                        trans_derv2_tmp += nstates;
+                    }
+                    partial_lh_node += nstates;
+                    partial_lh_dad += nstates;
+                }
+                lh_ptn = (lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+
+                if (ptn < orig_nptn) {
+                    lh_ptn = 1.0 / lh_ptn;
+                    VectorClass df_frac = df_ptn * lh_ptn;
+                    VectorClass ddf_frac = ddf_ptn * lh_ptn;
+                    VectorClass freq;
+                    freq.load_a(&ptn_freq[ptn]);
+                    VectorClass tmp1 = df_frac * freq;
+                    VectorClass tmp2 = ddf_frac * freq;
+                    my_df += tmp1;
+                    my_ddf += nmul_add(tmp1, df_frac, tmp2);
+                } else {
+                    if (ptn+VectorClass::size() > nptn) {
+                        // cutoff the last entries if going beyond
+                        lh_ptn.cutoff(nptn-ptn);
+                        df_ptn.cutoff(nptn-ptn);
+                        ddf_ptn.cutoff(nptn-ptn);
+                    }
+                    // bugfix 2016-01-21, prob_const can be rescaled
+                    // some entries are rescaled
+                    double *lh_ptn_dbl = (double*)&lh_ptn;
+                    double *df_ptn_dbl = (double*)&df_ptn;
+                    double *ddf_ptn_dbl = (double*)&ddf_ptn;
+                    for (size_t i = 0; i < VectorClass::size(); i++) {
+                        if (min_scale_vec[i] != 0) {
+                            lh_ptn_dbl[i]  *= SCALING_THRESHOLD;
+                            df_ptn_dbl[i]  *= SCALING_THRESHOLD;
+                            ddf_ptn_dbl[i] *= SCALING_THRESHOLD;
+                        }
+                    }
+                    vc_prob_const += lh_ptn;
+                    vc_df_const += df_ptn;
+                    vc_ddf_const += ddf_ptn;
+                }
+            } // FOR ptn
+            {
+                //These additions do not need to be in a critical section, because the
+                //reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
+                //clause in the omp parallel for takes care of that.
+                all_df  += horizontal_add(my_df);
+                all_ddf += horizontal_add(my_ddf);
+                if (isASC) {
+                    all_prob_const += horizontal_add(vc_prob_const);
+                    all_df_const   += horizontal_add(vc_df_const);
+                    all_ddf_const  += horizontal_add(vc_ddf_const);
+                }
+            }
+        } // FOR thread
+        aligned_free(buffer_lh);
+    }
+    *df  = all_df;
+    *ddf = all_ddf;
+    // ASSERT(std::isfinite(*df) && "Numerical underflow for non-rev lh-derivative");
+    if (!std::isfinite(*df)) {
+        getModel()->writeInfo(cout);
+        getRate()->writeInfo(cout);
+    }
+    if (!SAFE_NUMERIC && !std::isfinite(*df)) {
+        outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
+    }
+
+    if (isASC) {
+        // ascertainment bias correction
+        all_prob_const = 1.0 - all_prob_const;
+        double df_frac  = all_df_const  / all_prob_const;
+        double ddf_frac = all_ddf_const / all_prob_const;
+        size_t nsites = aln->getNSite();
+        *df  += nsites * df_frac;
+        *ddf += nsites *(ddf_frac + df_frac*df_frac);
+    }
+    if (!std::isfinite(*df)) {
+        cout << "WARNING: Numerical underflow for lh-derivative" << endl;
+        *df = *ddf = 0.0;
+    }
+}
+
 
 #endif
