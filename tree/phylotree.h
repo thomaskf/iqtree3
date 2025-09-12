@@ -2121,6 +2121,10 @@ public:
     
     virtual ModelFactory* getModelFactory(int branchmodel_id) {return model_factory;}
 
+    /**
+        obtain the root frequency vector (for branch model)
+    */
+    virtual void getRootFrequency(double *state_freq) {}
 
     /****************************************************************************
             Public variables

@@ -132,6 +132,13 @@ ModelFactory* PhyloTreeBranchModel::getModelFactory(int branchmodel_id) {
 }
 
 /**
+    obtain the root frequency vector
+*/
+void PhyloTreeBranchModel::getRootFrequency(double *state_freq) {
+    br_models->getRootFrequency(state_freq);
+}
+
+/**
     @return number of branch models, default: 1
 */
 int PhyloTreeBranchModel::getNumBrModel() {

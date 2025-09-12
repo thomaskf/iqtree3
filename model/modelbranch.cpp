@@ -4,12 +4,10 @@
 ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree) {
     logl_epsilon = 0.01;
     
-    /*
     // by default, the root frequency needs to optimize separately
     opt_root_freq = true;
     is_optimizing_root = false;
-    rootfreqs = NULL;
-    */
+    rootfreqs = nullptr;
 }
 
 // destructor
@@ -18,7 +16,7 @@ ModelBranch::~ModelBranch() {
         delete(at(i));
     }
     clear();
-    if (rootfreqs != NULL)
+    if (rootfreqs != nullptr)
         delete(rootfreqs);
 }
 
@@ -99,7 +97,7 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
  */
 int ModelBranch::getNDim() {
     if (is_optimizing_root) {
-        return (rootfreqs != NULL)?(num_states-1):0;
+        return (rootfreqs != nullptr)?(num_states-1):0;
     }
     int totndim = 0;
     for (iterator it = begin(); it != end(); it++)
@@ -136,24 +134,24 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
 /*
  * initialization of root frequencies
  */
-void ModelBranch::initializeRootFreq(string rootfreq) {
+void ModelBranch::initializeRootFreq(string root_freq) {
     
     vector<double> input_freqs;
     
     rootfreqs = new double[num_states];
 
-    if (rootfreq != "") {
+    if (root_freq != "") {
         // check the format of rootfreq
         size_t s = 0;
-        size_t p = rootfreq.find_first_of(" ,/", s);
+        size_t p = root_freq.find_first_of(" ,/", s);
         string f_str;
         while (p != string::npos) {
-            f_str = rootfreq.substr(s, p-s);
+            f_str = root_freq.substr(s, p-s);
             input_freqs.push_back(atof(f_str.c_str()));
             s = p+1;
-            p = rootfreq.find_first_of(" ,/", s);
+            p = root_freq.find_first_of(" ,/", s);
         }
-        f_str = rootfreq.substr(s);
+        f_str = root_freq.substr(s);
         input_freqs.push_back(atof(f_str.c_str()));
         // check whether the number of input frequences matches with the number of states
         if (input_freqs.size() != num_states) {
@@ -169,6 +167,21 @@ void ModelBranch::initializeRootFreq(string rootfreq) {
     }
 }
 
+void ModelBranch::getRootFrequency(double* state_freq) {
+    if (state_freq != nullptr && rootfreqs != nullptr) {
+        for (int i = 0; i < num_states; i++) {
+            state_freq[i] = rootfreqs[i];
+        }
+    }
+}
+
+void ModelBranch::setRootFrequency(double* state_freq) {
+    if (state_freq != nullptr && rootfreqs != nullptr) {
+        for (int i = 0; i < num_states; i++) {
+            rootfreqs[i] = state_freq[i];
+        }
+    }
+}
 /**
  * optimization of root frequencies
  */

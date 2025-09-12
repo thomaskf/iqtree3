@@ -48,6 +48,11 @@ public:
     }
 
     virtual ModelFactory* getModelFactory(int hal_id);
+    
+    /**
+        obtain the root frequency vector
+    */
+    virtual void getRootFrequency(double *state_freq);
 
     /*
      * check how many different branch models from the tree
