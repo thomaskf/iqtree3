@@ -1610,6 +1610,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mutation_file = "";
     params.site_starting_index = 0;
     params.isBranchModel = false;
+    params.root_freq_str = "";
 
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5862,6 +5863,13 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--branchmodel") == 0 || strcmp(argv[cnt], "-branchmodel") == 0) {
                 params.isBranchModel = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--rootfreq") == 0 || strcmp(argv[cnt], "-rootfreq") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    outError("Use -rootfreq <nucl/aa frequency array>");
+                params.root_freq_str = argv[cnt];
                 continue;
             }
 

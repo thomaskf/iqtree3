@@ -136,9 +136,33 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
 /*
  * initialization of root frequencies
  */
-void ModelBranch::initializeRootFreq() {
+void ModelBranch::initializeRootFreq(string rootfreq) {
+    
+    vector<double> input_freqs;
+    
     rootfreqs = new double[num_states];
-    if (size() > 0) {
+
+    if (rootfreq != "") {
+        // check the format of rootfreq
+        size_t s = 0;
+        size_t p = rootfreq.find_first_of(" ,/", s);
+        string f_str;
+        while (p != string::npos) {
+            f_str = rootfreq.substr(s, p-s);
+            input_freqs.push_back(atof(f_str.c_str()));
+            s = p+1;
+            p = rootfreq.find_first_of(" ,/", s);
+        }
+        f_str = rootfreq.substr(s);
+        input_freqs.push_back(atof(f_str.c_str()));
+        // check whether the number of input frequences matches with the number of states
+        if (input_freqs.size() != num_states) {
+            outError("For the option -rootfreq <freq array>, the number of freqs is not " + convertIntToString(num_states));
+        }
+        for (int i = 0; i < num_states; i++) {
+            rootfreqs[i] = input_freqs[i];
+        }
+    } else {
         for (int i = 0; i < num_states; i++) {
             rootfreqs[i] = at(0)->state_freq[i];
         }

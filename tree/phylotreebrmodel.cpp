@@ -109,7 +109,7 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     
     
     // initialize the root frequences
-    model_branch->initializeRootFreq();
+    model_branch->initializeRootFreq(params.root_freq_str);
     
     // set checkpoint
     getModelFactory()->setCheckpoint(checkpoint);

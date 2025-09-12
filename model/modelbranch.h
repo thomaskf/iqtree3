@@ -53,7 +53,7 @@ public:
     /*
      * initialization of root frequencies
      */
-    void initializeRootFreq();
+    void initializeRootFreq(string rootfreq = "");
     
     /**
         @return TRUE if model is time-reversible, FALSE otherwise
