@@ -53,6 +53,11 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     if (aln->ordered_pattern.empty())
         aln->orderPatternByNumChars(PAT_VARIANT);
 
+    // save the tree and restore it later
+    // because the following model initialization steps will update the tree
+    PhyloTree orig_tree;
+    orig_tree.copyPhyloTree(this, true);
+    
     ModelBranch* model_branch = new ModelBranch(this);
     br_models = model_branch;
 
@@ -116,6 +121,9 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     for (int i = 0; i < nBranchModels; i++) {
         model_facts[i]->setCheckpoint(checkpoint);
     }
+    
+    // restore the original tree
+    this->copyPhyloTree(&orig_tree, true);
 }
 
 /**

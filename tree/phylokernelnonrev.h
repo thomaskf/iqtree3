@@ -1537,6 +1537,7 @@ double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor 
 #endif
 
 //    assert(rooted);
+    assert(do_fundi == false); // Branch model does not support with fundi model
 
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -1609,13 +1610,14 @@ double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor 
             }
         }
 
+        /* (not supported)
         if (do_fundi) {
             double *this_state_freq = &state_freq_fundi[c*nstates];
             dad_model->getStateFrequency(this_state_freq, m);
             for (size_t j = 0; j < nstates; j++) {
                 this_state_freq[j] *= prop;
             }
-        }
+        }*/
     }
 
     double all_tree_lh(0.0);
@@ -1631,7 +1633,8 @@ double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor 
             for (size_t c = 0; c < ncat_mix; c++) {
                 double *lh_node = partial_lh_node + c*nstates;
                 size_t m = c/denom;
-                dad_model->getStateFrequency(lh_node, m);
+                // dad_model->getStateFrequency(lh_node, m);
+                getRootFrequency(lh_node);
                 double prop = site_rate->getProp(c%ncat) * dad_model->getMixtureWeight(m);
                 for (size_t i = 0; i < nstates; i++)
                     lh_node[i] *= prop;
@@ -2672,7 +2675,8 @@ void PhyloTree::computeNonrevLikelihoodDervBrModelGenericSIMD(PhyloNeighbor *dad
                 double *lh_derv1 = partial_lh_derv1 + c*nstates;
                 double *lh_derv2 = partial_lh_derv2 + c*nstates;
                 size_t m = c/denom;
-                dad_model->getStateFrequency(lh_node, m);
+                // dad_model->getStateFrequency(lh_node, m);
+                getRootFrequency(lh_node);
                 double prop = site_rate->getProp(c%ncat) * dad_model->getMixtureWeight(m);
                 for (size_t i = 0; i < nstates; i++) {
                     lh_node[i] *= prop;
