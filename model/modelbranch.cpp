@@ -6,7 +6,7 @@ ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree) {
     
     // whether the root frequencies are separated, by default yes
     // if not, then the root frequencies are same as the frequencies of the base class
-    separate_root_freq = true;
+    separate_root_freq = Params::getInstance().separate_root_freq;
 }
 
 // destructor

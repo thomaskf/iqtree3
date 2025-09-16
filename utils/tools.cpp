@@ -1610,6 +1610,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mutation_file = "";
     params.site_starting_index = 0;
     params.root_freq_str = "";
+    params.separate_root_freq = true;
 
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5865,6 +5866,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     outError("Use -rootfreq <nucl/aa frequency array>");
                 params.root_freq_str = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--norootfreq") == 0 || strcmp(argv[cnt], "-norootfreq") == 0) {
+                params.separate_root_freq = false;
                 continue;
             }
 

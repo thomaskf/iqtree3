@@ -2830,6 +2830,14 @@ public:
      root nucl or aa frequency string (for branch model)
      */
     string root_freq_str;
+    
+    /**
+     separate root frequency (for branch model)
+     that means root freqeuncy is different from any of
+     the class in the branch model
+     (default: true)
+     */
+    bool separate_root_freq;
 };
 
 /**
