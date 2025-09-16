@@ -65,6 +65,12 @@ public:
     virtual bool isReversible() { return false;  }
 
     /**
+        write information
+        @param out output stream
+    */
+    virtual void writeInfo(ostream &out);
+
+    /**
      * optimization of root frequencies
      */
     double optimizeRootFreq(double gradient_epsilon);

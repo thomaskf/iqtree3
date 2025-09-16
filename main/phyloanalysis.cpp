@@ -642,14 +642,14 @@ void reportModel(ostream &out, PhyloTree &tree) {
             reportModel(out, treeBrModel->aln, treeBrModel->getModel(i));
         }
         // report the root frequency
-        double state_freq[20];
-        treeBrModel->getRootFrequency(state_freq);
         int nstate = treeBrModel->getModel(0)->num_states;
-        out << "Root frequency:";
+        double* state_freq = new double[nstate];
+        treeBrModel->getRootFrequency(state_freq);
+        out << "Root frequencies:";
         for (i = 0; i < nstate; i++)
             out << " " << state_freq[i];
         out << endl << endl;
-        out.precision(4);
+        delete[] state_freq;
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;

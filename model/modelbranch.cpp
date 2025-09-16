@@ -192,3 +192,32 @@ double ModelBranch::optimizeRootFreq(double gradient_epsilon) {
     return 0.0;
 }
 
+void ModelBranch::writeInfo(ostream &out) {
+    size_t i;
+    for (i=0; i<size(); i++) {
+        out << "Branch Model " << i << ":" << endl;
+        at(i)->writeInfo(out);
+    }
+    // report the root frequency
+    int nstate = at(0)->num_states;
+    double* state_freq = new double[nstate];
+    getRootFrequency(state_freq);
+    out << "Root frequencies:";
+    if (nstate == 4) {
+        out << "  A: " << state_freq[0];
+        out << "  C: " << state_freq[1];
+        out << "  G: " << state_freq[2];
+        out << "  T: " << state_freq[3];
+        out << endl;
+    } else if (nstate == 2) {
+        out << "  0: " << state_freq[0];
+        out << "  1: " << state_freq[1];
+        out << endl;
+    } else {
+        for (i = 0; i < nstate; i++)
+            out << " " << state_freq[i];
+        out << endl;
+    }
+    out << endl;
+    delete[] state_freq;
+}
