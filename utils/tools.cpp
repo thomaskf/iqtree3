@@ -1609,7 +1609,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.include_pre_mutations = false;
     params.mutation_file = "";
     params.site_starting_index = 0;
-    params.isBranchModel = false;
     params.root_freq_str = "";
 
     // store original params
@@ -5859,10 +5858,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--make-consistent") == 0 || strcmp(argv[cnt], "-consistent") == 0) {
                 params.make_consistent = true;
-                continue;
-            }
-            if (strcmp(argv[cnt], "--branchmodel") == 0 || strcmp(argv[cnt], "-branchmodel") == 0) {
-                params.isBranchModel = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--rootfreq") == 0 || strcmp(argv[cnt], "-rootfreq") == 0) {

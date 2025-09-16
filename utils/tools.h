@@ -2827,11 +2827,6 @@ public:
     int site_starting_index;
     
     /**
-     * whether it is branch model
-     */
-    bool isBranchModel;
-    
-    /**
      root nucl or aa frequency string (for branch model)
      */
     string root_freq_str;
