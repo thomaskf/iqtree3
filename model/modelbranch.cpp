@@ -4,10 +4,9 @@
 ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree) {
     logl_epsilon = 0.01;
     
-    // by default, the root frequency needs to optimize separately
-    opt_root_freq = true;
-    is_optimizing_root = false;
-    rootfreqs = nullptr;
+    // whether the root frequencies are separated, by default yes
+    // if not, then the root frequencies are same as the frequencies of the base class
+    separate_root_freq = true;
 }
 
 // destructor
@@ -16,8 +15,6 @@ ModelBranch::~ModelBranch() {
         delete(at(i));
     }
     clear();
-    if (rootfreqs != nullptr)
-        delete(rootfreqs);
 }
 
 void ModelBranch::setCheckpoint(Checkpoint *checkpoint) {
@@ -37,6 +34,7 @@ void ModelBranch::saveCheckpoint() {
         at(i)->saveCheckpoint();
         checkpoint->endStruct();
     }
+    ModelMarkov::saveCheckpoint();
     endCheckpoint();
 }
 
@@ -47,6 +45,7 @@ void ModelBranch::restoreCheckpoint() {
         at(i)->restoreCheckpoint();
         checkpoint->endStruct();
     }
+    ModelMarkov::restoreCheckpoint();
     endCheckpoint();
     decomposeRateMatrix();
     if (phylo_tree)
@@ -79,10 +78,9 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
             }
         }
         // optimize the root frequency if necessary
-        if (opt_root_freq) {
-            optimizeRootFreq(gradient_epsilon);
-            // score = optimizeRootFreq(gradient_epsilon);
-        }
+        optimizeRootFreq(gradient_epsilon);
+        // score = optimizeRootFreq(gradient_epsilon);
+
         if (score < prev_score + logl_epsilon) {
             // converged
             break;
@@ -96,9 +94,6 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
  @return the number of dimensions
  */
 int ModelBranch::getNDim() {
-    if (is_optimizing_root) {
-        return (rootfreqs != nullptr)?(num_states-1):0;
-    }
     int totndim = 0;
     for (iterator it = begin(); it != end(); it++)
         totndim += (*it)->getNDim();
@@ -130,65 +125,60 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
     return retname;
 }
 
+void ModelBranch::getRootFrequency(double* state_freq) {
+    if (separate_root_freq) {
+        ModelMarkov::getStateFrequency(state_freq);
+    } else {
+        at(0)->getStateFrequency(state_freq);
+    }
+}
 
-/*
- * initialization of root frequencies
- */
-void ModelBranch::initializeRootFreq(string root_freq) {
-    
-    vector<double> input_freqs;
-    
-    rootfreqs = new double[num_states];
+void ModelBranch::setRootFrequency(double* state_freq) {
+    if (separate_root_freq) {
+        ModelMarkov::setStateFrequency(state_freq);
+        freq_type = FREQ_USER_DEFINED;
+    }
+}
 
-    if (root_freq != "") {
+void ModelBranch::setRootFrequency(string root_freq) {
+    if (separate_root_freq) {
+        double* state_freq = new double[num_states];
         // check the format of rootfreq
+        size_t i = 0;
         size_t s = 0;
         size_t p = root_freq.find_first_of(" ,/", s);
         string f_str;
         while (p != string::npos) {
             f_str = root_freq.substr(s, p-s);
-            input_freqs.push_back(atof(f_str.c_str()));
+            if (i < num_states) {
+                state_freq[i] = atof(f_str.c_str());
+                i++;
+            } else {
+                outError("The number of root frequencies inputted is more than " + convertIntToString(num_states));
+            }
             s = p+1;
             p = root_freq.find_first_of(" ,/", s);
         }
         f_str = root_freq.substr(s);
-        input_freqs.push_back(atof(f_str.c_str()));
-        // check whether the number of input frequences matches with the number of states
-        if (input_freqs.size() != num_states) {
-            outError("For the option -rootfreq <freq array>, the number of freqs is not " + convertIntToString(num_states));
+        if (i < num_states) {
+            state_freq[i] = atof(f_str.c_str());
+            i++;
+        } else {
+            outError("The number of root frequencies inputted is more than " + convertIntToString(num_states));
         }
-        for (int i = 0; i < num_states; i++) {
-            rootfreqs[i] = input_freqs[i];
+        if (i < num_states) {
+            outError("The number of root frequencies inputted is less than " + convertIntToString(num_states));
         }
-    } else {
-        for (int i = 0; i < num_states; i++) {
-            rootfreqs[i] = at(0)->state_freq[i];
-        }
+        setRootFrequency(state_freq);
+        delete[] state_freq;
     }
 }
 
-void ModelBranch::getRootFrequency(double* state_freq) {
-    if (state_freq != nullptr && rootfreqs != nullptr) {
-        for (int i = 0; i < num_states; i++) {
-            state_freq[i] = rootfreqs[i];
-        }
-    }
-}
-
-void ModelBranch::setRootFrequency(double* state_freq) {
-    if (state_freq != nullptr && rootfreqs != nullptr) {
-        for (int i = 0; i < num_states; i++) {
-            rootfreqs[i] = state_freq[i];
-        }
-    }
-}
 /**
  * optimization of root frequencies
  */
 double ModelBranch::optimizeRootFreq(double gradient_epsilon) {
-    is_optimizing_root = true;
     cout << "getNDim() = " << getNDim() << endl;
-    is_optimizing_root = false;
     return 0.0;
 }
 
@@ -199,22 +189,21 @@ void ModelBranch::writeInfo(ostream &out) {
         at(i)->writeInfo(out);
     }
     // report the root frequency
-    int nstate = at(0)->num_states;
-    double* state_freq = new double[nstate];
+    double* state_freq = new double[num_states];
     getRootFrequency(state_freq);
     out << "Root frequencies:";
-    if (nstate == 4) {
+    if (num_states == 4) {
         out << "  A: " << state_freq[0];
         out << "  C: " << state_freq[1];
         out << "  G: " << state_freq[2];
         out << "  T: " << state_freq[3];
         out << endl;
-    } else if (nstate == 2) {
+    } else if (num_states == 2) {
         out << "  0: " << state_freq[0];
         out << "  1: " << state_freq[1];
         out << endl;
     } else {
-        for (i = 0; i < nstate; i++)
+        for (i = 0; i < num_states; i++)
             out << " " << state_freq[i];
         out << endl;
     }

@@ -50,14 +50,11 @@ public:
      */
     virtual string getNameParams(bool show_fixed_params);
 
-    /*
-     * initialization of root frequencies
-     */
-    void initializeRootFreq(string rootfreq = "");
-    
     void getRootFrequency(double* state_freq);
     
     void setRootFrequency(double* state_freq);
+    
+    void setRootFrequency(string root_freq);
     
     /**
         @return TRUE if model is time-reversible, FALSE otherwise
@@ -78,15 +75,9 @@ public:
     // value of logl_epsilson
     double logl_epsilon;
     
-    // whether the root frequencies are optimized separately, by default it is true
-    bool opt_root_freq;
-    
-    double* rootfreqs;
-
-private:
-    
-    // in the progress of root frequencies optimization
-    bool is_optimizing_root;
+    // whether the root frequencies are separated, by default yes
+    // if not, then the root frequencies are same as the frequencies of the base class
+    bool separate_root_freq;
 };
 
 #endif

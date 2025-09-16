@@ -83,7 +83,7 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     
     ASSERT(modelparams.size() > 0);
     
-    // dummy model with shared site rate
+    // a dummy model with the root frequencies and the shared site rate
     ModelFactory *dm = new ModelFactory(params, modelparams[0], this, models_block);
     orig_sub_model = dm->model;
     dm->model = model_branch;
@@ -91,6 +91,7 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     setModelFactory(dm);
     setModel(model_branch);
     setRate(dm->site_rate);
+    model_branch->init(orig_sub_model->freq_type); // set the same frequency type
 
     // load the models
     for (int i = 0; i < nBranchModels; i++) {
@@ -113,8 +114,10 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     }
     
     
-    // initialize the root frequences
-    model_branch->initializeRootFreq(params.root_freq_str);
+    // set the root frequences
+    if (params.root_freq_str != "") {
+        model_branch->setRootFrequency(params.root_freq_str);
+    }
     
     // set checkpoint
     getModelFactory()->setCheckpoint(checkpoint);
