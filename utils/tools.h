@@ -1793,6 +1793,11 @@ public:
     string optimize_alg_qmix;
 
     /**
+     *  Optimization algorithm for branch model
+     */
+    string optimize_alg_brmodel;
+
+    /**
      * non-zero if want to estimate the initial frequency vectors for q-mixture model
      */
     int estimate_init_freq;

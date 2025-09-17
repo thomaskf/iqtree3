@@ -1288,6 +1288,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
     params.optimize_alg_qmix = "BFGS";
+    params.optimize_alg_brmodel = "BFGS";
     params.estimate_init_freq = 0;
 
     // defaults for new options -JD
@@ -1753,6 +1754,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
                     throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
                 params.optimize_alg_qmix = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-optalg_brmodel") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_brmodel <BFGS|BFGS-M>";
+                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "BFGS-M") != 0)
+                    throw "Invalid option for -optalg_qmix : use 'BFGS' or 'BFGS-M'";
+                params.optimize_alg_brmodel = argv[cnt];
                 continue;
             }
 
