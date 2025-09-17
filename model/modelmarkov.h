@@ -45,6 +45,7 @@ class ModelMarkov : public ModelSubst, public EigenDecomposition
 	friend class ModelSet;
 	friend class ModelMixture;
     friend class ModelPoMo;
+    friend class ModelBranch;
     friend class PartitionModel;
     friend class PartitionModelPlen;
 	

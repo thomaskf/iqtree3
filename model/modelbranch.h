@@ -41,6 +41,20 @@ public:
     virtual int getNDim();
     
     /**
+        @return the number of dimensions corresponding to state frequencies, which is
+            not counted in getNDim(). This serves e.g. for computing AIC, BIC score
+    */
+    virtual int getNDimFreq();
+    
+    virtual void setVariables(double *variables);
+    
+    virtual bool getVariables(double *variables);
+    
+    virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+    
+    virtual double targetFunk(double x[]);
+    
+    /**
      * @return model name
      */
     virtual string getName();
@@ -67,17 +81,19 @@ public:
     */
     virtual void writeInfo(ostream &out);
 
-    /**
-     * optimization of root frequencies
-     */
-    double optimizeRootFreq(double gradient_epsilon);
-    
     // value of logl_epsilson
     double logl_epsilon;
     
     // whether the root frequencies are separated, by default yes
     // if not, then the root frequencies are same as the frequencies of the base class
     bool separate_root_freq;
+    
+    // scale the state frequencies
+    void scaleStateFreq(bool sum_one);
+    
+private:
+    
+    void showRootFreq();
 };
 
 #endif
