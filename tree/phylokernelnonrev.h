@@ -1602,7 +1602,11 @@ double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor 
         if (!rooted) {
             // if unrooted tree, multiply with frequency
             double state_freq[nstates];
-            dad_model->getStateFrequency(state_freq, m);
+            if (dad == root) {
+                getRootFrequency(state_freq);
+            } else {
+                dad_model->getStateFrequency(state_freq, m);
+            }
             for (size_t i = 0; i < nstates; i++) {
                 for (size_t x = 0; x < nstates; x++)
                     this_trans_mat[x] *= state_freq[i];
@@ -2640,7 +2644,11 @@ void PhyloTree::computeNonrevLikelihoodDervBrModelGenericSIMD(PhyloNeighbor *dad
         if (!rooted) {
             // for unrooted tree, multiply with state_freq
             double state_freq[nstates];
-            dad_model->getStateFrequency(state_freq, m);
+            if (dad == root) {
+                getRootFrequency(state_freq);
+            } else {
+                dad_model->getStateFrequency(state_freq, m);
+            }
             for (size_t i = 0; i < nstates; i++) {
                 for (size_t x = 0; x < nstates; x++) {
                     this_trans_mat[x] *= state_freq[i];

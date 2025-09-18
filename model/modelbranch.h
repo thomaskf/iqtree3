@@ -93,7 +93,7 @@ public:
     
 private:
     
-    void showRootFreq();
+    bool optimizing_root_freq;
 };
 
 #endif

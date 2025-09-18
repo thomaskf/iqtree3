@@ -3,12 +3,13 @@
 // default constructor
 ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, true, false) {
     logl_epsilon = 0.01;
+    optimizing_root_freq = false;
     
     // whether the root frequencies are separated, by default yes
     // if not, then the root frequencies are same as the frequencies of the base class
     separate_root_freq = Params::getInstance().separate_root_freq;
     
-    // only stores the root frequency, the other classes are stored in the array
+    // only stores the root frequency, the other classe information are stored in the array
     num_params = 0;
 }
 
@@ -58,6 +59,7 @@ void ModelBranch::restoreCheckpoint() {
 void ModelBranch::decomposeRateMatrix() {
     for (iterator it = begin(); it != end(); it++)
         (*it)->decomposeRateMatrix();
+    ModelMarkov::decomposeRateMatrix();
 }
 
 double ModelBranch::optimizeParameters(double gradient_epsilon) {
@@ -66,62 +68,70 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
     if (ndim == 0)
         return 0.0;
     
-    // since the model is not reversible, should not call ModelMarkov::optimizeParameters()
-    double *variables = new double[ndim+1]; // used for BFGS numerical recipes
-    double *variables2 = new double[ndim+1]; // used for L-BFGS-B
-    double *upper_bound = new double[ndim+1];
-    double *lower_bound = new double[ndim+1];
-    bool *bound_check = new bool[ndim+1];
-    double score;
+    if (Params::getInstance().optimize_alg_brmodel == "BFGS") {
+        
+        // since the model is not reversible, should not call ModelMarkov::optimizeParameters()
+        double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+        double *variables2 = new double[ndim+1]; // used for L-BFGS-B
+        double *upper_bound = new double[ndim+1];
+        double *lower_bound = new double[ndim+1];
+        bool *bound_check = new bool[ndim+1];
+        double score;
+        
+        // by BFGS algorithm
+        setVariables(variables);
+        setBounds(lower_bound, upper_bound, bound_check);
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
+        
+        // scale the frequencies
+        scaleStateFreq(true);
+        
+        delete [] bound_check;
+        delete [] lower_bound;
+        delete [] upper_bound;
+        delete [] variables2;
+        delete [] variables;
+        
+        return score;
+        
+    } else {
 
-    // by BFGS algorithm
-    setVariables(variables);
-    setBounds(lower_bound, upper_bound, bound_check);
-    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
-    
-    // scale the frequencies
-    scaleStateFreq(true);
+        double prev_score = phylo_tree->computeLikelihood();
+        double score = prev_score;
+        int optimize_steps = 100;
+        int digit_prec = 5;
+        int step, k;
 
-    delete [] bound_check;
-    delete [] lower_bound;
-    delete [] upper_bound;
-    delete [] variables2;
-    delete [] variables;
+        if (verbose_mode >= VB_DEBUG) {
+            cout << setprecision(digit_prec) << "ModelBranch -- optimizing parameters (gradient_epsilon = " << gradient_epsilon << "; logl_epsilon = " << logl_epsilon << ")" << endl;
+        }
 
-    return score;
-    
-    /*
-    double prev_score = phylo_tree->computeLikelihood();
-    double score = prev_score;
-    int optimize_steps = 100;
-    int digit_prec = 5;
-    int step, k;
-
-    if (verbose_mode >= VB_DEBUG) {
-        cout << std::setprecision(digit_prec) << "ModelBranch -- optimizing parameters (gradient_epsilon = " << gradient_epsilon << "; logl_epsilon = " << logl_epsilon << ")" << endl;
-    }
-
-    for (step = 0; step < optimize_steps; step++) {
-        for (k = 0; k < size(); k++) {
-            if (!at(k)->fixed_parameters && at(k)->getNDim() > 0) {
-                score = at(k)->optimizeParameters(gradient_epsilon);
-                if (verbose_mode >= VB_DEBUG) {
-                    cout << std::setprecision(digit_prec) << "step " << step << "; model " << k << ": " << score << endl;
+        for (step = 0; step < optimize_steps; step++) {
+            for (k = 0; k < size(); k++) {
+                if (!at(k)->fixed_parameters && at(k)->getNDim() > 0) {
+                    score = at(k)->optimizeParameters(gradient_epsilon);
+                    if (verbose_mode >= VB_DEBUG) {
+                        cout << setprecision(digit_prec) << "step " << step << "; model " << k << ": " << score << endl;
+                    }
                 }
             }
+            // optimize the root frequency if necessary
+            if (separate_root_freq) {
+                optimizing_root_freq = true;
+                score = ModelMarkov::optimizeParameters(gradient_epsilon);
+                optimizing_root_freq = false;
+                if (verbose_mode >= VB_DEBUG) {
+                    cout << setprecision(digit_prec) << "step " << step << "; optimizing root: " << score << endl;
+                }
+            }
+            if (score < prev_score + logl_epsilon) {
+                // converged
+                break;
+            }
+            prev_score = score;
         }
-        // optimize the root frequency if necessary
-        if (separate_root_freq) {
-            score = ModelMarkov::optimizeParameters(gradient_epsilon);
-        }
-        if (score < prev_score + logl_epsilon) {
-            // converged
-            break;
-        }
-        prev_score = score;
+        return score;
     }
-    return score;
-    */
 }
 
 string ModelBranch::getName() {
@@ -198,16 +208,6 @@ void ModelBranch::setRootFrequency(string root_freq) {
     }
 }
 
-void ModelBranch::showRootFreq() {
-    double* f = new double[num_states];
-    getRootFrequency(f);
-    cout << "Root frequencies:";
-    for (size_t i = 0; i < num_states; i++)
-        cout << " " << f[i];
-    cout << endl;
-    delete[] f;
-}
-
 void ModelBranch::writeInfo(ostream &out) {
     size_t i;
     for (i=0; i<size(); i++) {
@@ -242,12 +242,21 @@ void ModelBranch::writeInfo(ostream &out) {
  @return the number of dimensions
  */
 int ModelBranch::getNDim() {
+    
+    if (optimizing_root_freq) {
+        if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+            return ModelMarkov::num_states-1;
+        } else {
+            return 0;
+        }
+    }
+    
     int totndim = 0;
     for (iterator it = begin(); it != end(); it++)
         totndim += (*it)->getNDim();
     
-    if (separate_root_freq) {
-        totndim += ModelMarkov::getNDim();
+    if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+        totndim += ModelMarkov::num_states-1;
     }
     
     return totndim;
@@ -311,12 +320,21 @@ int ModelBranch::getNDimFreq() {
 void ModelBranch::setVariables(double *variables) {
     if (getNDim() == 0)
         return;
+    
+    if (optimizing_root_freq) {
+        if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+            double* var = &variables[1];
+            memcpy(var, ModelMarkov::state_freq, (ModelMarkov::num_states-1)*sizeof(double));
+        }
+        return;
+    }
+    
     int dim = 0;
     for (iterator it = begin(); it != end(); it++) {
         (*it)->ModelMarkov::setVariables(&variables[dim]);
         dim += (*it)->ModelMarkov::getNDim();
     }
-    if (separate_root_freq) {
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
         double* var = &variables[dim+1];
         memcpy(var, ModelMarkov::state_freq, (ModelMarkov::num_states-1)*sizeof(double));
         dim += (ModelMarkov::num_states-1);
@@ -326,13 +344,26 @@ void ModelBranch::setVariables(double *variables) {
 bool ModelBranch::getVariables(double *variables) {
     if (getNDim() == 0)
         return false;
+    
+    if (optimizing_root_freq) {
+        if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+            double* var = &variables[1];
+            bool changed = false;
+            for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
+                changed |= (ModelMarkov::state_freq[i] != var[i]);
+            memcpy(ModelMarkov::state_freq, var, (ModelMarkov::num_states-1)*sizeof(double));
+            return changed;
+        }
+        return false;
+    }
+
     int dim = 0;
     bool changed = false;
     for (iterator it = begin(); it != end(); it++) {
         changed |= (*it)->ModelMarkov::getVariables(&variables[dim]);
         dim += (*it)->ModelMarkov::getNDim();
     }
-    if (separate_root_freq) {
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
         double* var = &variables[dim+1];
         for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
             changed |= (ModelMarkov::state_freq[i] != var[i]);
@@ -345,16 +376,28 @@ bool ModelBranch::getVariables(double *variables) {
 void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     if (getNDim() == 0)
         return;
+    
+    if (optimizing_root_freq) {
+        if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+            for (size_t i = 1; i <= ModelMarkov::num_states-1; i++) {
+                lower_bound[i] = Params::getInstance().min_state_freq;;
+                upper_bound[i] = 1.0;
+                bound_check[i] = false;
+            }
+        }
+        return;
+    }
+
     int dim = 0;
     for (iterator it = begin(); it != end(); it++) {
         (*it)->ModelMarkov::setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
         dim += (*it)->ModelMarkov::getNDim();
     }
-    if (separate_root_freq) {
-        for (size_t i = 0; i < ModelMarkov::num_states-1; i++) {
-            lower_bound[dim+1+i] = Params::getInstance().min_state_freq;;
-            upper_bound[dim+1+i] = 1.0;
-            bound_check[dim+1+i] = false;
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+        for (size_t i = 1; i <= ModelMarkov::num_states-1; i++) {
+            lower_bound[dim+i] = Params::getInstance().min_state_freq;;
+            upper_bound[dim+i] = 1.0;
+            bound_check[dim+i] = false;
         }
         dim += (ModelMarkov::num_states-1);
     }
@@ -363,15 +406,24 @@ void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *boun
 double ModelBranch::targetFunk(double x[]) {
     if (verbose_mode >= VB_DEBUG) {
         int ndim = getNDim();
-        for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
+        for(int i=1; i<=ndim; i++){ cout << setprecision(10) << x[i] << "; "; }
         cout << endl;
     }
-    getVariables(x);
-    decomposeRateMatrix();
-    phylo_tree->clearAllPartialLH();
     
-    double score = -phylo_tree->computeLikelihood();
-    return score;
+    if (optimizing_root_freq) {
+        getVariables(x);
+        return -phylo_tree->computeLikelihood();
+    }
+
+    bool changed = getVariables(x);
+
+    if (changed) {
+        decomposeRateMatrix();
+        ASSERT(phylo_tree);
+        phylo_tree->clearAllPartialLH();
+    }
+    
+    return -phylo_tree->computeLikelihood();;
 }
 
 void ModelBranch::scaleStateFreq(bool sum_one) {

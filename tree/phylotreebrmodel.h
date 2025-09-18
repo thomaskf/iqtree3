@@ -38,7 +38,7 @@ public:
      */
 
     virtual ModelSubst *getModel() {
-        return model;
+        return br_models;
     }
 
     virtual ModelSubst* getModel(int hal_id);

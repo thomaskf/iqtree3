@@ -1761,7 +1761,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -optalg_brmodel <BFGS|BFGS-M>";
                 if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "BFGS-M") != 0)
-                    throw "Invalid option for -optalg_qmix : use 'BFGS' or 'BFGS-M'";
+                    throw "Invalid option for -optalg_brmodel : use 'BFGS' or 'BFGS-M'";
                 params.optimize_alg_brmodel = argv[cnt];
                 continue;
             }
