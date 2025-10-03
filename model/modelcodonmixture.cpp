@@ -92,6 +92,13 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     if (user_input_param) {
         restrict_omega_values(cmix_type);
     }
+    
+    // set the initial omega values for M3 model
+    if (!user_input_param && cmix_type == "3") {
+        ((ModelCodon*)at(0))->omega = 0.4;
+        ((ModelCodon*)at(1))->omega = 0.9;
+        ((ModelCodon*)at(2))->omega = 1.8;
+    }
 
     // show the initial parameters
     cout << "Initial parameters in the Codon Mixture:" << endl;
