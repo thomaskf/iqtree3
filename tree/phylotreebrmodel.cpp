@@ -352,11 +352,8 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
 }
 
 double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log_value) {
-    ASSERT(root->isLeaf());
-    if (!current_it) {
-        current_it = (PhyloNeighbor*)root->neighbors[0];
-        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
-    }
+    current_it = (PhyloNeighbor*)root->neighbors[0];
+    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
     return PhyloTree::computeLikelihood(pattern_lh, save_log_value);
 }
 
