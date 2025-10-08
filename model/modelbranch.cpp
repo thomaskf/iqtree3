@@ -209,10 +209,28 @@ void ModelBranch::setRootFrequency(string root_freq) {
 }
 
 void ModelBranch::writeInfo(ostream &out) {
-    size_t i;
+    size_t i,j;
     for (i=0; i<size(); i++) {
-        out << "Branch Model " << i << ":" << endl;
-        at(i)->writeInfo(out);
+        if (num_states <= 4) {
+            if (i == 0)
+                out << "Base model " << i << ":" << endl;
+            else
+                out << "Model " << i << ":" << endl;
+            at(i)->writeInfo(out);
+        } else {
+            if (i == 0)
+                out << "Base model " << i << ": ";
+            else
+                out << "Model " << i << ": ";
+            out << at(i)->getName() << endl;
+            out << "Frequencies:";
+            double* freq = new double[num_states];
+            at(i)->getStateFrequency(freq);
+            for (j = 0; j < num_states; j++)
+                out << " " << freq[j];
+            out << endl;
+            delete[] freq;
+        }
     }
     // report the root frequency
     double* sfreq = new double[num_states];

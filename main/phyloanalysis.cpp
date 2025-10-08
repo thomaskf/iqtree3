@@ -638,7 +638,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
     } else if (tree.isBranchModel()) {
         PhyloTreeBranchModel* treeBrModel = (PhyloTreeBranchModel*) &tree;
         for (i=0; i<treeBrModel->numBranchModels(); i++) {
-            out << "Branch Model " << i << ":" << endl << endl;
+            out << "Branch Model " << i << ": " << treeBrModel->getModel(i)->getName() << endl << endl;
             reportModel(out, treeBrModel->aln, treeBrModel->getModel(i));
         }
         // report the root frequency
