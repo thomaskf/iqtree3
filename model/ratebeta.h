@@ -10,7 +10,8 @@
 class RateBeta {
 public:
     RateBeta();
-    double* SampleOmegas(double alpha, double beta);
+
+    static double* SampleOmegas(double alpha, double beta);
 };
 
 #endif //IQTREE_RATEBETA_H

@@ -7,10 +7,12 @@
 
 #include "modelcodonmixture.h"
 
+#include "ratebeta.h"
+
 
 ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
-    ModelsBlock *models_block, StateFreqType freq, string freq_params,
-    PhyloTree *tree, bool optimize_weights)
+                                     ModelsBlock *models_block, StateFreqType freq, string freq_params,
+                                     PhyloTree *tree, bool optimize_weights)
 : ModelMarkov(tree), ModelMixture(tree)
 {
     if (tree->aln->seq_type != SEQ_CODON)
@@ -55,6 +57,22 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         } else if (cmix_type == "3") {
             // M3 model with 3 classes with no constraint
             model_list = model_name + "{>0.001}," + model_name + "{>0.001" + kappa_str + "}," + model_name + "{>0.001" + kappa_str + "}";
+        } else if (cmix_type == "7") {
+            double beta_p = 1.0;
+            double beta_q = 1.0;
+            RateBeta beta_dist;
+            double* omega = beta_dist.SampleOmegas(beta_p,beta_q);
+
+            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1," +
+                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.1," +
+                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.1," +
+                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.1," +
+                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.1," +
+                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.1," +
+                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.1," +
+                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.1," +
+                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.1," +
+                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.1";
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
