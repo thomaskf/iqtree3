@@ -34,6 +34,7 @@ modelhmm.cpp modelhmm.h
 modelhmmgm.cpp modelhmmgm.h
 modelhmmtm.cpp modelhmmtm.h
 modelcodonmixture.cpp modelcodonmixture.h
+        ratebeta.cpp
 )
 
 target_link_libraries(model utils)
