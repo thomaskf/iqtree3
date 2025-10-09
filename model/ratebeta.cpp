@@ -11,8 +11,8 @@
 RateBeta::RateBeta(){
 }
 
-double* RateBeta::SampleOmegas(double p, double q) {
-    boost::math::beta_distribution distribution(p,q);
+double* RateBeta::SampleOmegas(double alpha, double beta) {
+    boost::math::beta_distribution distribution(alpha,beta);
     double *omega = new double[10];
     //omega[0] = (boost::math::quantile(distribution,0.1)+boost::math::quantile(distribution,0.005))/2.0;
     omega[0] = (boost::math::quantile(distribution,0.05));

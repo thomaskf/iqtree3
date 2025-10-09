@@ -58,10 +58,10 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             // M3 model with 3 classes with no constraint
             model_list = model_name + "{>0.001}," + model_name + "{>0.001" + kappa_str + "}," + model_name + "{>0.001" + kappa_str + "}";
         } else if (cmix_type == "7") {
-            double beta_p = 1.0;
-            double beta_q = 1.0;
-            RateBeta beta_dist;
-            double* omega = beta_dist.SampleOmegas(beta_p,beta_q);
+            double shape_alpha = 1.0;
+            double shape_beta = 1.0;
+            //RateBeta beta_dist;
+            double* omega = RateBeta::SampleOmegas(shape_alpha,shape_beta);
 
             model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.1," +
@@ -133,6 +133,13 @@ bool ModelCodonMixture::getVariables(double *variables) {
     bool changed = ModelMixture::getVariables(variables);
     auto kappa = ((ModelCodon*)at(0))->kappa;
     auto kappa2 = ((ModelCodon*)at(0))->kappa2;
+    double* omega = RateBeta::SampleOmegas(variables[getNDim()-1],variables[getNDim()]);
+    if (name=="M7") {
+        for (int i = 0; i < size(); i++) {
+            ModelCodon *model = (ModelCodon*)at(i);
+            model->omega = omega[i];
+        }
+    }
     for (int i = 1; i < size(); i++) {
         ModelCodon *model = (ModelCodon*)at(i);
         model->kappa = kappa;
@@ -141,9 +148,38 @@ bool ModelCodonMixture::getVariables(double *variables) {
     return changed;
 }
 
+int ModelCodonMixture::getNDim() {
+    if (name == "M7") {
+        return ModelMixture::getNDim()+2;
+    }
+    else{
+        return ModelMixture::getNDim();
+    }
+}
 
 void ModelCodonMixture::setVariables(double *variables) {
     ModelMixture::setVariables(variables);
+    if (name == "M7"){
+        variables[getNDim()-1] = 1.0;
+        variables[getNDim()] = 1.0;
+        //variables[getNDim()-1] = 0.5;
+        //variables[getNDim()] = 0.5;
+        //Values match demo for codeml where fixed kappa = 1
+        //variables[getNDim()] = 0.01523;
+        //variables[getNDim()-1] = 0.04237;
+    }
+}
+
+void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+    ModelMixture::setBounds(lower_bound, upper_bound, bound_check);
+    if (name == "M7") {
+        lower_bound[getNDim()-1]=0.01;
+        upper_bound[getNDim()-1]=10.0000;
+        bound_check[getNDim()-1]=false;
+        lower_bound[getNDim()]=0.01;
+        upper_bound[getNDim()]=10.0000;
+        bound_check[getNDim()]=false;
+    }
 }
 
 // Impose restrictions on the omega values

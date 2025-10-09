@@ -1312,7 +1312,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector weights;
     name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
     if (!models_block->findMixModel(name)) {
-        name = "";
+        if (orig_model_name.find("CMIX7") != string::npos) {
+            name = "M7";
+        }
+        else {
+            name = "";
+        }
     }
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
