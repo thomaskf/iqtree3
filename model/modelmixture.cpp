@@ -1315,6 +1315,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         if (orig_model_name.find("CMIX7") != string::npos) {
             name = "M7";
         }
+        else if (orig_model_name.find("CMIX8") != string::npos) {
+            name = "M8";
+        }
         else {
             name = "";
         }
