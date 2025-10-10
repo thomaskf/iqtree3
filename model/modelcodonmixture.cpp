@@ -183,15 +183,7 @@ int ModelCodonMixture::getNDim() {
 
 void ModelCodonMixture::setVariables(double *variables) {
     ModelMixture::setVariables(variables);
-    if (name == "M7") {
-        variables[getNDim()-1] = 1.0;
-        variables[getNDim()] = 1.0;
-        //variables[getNDim()-1] = 0.5;
-        //variables[getNDim()] = 0.5;
-        //Values match demo for codeml where fixed kappa = 1
-        //variables[getNDim()] = 0.01523;
-        //variables[getNDim()-1] = 0.04237;
-    }else if (name == "M8") {
+    if (name == "M7" || name == "M8") {
         variables[getNDim()-1] = 1.0;
         variables[getNDim()] = 1.0;
     }
