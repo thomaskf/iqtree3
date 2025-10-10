@@ -81,6 +81,11 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     bool old_reversible = is_reversible;
     is_reversible = reversible;
 
+    // if it is a branch-model tree, then set adapt_tree to false to avoid
+    // from changing the rooted tree to an unrooted tree
+    if (phylo_tree->isBranchModel())
+        adapt_tree = false;
+
     if (reversible) {
         // setup reversible model
         int i;
