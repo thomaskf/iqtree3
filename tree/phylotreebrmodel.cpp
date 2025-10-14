@@ -66,15 +66,16 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     size_t p1 = model_name.find("BR{");
     size_t p2 = model_name.find_last_of("}");
     ASSERT(p1 != string::npos && p2 != string::npos && p2 > p1 + 3);
+    string shared_rate = model_name.substr(p2+1);
     model_name = model_name.substr(p1 + 3, p2 - p1 - 3);
     size_t fr_pos = 0;
     size_t p_comma = model_name.find(",", fr_pos);
     while (p_comma != string::npos) {
-        modelparams.push_back(model_name.substr(fr_pos, p_comma - fr_pos));
+        modelparams.push_back(model_name.substr(fr_pos, p_comma - fr_pos) + shared_rate);
         fr_pos = p_comma + 1;
         p_comma = model_name.find(",", fr_pos);
     }
-    modelparams.push_back(model_name.substr(fr_pos));
+    modelparams.push_back(model_name.substr(fr_pos) + shared_rate);
     
     ASSERT(modelparams.size() > 0);
     
@@ -108,6 +109,9 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         mf->site_rate = getRate();
     }
     
+    if (shared_rate.length() > 0) {
+        cout << "Rate shared among them: " << shared_rate << endl;
+    }
     
     // set the root frequences
     if (params.root_freq_str != "") {

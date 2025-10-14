@@ -1647,7 +1647,7 @@ double PhyloTree::computeNonrevLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor 
 //            IntVector states_dad = dad_model->seq_states[dad->id];
 //            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
-            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
             for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                 double *lh_node = partial_lh_node + state*block;
                 double *lh_tip = tip_partial_lh + state*nstates + s;
@@ -2117,7 +2117,7 @@ void PhyloTree::computeNonrevPartialLikelihoodBrModelGenericSIMD(TraversalInfo &
                 if (child->node->isLeaf()) {
                     // external node
                     // load data for tip
-                    int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+                    int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
                     
                     auto childStateRow = this->getConvertedSequenceByNumber(child->node->id);
                     auto unknown  = aln->STATE_UNKNOWN;

@@ -3765,7 +3765,7 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (child->node->isLeaf()) {
                 //vector<int>::iterator it;
-                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
                 if (nstates % VectorClass::size() == 0) {
                     // vectorized version
                     for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
@@ -3838,7 +3838,7 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
             if (child->node->isLeaf()) {
                 //vector<int>::iterator it;
 
-                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
                 for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     VectorClass *echild_ptr = (VectorClass*)echild;
@@ -3891,7 +3891,7 @@ void PhyloTree::computePartialInfoBrModel(TraversalInfo &info, VectorClass* buff
             // pre compute information for tip
             if (child->node->isLeaf()) {
                 //vector<int>::iterator it;
-                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+                int s = child->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
                 for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     double *echild_ptr = echild;
@@ -4847,7 +4847,7 @@ double PhyloTree::computeLikelihoodBranchBrModelGenericSIMD(PhyloNeighbor *dad_b
         if (!SITE_MODEL) {
 //            IntVector states_dad = dad_model->seq_states[dad->id];
 //            states_dad.push_back(aln->STATE_UNKNOWN);
-            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * block;
+            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
             // precompute information from one tip
             if (nstates % VectorClass::size() == 0) {
                 // vectorized version
