@@ -851,7 +851,7 @@ public:
     int num_packets;
 
     /** flag to identify partition-trees with missing root for MCMCTree branch traversal order*/
-    bool leftSingleRoot;
+    bool leftSingleRoot = false;
 
     /****************************************************************************
             helper functions for computing tree traversal
@@ -1632,6 +1632,11 @@ public:
      * */
     double *hessian_diagonal;
 
+    /**
+    Flag to check root node availability in case of missing data in partitions
+    * */
+    bool root_available = true;
+
 
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood
@@ -1817,6 +1822,17 @@ public:
     @return the longest distance
      */
     double correctDist(double *dist_mat);
+
+    /**
+    compute the distance between two nodes on a tree.
+    @param node1 node 1.
+    @param node2 node 2.
+    @param node the starting node, NULL to start from the node1
+    @param dad dad of the node, used to direct the search
+    @return the distance between two nodes on the tree
+    */
+    double pairDist(Node *node1, Node *node2, Node *node = NULL, Node *dad = NULL);
+
 
     /****************************************************************************
             compute BioNJ tree, a more accurate extension of Neighbor-Joining
@@ -2587,7 +2603,7 @@ protected:
     void trackProgress(double amount);
     void hideProgress();
     void showProgress();
-    void doneProgress();
+    void doneProgress(bool showMsg = true);
 };
 
 #endif

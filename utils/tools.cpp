@@ -71,9 +71,16 @@ void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
         print_stacktrace(cerr);
 	}
+#ifndef BUILD_LIB
 	cerr << error << endl;
-    if (quit)
-    	exit(2);
+#endif
+    if (quit) {
+#ifndef BUILD_LIB
+        exit(2);
+#else
+        throw runtime_error(error);
+#endif
+    }
 }
 
 /**
@@ -1088,6 +1095,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     progress_display::setProgressDisplay(false);
     verbose_mode = VB_MIN;
+    
     params.tree_gen = NONE;
     params.user_file = NULL;
     params.constraint_tree_file = NULL;
@@ -1258,6 +1266,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_mixmodel_freq = false;
     params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     params.parallel_over_sites = false;
@@ -1364,22 +1373,22 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ncbi_names_file = NULL;
     params.ncbi_ignore_level = NULL;
 
-	params.eco_dag_file  = NULL;
-	params.eco_type = NULL;
-	params.eco_detail_file = NULL;
-	params.k_percent = 0;
-	params.diet_min = 0;
-	params.diet_max = 0;
-	params.diet_step = 0;
-	params.eco_weighted = false;
-	params.eco_run = 0;
+    params.eco_dag_file  = NULL;
+    params.eco_type = NULL;
+    params.eco_detail_file = NULL;
+    params.k_percent = 0;
+    params.diet_min = 0;
+    params.diet_max = 0;
+    params.diet_step = 0;
+    params.eco_weighted = false;
+    params.eco_run = 0;
 
-	params.upper_bound = false;
-	params.upper_bound_NNI = false;
-	params.upper_bound_frac = 0.0;
+    params.upper_bound = false;
+    params.upper_bound_NNI = false;
+    params.upper_bound_frac = 0.0;
 
     params.gbo_replicates = 0;
-	params.ufboot_epsilon = 0.5;
+    params.ufboot_epsilon = 0.5;
     params.check_gbo_sample_size = 0;
     params.use_rell_method = true;
     params.use_elw_method = false;
@@ -1391,7 +1400,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_correlation = 0.99;
     params.step_iterations = 100;
 //    params.store_candidate_trees = false;
-	params.print_ufboot_trees = 0;
+    params.print_ufboot_trees = 0;
     params.jackknife_prop = 0.0;
     params.robust_phy_keep = 1.0;
     params.robust_median = false;
@@ -1452,23 +1461,23 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.root_state = NULL;
     params.print_bootaln = false;
     params.print_boot_site_freq = false;
-	params.print_subaln = false;
-	params.print_partition_info = false;
-	params.print_conaln = false;
-	params.count_trees = false;
+    params.print_subaln = false;
+    params.print_partition_info = false;
+    params.print_conaln = false;
+    params.count_trees = false;
     params.pomo = false;
     params.pomo_random_sampling = false;
-	// params.pomo_counts_file_flag = false;
-	params.pomo_pop_size = 9;
-	params.print_branch_lengths = false;
-	params.lh_mem_save = LM_PER_NODE; // auto detect
+    // params.pomo_counts_file_flag = false;
+    params.pomo_pop_size = 9;
+    params.print_branch_lengths = false;
+    params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
-	params.start_tree = STT_PLL_PARSIMONY;
+    params.start_tree = STT_PLL_PARSIMONY;
     params.start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
 
     params.modelfinder_ml_tree = true;
     params.final_model_opt = true;
-	params.print_splits_file = false;
+    params.print_splits_file = false;
     params.print_splits_nex_file = true;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
@@ -1488,6 +1497,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
+    params.force_aa_mix_finder = false;
     params.print_all_checkpoints = false;
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
@@ -1499,7 +1509,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_outlier = -1.0;
     params.dating_mf = false;
     params.mcmc_clock = CORRELATED;
-    params.mcmc_bds = "1,1,0.5";
+    params.mcmc_bds = "1 1 0.5";
     params.mcmc_iter = "20000, 100, 20000";
 
     // added by TD
@@ -1537,11 +1547,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
-	if (params.nni5) {
-	    params.nni_type = NNI5;
-	} else {
-	    params.nni_type = NNI1;
-	}
+    if (params.nni5) {
+        params.nni_type = NNI5;
+    } else {
+        params.nni_type = NNI1;
+    }
 
     struct timeval tv;
     struct timezone tz;
@@ -1551,6 +1561,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ran_seed = (tv.tv_usec);
     params.subsampling_seed = params.ran_seed;
     params.subsampling = 0;
+    params.seed_specified = false;
     
     params.suppress_list_of_sequences = false;
     params.suppress_zero_distance_warnings = false;
@@ -1572,11 +1583,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_length_ratio = 2;
     params.birth_rate = 0.8;
     params.death_rate = 0.2;
-    params.alisim_fundi_proportion = 0;
+    params.alisim_fundi_proportion = 0.0;
+    params.fundi_init_proportion = 0.5;
+    params.fundi_init_branch_length = 0.0;
     params.alisim_distribution_definitions = NULL;
     params.alisim_skip_checking_memory = false;
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
+    params.alisim_skip_bl_check = false;
     params.branch_distribution = NULL;
     params.alisim_insertion_ratio = 0;
     params.alisim_deletion_ratio = 0;
@@ -1612,6 +1626,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.site_starting_index = 0;
     params.root_freq_str = "";
     params.separate_root_freq = true;
+    params.mr_bayes_output = false;
+    
+    // ----------- SPRTA ----------
+    params.compute_SPRTA = false;
+    params.SPRTA_zero_branches = false;
+    params.out_alter_spr = false;
 
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2145,6 +2165,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
 				params.ran_seed = abs(convert_int(argv[cnt]));
+                params.seed_specified = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pdgain") == 0) {
@@ -2933,13 +2954,34 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.alisim_fundi_proportion = 0.0;
                 } else {
                     params.alisim_fundi_proportion = convert_double(fundi_input.c_str());
-                    if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion < 0)
+                    if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion <= 0)
                         throw "Proportion in FunDi model must be positive and not greater than 1";
                 }
                 
                 continue;
             }
-			if (strcmp(argv[cnt], "-ngs_gap") == 0) {
+
+            if (strcmp(argv[cnt], "--fundi-init-rho") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --fundi-init-rho <proportion>";
+                params.fundi_init_proportion = convert_double(argv[cnt]);
+                if (params.fundi_init_proportion >= 1 || params.fundi_init_proportion <= 0)
+                    throw "Initial proportion in FunDi model must be positive and smaller than 1";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--fundi-init-branch") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --fundi-init-branch <branch_legth>";
+                params.fundi_init_branch_length = convert_double(argv[cnt]);
+                if (params.fundi_init_branch_length >= params.max_branch_length || params.fundi_init_branch_length <= 0)
+                    throw "Initial branch length in FunDi model must be positive and smaller than 10";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-ngs_gap") == 0) {
 				params.ngs_ignore_gaps = false;
 				continue;
 			}
@@ -2962,6 +3004,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_branch_scale = convert_double(argv[cnt]);
                 if (params.alisim_branch_scale <= 0)
                     throw "<SCALE> must be positive!";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-pop-size") == 0 || strcmp(argv[cnt], "--pop-size") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -pop-size <NUM>";
+                const double pop_size = convert_double(argv[cnt]);
+                if (pop_size <= 0)
+                    throw "Population size must be positive!";
+                params.alisim_branch_scale = 0.5 / pop_size;
                 continue;
             }
             if (strcmp(argv[cnt], "--site-rate") == 0) {
@@ -3094,6 +3146,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.branch_distribution = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "--skip-bl-check") == 0) {
+                params.alisim_skip_bl_check = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "--simulation-thresh") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3218,6 +3274,24 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-pathogen-force") == 0 || strcmp(argv[cnt], "--pathogen-force") == 0) {
                 params.inference_alg = ALG_CMAPLE;
                 continue;
+            }
+            if (strcmp(argv[cnt], "--sprta") == 0 ||
+                strcmp(argv[cnt], "-sprta") == 0) {
+              params.compute_SPRTA = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--sprta-zero-branch") == 0 ||
+                strcmp(argv[cnt], "-sprta-zero-branch") == 0) {
+              params.SPRTA_zero_branches = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--sprta-other-places") == 0 ||
+                strcmp(argv[cnt], "-sprta-other-places") == 0) {
+              params.out_alter_spr = true;
+
+              continue;
             }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
                 params.output_format = FORMAT_CSV;
@@ -3440,6 +3514,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0 || strcmp(argv[cnt], "--mix-opt") == 0) {
 				params.optimize_mixmodel_weight = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mfopt") == 0 || strcmp(argv[cnt], "--mfopt") == 0) {
+				params.optimize_mixmodel_freq = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
@@ -4789,7 +4867,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.modelfinder_eps = convert_double(argv[cnt]);
                 if (params.modelfinder_eps <= 0.0)
                     throw "ModelFinder epsilon must be positive";
-                if (params.modelEps > 1.0)
+                if (params.modelfinder_eps > 1.0)
                     throw "ModelFinder epsilon must not be larger than 1.0";
                 continue;
             }
@@ -5441,6 +5519,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.force_unfinished = true;
 				continue;
 			}
+      
+      if (strcmp(argv[cnt], "-force-aa-mix-finder") == 0 || strcmp(argv[cnt], "--force-aa-mix-finder") == 0) {
+        params.force_aa_mix_finder = true;
+        continue;
+      }
 
 			if (strcmp(argv[cnt], "-cptime") == 0 || strcmp(argv[cnt], "--cptime") == 0) {
 				cnt++;
@@ -5504,11 +5587,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.dating_method = argv[cnt];
                 if (params.dating_method != "LSD"){
                     if (params.dating_method != "mcmctree"){
-                        throw "Currently only LSD (least-square dating) method or MCMCTree method is supported";
-                        continue;
+                        throw "Use --dating LSD or --dating mcmctree";
                     }
 
                 }
+                continue;
             }
 
             if (strcmp(argv[cnt], "--date") == 0) {
@@ -5636,10 +5719,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.mcmc_bds = argv[cnt];
                 StrVector mcmc_bds_vec;
                 convert_string_vec(params.mcmc_bds.c_str(), mcmc_bds_vec, ',');
-                if (mcmc_bds_vec.size()!=3 || !strcmp(mcmc_bds_vec[2].c_str(), ""))
+                if (mcmc_bds_vec.size() != 3 || mcmc_bds_vec[0].empty() ||
+                    mcmc_bds_vec[1].empty() ||
+                    mcmc_bds_vec[2].empty())
                 {
-                    throw "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
+                    throw
+                        "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
                 }
+                params.mcmc_bds = mcmc_bds_vec[0] + " " + mcmc_bds_vec[1] + " " + mcmc_bds_vec[2];
                 continue;
             }
 
@@ -5648,7 +5735,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.mcmc_iter = argv[cnt];
                 StrVector mcmc_iter_vec;
                 convert_string_vec(params.mcmc_iter.c_str(), mcmc_iter_vec, ',');
-                if (mcmc_iter_vec.size()!=3  || !strcmp(mcmc_iter_vec[2].c_str(), ""))
+                if (mcmc_iter_vec.size() != 3 || mcmc_iter_vec[0].empty() ||
+                    mcmc_iter_vec[1].empty() ||
+                    mcmc_iter_vec[2].empty())
                 {
                     throw "three parameters should be set for MCMCtree dating (Burin, samplefreq and nsamples)";
                 }
@@ -5882,16 +5971,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.separate_root_freq = false;
                 continue;
             }
-
+            if (strcmp(argv[cnt], "-mrbayes") == 0) {
+                params.mr_bayes_output = true;
+                continue;
+            }
             if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
                 err += "\" option.";
                 throw err;
             } else {
-//                if (params.user_file == NULL)
-//                    params.user_file = argv[cnt];
-//                else
+                if (params.user_file == NULL)
+                    params.user_file = argv[cnt];
+                else
                     params.out_file = argv[cnt];
             }
         }
@@ -6023,6 +6115,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
+
+    // Set MrBayes Block Output if -mset mrbayes
+    if (params.model_set == "mrbayes")
+        params.mr_bayes_output = true;
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
@@ -6030,6 +6126,18 @@ void parseArg(int argc, char *argv[], Params &params) {
     // computeTransMatix has not yet implemented for ModelSet
     if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
         outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
+    
+    // Users have to specify a random seed to run AliSim
+    if (params.alisim_active && !params.seed_specified)
+        outError("To make the simulation reproducible, please specify a random seed via `-seed <NUM>`");
+    
+    // Don't allow using both --branch-scale and -pop-size at the same time
+    if (params.alisim_active)
+    {
+        if (params.original_params.find("-branch-scale") != std::string::npos &&
+            params.original_params.find("-pop-size") != std::string::npos)
+            outError("Only one of `--branch-scale` or `-pop-size` can be specified at a time.");
+    }
     
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
@@ -6136,12 +6244,6 @@ void usage(char* argv[]) {
     //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
-    cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  --pathogen           Apply CMAPLE tree search algorithm if sequence" << endl;
-    cout << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl;
-    cout << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl;
-    cout << "                       of sequence divergence." << endl;
-    cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
     exit(0);
@@ -6242,7 +6344,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
     << "  --ninit NUM          Number of initial parsimony trees (default: 100)" << endl
     << "  --ntop NUM           Number of top initial trees (default: 20)" << endl
-    << "  --nbest NUM          Number of best trees retained during search (defaut: 5)" << endl
+    << "  --nbest NUM          Number of best trees retained during search (default: 5)" << endl
     << "  -n NUM               Fix number of iterations to stop (default: OFF)" << endl
     << "  --nstop NUM          Number of unsuccessful iterations to stop (default: 100)" << endl
     << "  --perturb NUM        Perturbation strength for randomized NNI (default: 0.5)" << endl
@@ -6302,6 +6404,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
     << "  --mset STRING        Restrict search to models supported by other programs" << endl
     << "                       (raxml, phyml, mrbayes, beast1 or beast2)" << endl
+    << "                       If 'mrbayes' is selected, will output a MrBayes" << endl
+    << "                       Block File if Data Type is supported." << endl
     << "  --mset STR,...       Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
     << "  --msub STRING        Amino-acid model source" << endl
     << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
@@ -6463,6 +6567,12 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl
     << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl
     << "                       of sequence divergence." << endl
+    << "  --alrt <num_rep>     Specify number of replicates to compute SH-aLRT." << endl
+    << "  --sprta              Compute SPRTA (DeMaio et al., 2024) branch supports." << endl
+    << "  --sprta-zero-branch  Compute SPRTA supports for zero-length branches." << endl
+    << "  --sprta-other-places Output alternative SPRs and their SPRTA supports." << endl
+    << "  -T <num_thread>      Specify number of threads used for computing" << endl
+    << "                       branch supports (SH-aLRT or SPRTA)." << endl
 
 
     
@@ -6535,8 +6645,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
     //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
     //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
-
-
+        << "  -mrbayes             Outputs a Mr Bayes block file, to use as a template for future analysis" << endl
         << endl;
 
     if (full_command) {
@@ -6548,31 +6657,32 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
-    cout << "Command-line examples (replace 'iqtree2 ...' by actual path to executable):" << endl << endl
+    cout << "Command-line examples (replace 'iqtree3 ...' by actual path to executable):" << endl << endl
          << "1. Infer maximum-likelihood tree from a sequence alignment (example.phy)" << endl
          << "   with the best-fit model automatically selected by ModelFinder:" << endl
-         << "     iqtree2 -s example.phy" << endl << endl
+         << "     iqtree3 -s example.phy" << endl << endl
          << "2. Perform ModelFinder without subsequent tree inference:" << endl
-         << "     iqtree2 -s example.phy -m MF" << endl
+         << "     iqtree3 -s example.phy -m MF" << endl
          << "   (use '-m TEST' to resemble jModelTest/ProtTest)" << endl << endl
          << "3. Combine ModelFinder, tree search, ultrafast bootstrap and SH-aLRT test:" << endl
-         << "     iqtree2 -s example.phy --alrt 1000 -B 1000" << endl << endl
+         << "     iqtree3 -s example.phy --alrt 1000 -B 1000" << endl << endl
          << "4. Perform edge-linked proportional partition model (example.nex):" << endl
-         << "     iqtree2 -s example.phy -p example.nex" << endl
+         << "     iqtree3 -s example.phy -p example.nex" << endl
          << "   (replace '-p' by '-Q' for edge-unlinked model)" << endl << endl
          << "5. Find best partition scheme by possibly merging partitions:" << endl
-         << "     iqtree2 -s example.phy -p example.nex -m MF+MERGE" << endl
+         << "     iqtree3 -s example.phy -p example.nex -m MF+MERGE" << endl
          << "   (use '-m TESTMERGEONLY' to resemble PartitionFinder)" << endl << endl
          << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
-         << "     iqtree2 -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
+         << "     iqtree3 -s example.phy -p example.nex -m MFP+MERGE -B 1000" << endl << endl
 #ifdef _OPENMP
          << "7. Use 4 CPU cores to speed up computation: add '-T 4' option" << endl << endl
 #endif
          << "8. Polymorphism-aware model with HKY nucleotide model and Gamma rate:" << endl
-         << "     iqtree2 -s counts_file.cf -m HKY+P+G" << endl << endl
-         << "9. PoMo mixture with virtual popsize 5 and weighted binomial sampling:" << endl
-         << "     iqtree2 -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
-         << "To show all available options: run 'iqtree2 -h'" << endl << endl
+         << "     iqtree3 -s counts_file.cf -m HKY+P+G" << endl << endl
+    // BQM: this example is too complicated
+//         << "9. PoMo mixture with virtual popsize 5 and weighted binomial sampling:" << endl
+//         << "     iqtree3 -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
+         << "To show all available options: run 'iqtree3 -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.iqtree.org" << endl << endl;
     exit(0);
@@ -7425,6 +7535,534 @@ Params& Params::getInstance() {
     return instance;
 }
 
+void Params::setDefault() {
+    tree_gen = NONE;
+    user_file = NULL;
+    constraint_tree_file = NULL;
+    opt_gammai = true;
+    opt_gammai_fast = false;
+    opt_gammai_keep_bran = false;
+    testAlphaEpsAdaptive = false;
+    randomAlpha = false;
+    testAlphaEps = 0.1;
+    exh_ai = false;
+    alpha_invar_file = NULL;
+    out_prefix = NULL;
+    out_file = NULL;
+    sub_size = 4;
+    pd_proportion = 0.0;
+    min_proportion = 0.0;
+    step_proportion = 0.01;
+    min_size = 0;
+    step_size = 1;
+    find_all = false;
+    run_mode = RunMode::DETECTED;
+    detected_mode = RunMode::DETECTED;
+    param_file = NULL;
+    initial_file = NULL;
+    initial_area_file = NULL;
+    pdtaxa_file = NULL;
+    areas_boundary_file = NULL;
+    boundary_modifier = 1.0;
+    dist_file = NULL;
+    compute_obs_dist = false;
+    compute_jc_dist = true;
+    experimental = true;
+    compute_ml_dist = true;
+    compute_ml_tree = true;
+    compute_ml_tree_only = false;
+    budget_file = NULL;
+    overlap = 0;
+    is_rooted = false;
+    root_move_dist = 2;
+    root_find = false;
+    root_test = false;
+    sample_size = -1;
+    repeated_time = 1;
+    //nr_output = 10000;
+    nr_output = 0;
+    //smode = EXHAUSTIVE;
+    intype = IN_OTHER;
+    budget = -1;
+    min_budget = -1;
+    step_budget = 1;
+    root = NULL;
+    num_splits = 0;
+    min_len = 0.001;
+    mean_len = 0.1;
+    max_len = 0.999;
+    num_zero_len = 0;
+    pd_limit = 100;
+    calc_pdgain = false;
+    multi_tree = false;
+    second_tree = NULL;
+    support_tag = NULL;
+    site_concordance = 0;
+    ancestral_site_concordance = 0;
+    site_concordance_partition = false;
+    print_cf_quartets = false;
+    print_df1_trees = false;
+    internode_certainty = 0;
+    tree_weight_file = NULL;
+    consensus_type = CT_NONE;
+    find_pd_min = false;
+    branch_cluster = 0;
+    taxa_order_file = NULL;
+    endemic_pd = false;
+    exclusive_pd = false;
+    complement_area = NULL;
+    scaling_factor = -1;
+    numeric_precision = -1;
+    binary_programming = false;
+    quad_programming = false;
+    test_input = TEST_NONE;
+    tree_burnin = 0;
+    tree_max_count = 1000000;
+    split_threshold = 0.0;
+    split_threshold_str = NULL;
+    split_weight_threshold = -1000;
+    collapse_zero_branch = false;
+    split_weight_summary = SW_SUM;
+    gurobi_format = true;
+    gurobi_threads = 1;
+    num_bootstrap_samples = 0;
+    bootstrap_spec = NULL;
+    transfer_bootstrap = 0;
+    
+    aln_file = NULL;
+    phylip_sequential_format = false;
+    symtest = SYMTEST_NONE;
+    symtest_only = false;
+    symtest_remove = 0;
+    symtest_keep_zero = false;
+    symtest_type = 0;
+    symtest_pcutoff = 0.05;
+    symtest_stat = false;
+    symtest_shuffle = 1;
+    //treeset_file = NULL;
+    topotest_replicates = 0;
+    topotest_optimize_model = false;
+    do_weighted_test = false;
+    do_au_test = false;
+    siteLL_file = NULL; //added by MA
+    partition_file = NULL;
+    partition_type = BRLEN_OPTIMIZE;
+    partfinder_rcluster = 10; // change the default from 100 to 10
+    partfinder_rcluster_max = 0;
+    partition_merge = MERGE_NONE;
+    merge_models = "1";
+    merge_rates = "1";
+    partfinder_log_rate = true;
+    
+    sequence_type = NULL;
+    aln_output = NULL;
+    aln_site_list = NULL;
+    aln_output_format = IN_PHYLIP;
+    output_format = FORMAT_NORMAL;
+    newick_extended_format = false;
+    gap_masked_aln = NULL;
+    concatenate_aln = NULL;
+    aln_nogaps = false;
+    aln_no_const_sites = false;
+    print_aln_info = false;
+    //    parsimony = false;
+    //    parsimony_tree = false;
+    tree_spr = false;
+    nexus_output = false;
+    k_representative = 4;
+    loglh_epsilon = 0.001;
+    numSmoothTree = 1;
+    nni5 = true;
+    nni5_num_eval = 1;
+    brlen_num_traversal = 1;
+    leastSquareBranch = false;
+    pars_branch_length = false;
+    bayes_branch_length = false;
+    manuel_analytic_approx = false;
+    leastSquareNNI = false;
+    ls_var_type = OLS;
+    maxCandidates = 20;
+    popSize = 5;
+    p_delete = -1;
+    min_iterations = -1;
+    max_iterations = 1000;
+    num_param_iterations = 100;
+    stop_condition = SC_UNSUCCESS_ITERATION;
+    stop_confidence = 0.95;
+    num_runs = 1;
+    model_name = "";
+    contain_nonrev = false;
+    model_name_init = NULL;
+    model_opt_steps = 10;
+    model_set = "ALL";
+    model_extra_set = NULL;
+    model_subset = NULL;
+    state_freq_set = NULL;
+    ratehet_set = "AUTO";
+    score_diff_thres = 10.0;
+    model_def_file = NULL;
+    modelomatic = false;
+    model_test_again = false;
+    model_test_and_tree = 0;
+    model_test_separate_rate = false;
+    optimize_mixmodel_weight = false;
+    optimize_rate_matrix = false;
+    store_trans_matrix = false;
+    parallel_over_sites = false;
+    order_by_threads = false;
+    //freq_type = FREQ_EMPIRICAL;
+    freq_type = FREQ_UNKNOWN;
+    keep_zero_freq = true;
+    min_state_freq = MIN_FREQUENCY;
+    min_rate_cats = 2;
+    num_rate_cats = 4;
+    max_rate_cats = 10;
+    min_mix_cats = 1;
+    max_mix_cats = 10;
+    start_subst = "GTR+FO";
+    opt_rhas_again = false;
+    opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    opt_qmix_pthres = 0.05;
+    check_combin_q_mat = true;
+    gamma_shape = -1.0;
+    min_gamma_shape = MIN_GAMMA_SHAPE;
+    gamma_median = false;
+    p_invar_sites = -1.0;
+    optimize_model_rate_joint = false;
+    optimize_by_newton = true;
+    optimize_alg_freerate = "2-BFGS,EM";
+    optimize_alg_mixlen = "EM";
+    optimize_alg_gammai = "EM";
+    optimize_alg_treeweight = "EM";
+    optimize_from_given_params = false;
+    optimize_alg_qmix = "BFGS";
+    estimate_init_freq = 0;
+    
+    // defaults for new options -JD
+    optimize_linked_gtr = false;
+    gtr20_model = "POISSON";
+    guess_multiplier = 0.75; // change from 0.5
+    // rates_file = false;
+    reset_method = "random"; // change from const
+    
+    optimize_params_use_hmm = false;
+    optimize_params_use_hmm_sm = false;
+    optimize_params_use_hmm_gm = false;
+    optimize_params_use_hmm_tm = false;
+    HMM_no_avg_brlen = false;
+    HMM_min_stran = 0.0;
+    treemix_optimize_methods = "mast"; // default is MAST
+    
+    fixed_branch_length = BRLEN_OPTIMIZE;
+    min_branch_length = 0.0; // this is now adjusted later based on alignment length
+    // TODO DS: This seems inappropriate for PoMo.  It is handled in
+    // phyloanalysis::2908.
+    max_branch_length = 10.0; // Nov 22 2016: reduce from 100 to 10!
+    iqp_assess_quartet = IQP_DISTANCE;
+    iqp = false;
+    write_intermediate_trees = 0;
+    //    avoid_duplicated_trees = false;
+    writeDistImdTrees = false;
+    rf_dist_mode = 0;
+    rf_same_pair = false;
+    normalize_tree_dist = false;
+    mvh_site_rate = false;
+    rate_mh_type = true;
+    discard_saturated_site = false;
+    mean_rate = 1.0;
+    aLRT_threshold = 101;
+    aLRT_replicates = 0;
+    aLRT_test = false;
+    aBayes_test = false;
+    localbp_replicates = 0;
+#ifdef __AVX512KNL
+    SSE = LK_AVX512;
+#else
+    SSE = LK_AVX_FMA;
+#endif
+    lk_safe_scaling = false;
+    numseq_safe_scaling = 2000;
+    kernel_nonrev = false;
+    print_site_lh = WSL_NONE;
+    print_partition_lh = false;
+    print_marginal_prob = false;
+    print_site_prob = WSL_NONE;
+    print_site_state_freq = WSF_NONE;
+    print_site_rate = 0;
+    print_trees_site_posterior = 0;
+    print_ancestral_sequence = AST_NONE;
+    min_ancestral_prob = 0.0;
+    print_tree_lh = false;
+    lambda = 1;
+    speed_conf = 1.0;
+    whtest_simulations = 1000;
+    mcat_type = MCAT_LOG + MCAT_PATTERN;
+    rate_file = NULL;
+    ngs_file = NULL;
+    ngs_mapped_reads = NULL;
+    ngs_ignore_gaps = true;
+    do_pars_multistate = false;
+    gene_pvalue_file = NULL;
+    gene_scale_factor = -1;
+    gene_pvalue_loga = false;
+    second_align = NULL;
+    ncbi_taxid = 0;
+    ncbi_taxon_level = NULL;
+    ncbi_names_file = NULL;
+    ncbi_ignore_level = NULL;
+    
+    eco_dag_file  = NULL;
+    eco_type = NULL;
+    eco_detail_file = NULL;
+    k_percent = 0;
+    diet_min = 0;
+    diet_max = 0;
+    diet_step = 0;
+    eco_weighted = false;
+    eco_run = 0;
+    
+    upper_bound = false;
+    upper_bound_NNI = false;
+    upper_bound_frac = 0.0;
+    
+    gbo_replicates = 0;
+    ufboot_epsilon = 0.5;
+    check_gbo_sample_size = 0;
+    use_rell_method = true;
+    use_elw_method = false;
+    use_weighted_bootstrap = false;
+    use_max_tree_per_bootstrap = true;
+    max_candidate_trees = 0;
+    distinct_trees = false;
+    online_bootstrap = true;
+    min_correlation = 0.99;
+    step_iterations = 100;
+    //    store_candidate_trees = false;
+    print_ufboot_trees = 0;
+    jackknife_prop = 0.0;
+    robust_phy_keep = 1.0;
+    robust_median = false;
+    //const double INF_NNI_CUTOFF = -1000000.0;
+    nni_cutoff = -1000000.0;
+    estimate_nni_cutoff = false;
+    nni_sort = false;
+    //nni_opt_5branches = false;
+    testNNI = false;
+    approximate_nni = false;
+    do_compression = false;
+    
+    new_heuristic = true;
+    iteration_multiple = 1;
+    initPS = 0.5;
+#ifdef USING_PLL
+    pll = true;
+#else
+    pll = false;
+#endif
+    modelEps = 0.01;
+    fundiEps = 0.000001;
+    modelfinder_eps = 0.1;
+    treemix_eps = 0.001;
+    treemixhmm_eps = 0.01;
+    parbran = false;
+    binary_aln_file = NULL;
+    maxtime = 1000000;
+    reinsert_par = false;
+    bestStart = true;
+    snni = true; // turn on sNNI default now
+    //    autostop = true; // turn on auto stopping rule by default now
+    unsuccess_iteration = 100;
+    speednni = true; // turn on reduced hill-climbing NNI by default now
+    numInitTrees = 100;
+    fixStableSplits = false;
+    stableSplitThreshold = 0.9;
+    five_plus_five = false;
+    memCheck = false;
+    tabu = false;
+    adaptPertubation = false;
+    numSupportTrees = 20;
+    //    sprDist = 20;
+    sprDist = 6;
+    sankoff_cost_file = NULL;
+    numNNITrees = 20;
+    avh_test = 0;
+    bootlh_test = 0;
+    bootlh_partitions = NULL;
+    site_freq_file = NULL;
+    tree_freq_file = NULL;
+    num_threads = 1;
+    num_threads_max = 10000;
+    openmp_by_model = false;
+    model_test_criterion = MTC_BIC;
+    //    model_test_stop_rule = MTC_ALL;
+    model_test_sample_size = 0;
+    root_state = NULL;
+    print_bootaln = false;
+    print_boot_site_freq = false;
+    print_subaln = false;
+    print_partition_info = false;
+    print_conaln = false;
+    count_trees = false;
+    pomo = false;
+    pomo_random_sampling = false;
+    // pomo_counts_file_flag = false;
+    pomo_pop_size = 9;
+    print_branch_lengths = false;
+    lh_mem_save = LM_PER_NODE; // auto detect
+    buffer_mem_save = false;
+    start_tree = STT_PLL_PARSIMONY;
+    start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
+    
+    modelfinder_ml_tree = true;
+    final_model_opt = true;
+    print_splits_file = false;
+    print_splits_nex_file = true;
+    ignore_identical_seqs = true;
+    write_init_tree = false;
+    write_candidate_trees = false;
+    write_branches = false;
+    freq_const_patterns = NULL;
+    no_rescale_gamma_invar = false;
+    compute_seq_identity_along_tree = false;
+    compute_seq_composition = true;
+    lmap_num_quartets = -1;
+    lmap_cluster_file = NULL;
+    print_lmap_quartet_lh = false;
+    num_mixlen = 1;
+    link_alpha = false;
+    link_model = false;
+    model_joint = "";
+    ignore_checkpoint = false;
+    checkpoint_dump_interval = 60;
+    force_unfinished = false;
+    print_all_checkpoints = false;
+    suppress_output_flags = 0;
+    ufboot2corr = false;
+    u2c_nni5 = false;
+    date_with_outgroup = true;
+    date_debug = false;
+    date_replicates = 0;
+    clock_stddev = -1.0;
+    date_outlier = -1.0;
+    dating_mf = false;
+    mcmc_clock = CORRELATED;
+    mcmc_bds = "1,1,0.5";
+    mcmc_iter = "20000, 100, 20000";
+    
+    // added by TD
+    use_nn_model = false;
+    nn_path_model = "resnet_modelfinder.onnx";
+    nn_path_rates = "lanfear_alpha_lstm.onnx";
+    
+    // ------------ Terrace variables ------------
+    terrace_check = false;
+    terrace_analysis = false;
+    print_terrace_trees = false;
+    print_induced_trees = false;
+    pr_ab_matrix = nullptr;
+    print_pr_ab_matrix = false;
+    print_m_overlap = false;
+    terrace_query_set = nullptr;
+    terrace_stop_intermediate_num = -1;
+    terrace_stop_terrace_trees_num = -1;
+    terrace_stop_time = -1;
+    terrace_non_stop = false;
+    terrace_print_lim = 0;
+    terrace_remove_m_leaves = 0;
+    matrix_order = false;
+    gen_all_NNI = false;
+    
+    remove_empty_seq = true;
+    terrace_aware = true;
+#ifdef IQTREE_TERRAPHAST
+    terrace_analysis_tphast = false;
+#else
+    terrace_analysis_tphast = false;
+#endif
+    
+    // --------------------------------------------
+    
+    matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
+    
+    if (nni5) {
+        nni_type = NNI5;
+    } else {
+        nni_type = NNI1;
+    }
+    
+    struct timeval tv;
+    struct timezone tz;
+    // initialize random seed based on current time
+    gettimeofday(&tv, &tz);
+    //ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
+    ran_seed = (tv.tv_usec);
+    subsampling_seed = ran_seed;
+    subsampling = 0;
+    seed_specified = false;
+    
+    suppress_list_of_sequences = false;
+    suppress_zero_distance_warnings = false;
+    suppress_duplicate_sequence_warnings = false;
+    
+    original_params = "";
+    alisim_active = false;
+    multi_rstreams_used = false;
+    alisim_inference_mode = false;
+    alisim_no_copy_gaps = false;
+    alisim_sequence_length = 1000;
+    alisim_dataset_num = 1;
+    root_ref_seq_aln = "";
+    root_ref_seq_name = "";
+    alisim_max_rate_categories_for_applying_caching = 100;
+    alisim_num_states_morph = 0;
+    alisim_num_taxa_uniform_start = -1;
+    alisim_num_taxa_uniform_end = -1;
+    alisim_length_ratio = 2;
+    birth_rate = 0.8;
+    death_rate = 0.2;
+    alisim_fundi_proportion = 0.0;
+    fundi_init_proportion = 0.5;
+    fundi_init_branch_length = 0.0;
+    alisim_distribution_definitions = NULL;
+    alisim_skip_checking_memory = false;
+    alisim_write_internal_sequences = false;
+    alisim_only_unroot_tree = false;
+    alisim_skip_bl_check = false;
+    branch_distribution = NULL;
+    alisim_insertion_ratio = 0;
+    alisim_deletion_ratio = 0;
+    alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,100);
+    alisim_deletion_distribution = IndelDistribution(ZIPF,1.7,100);
+    alisim_mean_deletion_size = -1;
+    alisim_simulation_thresh = 0.001;
+    delay_msgs = "";
+    alisim_no_export_sequence_wo_gaps = false;
+    alisim_mixture_at_sub_level = false;
+    alisim_branch_scale = 1.0;
+    alisim_rate_heterogeneity = POSTERIOR_MEAN;
+    alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+    alisim_single_output = false;
+    keep_seq_order = false;
+    mem_limit_factor = 0;
+    delete_output = false;
+    indel_rate_variation = false;
+    tmp_data_filename = "tmp_data";
+    rebuild_indel_history_param = 1.0/3;
+    alisim_openmp_alg = IM;
+    no_merge = false;
+    alignment_id = 0;
+    inference_alg = ALG_IQ_TREE;
+    in_aln_format_str = "AUTO";
+    shallow_tree_search = false;
+    tree_search_type_str = "NORMAL";
+    allow_replace_input_tree = false;
+    tree_format_str = "BIN";
+    make_consistent = false;
+    include_pre_mutations = false;
+    mutation_file = "";
+    site_starting_index = 0;
+    intree_str = "";
+}
 
 int countPhysicalCPUCores() {
     #ifdef _OPENMP
@@ -8198,4 +8836,40 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
         default:
             return output_filepath + ".phy";
     }
+}
+
+double minValueCheckMrBayes(double orig_value) {
+     if (orig_value < 0.01) {
+         outWarning("MrBayes does not support values < 0.01! Using 0.01 instead...");
+         return 0.01;
+     }
+     return orig_value;
+}
+
+const unordered_map<string, string> iqtree_to_mr_bayes_aa_models = {
+        {"Poisson", "poisson"},
+        {"JTT", "jones"},
+        {"Dayhoff", "dayhoff"},
+        {"mtREV", "mtrev"},
+        {"mtMAM", "mtmam"},
+        {"WAG", "wag"},
+        {"rtREV", "rtrev"},
+        {"cpREV", "cprev"},
+        {"VT", "vt"},
+        {"Blosum62", "blosum"},
+        {"LG", "lg"},
+};
+
+// Anything outside of index 10 (Code No. 11) is invalid, leave that as empty string
+const string indexed_mr_bayes_genetic_codes[25] = {"universal", "vertmt", "yeast", "mycoplasma", "invermt",
+                                               "ciliate", "", "", "echinoderm", "euplotid", "universal"};
+
+unordered_map<string, string> getIqTreeToMrBayesAAModels() {
+    return iqtree_to_mr_bayes_aa_models;
+}
+
+string getMrBayesGeneticCode(int geneticCodeId) {
+    if (geneticCodeId == 0) return "";
+
+    return indexed_mr_bayes_genetic_codes[geneticCodeId - 1];
 }

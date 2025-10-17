@@ -2824,7 +2824,7 @@ double PhyloTree::computeFundiLikelihood() {
         taxa_set.insert(*it);
     }
 
-    cout << "rho = " << params->alisim_fundi_proportion << endl;
+    cout << "Fundi proportion rho: " << params->alisim_fundi_proportion << endl;
 
     findNodeNames(taxa_set, central_branch, root, nullptr);
     if (!central_branch.first) {
@@ -2912,6 +2912,16 @@ double PhyloTree::computeFundiLikelihood() {
         // by BFGS algorithm
         current_it = (PhyloNeighbor*)central_branch.second;
         current_it_back = (PhyloNeighbor*)central_branch.second->node->findNeighbor(central_branch.first);
+
+        params->alisim_fundi_proportion = params->fundi_init_proportion;
+        if (params->fundi_init_branch_length > 0.0) {
+            current_it->length = params->fundi_init_branch_length;
+            current_it_back->length = params->fundi_init_branch_length;
+        }
+
+        cout << "Init rho = " << params->alisim_fundi_proportion
+            << " and init branch length = " << current_it->length << endl;
+        
         variables[1] = params->alisim_fundi_proportion;
         variables[2] = current_it->length;
         lower_bound[1] = 0.0;
@@ -3376,6 +3386,22 @@ double PhyloTree::correctDist(double *dist_mat) {
     return longest_dist;
 }
 
+double PhyloTree::pairDist(Node *node1, Node *node2, Node *node, Node *dad) {
+    if (!node) return -1;
+
+    if (node == node2) return 0;
+    double branch_len;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+            branch_len = (*it)->length;
+            double current_len = pairDist(node1, node2, (*it)->node, node);
+            if (current_len != -1) {
+                return current_len + branch_len;
+            }
+        }
+    return -1;
+}
+
+
 template <class L, class F> double computeDistanceMatrix
     ( LEAST_SQUARE_VAR vartype
     , L unknown, const L* sequenceMatrix, int nseqs, int seqLen
@@ -3696,17 +3722,28 @@ double PhyloTree::computeObsDist(double *dist_mat) {
     #pragma omp parallel for schedule(dynamic)
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
-        size_t pos = seq1*nseqs;
-        for (size_t seq2 = 0; seq2 < nseqs; ++seq2, ++pos) {
+        size_t pos = seq1*nseqs + seq1;
+        for (size_t seq2 = seq1; seq2 < nseqs; ++seq2, ++pos) {
             if (seq1 == seq2)
                 dist_mat[pos] = 0.0;
-            else if (seq2 > seq1) {
+            else {
                 dist_mat[pos] = aln->computeObsDist(seq1, seq2);
-            } else
-                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-            if (dist_mat[pos] > longest_dist) {
-                longest_dist = dist_mat[pos];
             }
+            #pragma omp critical
+            {
+                if (dist_mat[pos] > longest_dist) {
+                    longest_dist = dist_mat[pos];
+                }
+            }
+        }
+    }
+//    #ifdef _OPENMP
+//    #pragma omp parallel for schedule(dynamic)
+//    #endif
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
+        size_t pos = seq1*nseqs;
+        for (size_t seq2 = 0; seq2 < seq1; ++seq2, ++pos) {
+            dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
         }
     }
     return longest_dist;
@@ -6180,11 +6217,11 @@ void PhyloTree::showProgress() {
     }
 }
 
-void PhyloTree::doneProgress() {
+void PhyloTree::doneProgress(bool showMsg) {
     {
         --progressStackDepth;
         if (progressStackDepth==0) {
-            progress->done();
+            progress->done(showMsg);
             delete progress;
             progress = nullptr;
         }

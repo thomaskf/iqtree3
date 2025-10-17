@@ -723,7 +723,7 @@ void MTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
             
             // make sure the current line is not empty
             if (in.peek() == EOF )
-                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index) + " at line " + convertIntToString(tree_line_index+1)+" in the input tree file. To use Edge-unlinked partition model, please specify a super tree (combining all taxa in all partitions) in the first line. Following that, each tree for each partition should be specified in a single line one by one in the input (multiple)-tree file.");
+                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index + 1) + " at line " + convertIntToString(tree_line_index + 1) + " in the input tree file. To use Edge-unlinked partition model, each tree for each partition should be specified in a single line one by one in the input (multiple)-tree file.");
         }
         readTree(in, is_rooted);
         in.close();
@@ -738,15 +738,13 @@ void MTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
              " taxa and " << nodeNum-1-is_rooted << " branches" << (is_rooted ? " (rooted)" : "") << endl;
 }
 
-/*
-void MTree::readTreeString(string tree_string, bool is_rooted) {
+void MTree::read_TreeString(string tree_string, bool is_rooted) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, is_rooted);
 }
-*/
 
 
 void MTree::readTree(istream &in, bool &is_rooted)

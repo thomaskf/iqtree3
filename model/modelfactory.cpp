@@ -31,6 +31,7 @@
 #include "modelpomo.h"
 #include "modelset.h"
 #include "modelmixture.h"
+#include "modelcodonmixture.h"
 #include "ratemeyerhaeseler.h"
 #include "ratemeyerdiscrete.h"
 #include "ratekategory.h"
@@ -211,7 +212,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
             size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
             string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
-            // cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
             nxsmodel = models_block->findMixModel(sub_model_str);
             if (nxsmodel) sub_model_str = nxsmodel->description;
             new_model_str += sub_model_str;
@@ -261,6 +261,19 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             rate_str = rate_str.substr(0, spec_pos);
         } else {
             freq_str += rate_str.substr(spec_pos, end_pos - spec_pos);
+            rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
+        }
+    }
+        
+    // decompose +CMIX (codon mixture) from rate_str
+    string cmix_str = "";
+    if ((spec_pos = rate_str.find("+CMIX")) != string::npos) {
+        size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
+        if (end_pos == string::npos) {
+            cmix_str += rate_str.substr(spec_pos);
+            rate_str = rate_str.substr(0, spec_pos);
+        } else {
+            cmix_str += rate_str.substr(spec_pos, end_pos - spec_pos);
             rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
     }
@@ -614,6 +627,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 model_str = model_str.substr(0, 3);
             }
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+        } else if (model_name.find("+CMIX") != string::npos) {
+            // codon mixture model
+            model = new ModelCodonMixture(model_name, model_str, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
             //            NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -985,7 +1001,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             }
             site_rate = new RateKategory(num_rate_cats, tree);
         } else
-            outError("Invalid rate heterogeneity type");
+            outError("Invalid rate heterogeneity type " + rate_str);
 //        if (model_str.find('+') != string::npos)
 //            model_str = model_str.substr(0, model_str.find('+'));
 //        else
@@ -1110,10 +1126,9 @@ bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
         */
 
         for (i = 0; i < nested_models.size(); i++) {
-            map<string, string>::iterator itr = checkpoint->find(nested_models[i] + rate_name);
-            ASSERT(itr != checkpoint->end());
-
-            string best_model_logl_df = itr->second;
+            string best_model_logl_df;
+            bool check = checkpoint->getString(nested_models[i] + rate_name, best_model_logl_df);
+            ASSERT(check);
             stringstream ss(best_model_logl_df);
             ss >> cur_logl;
 
@@ -1162,10 +1177,9 @@ bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
 
         for (i = 0; i < nested_models.size(); i++) {
             nested_mix_model = replaceLastQ(model_name, nested_models[i]);
-            map<string, string>::iterator itr = checkpoint->find(nested_mix_model + rate_name);
-            ASSERT(itr != checkpoint->end());
-
-            string best_model_logl_df = itr->second;
+            string best_model_logl_df;
+            bool check = checkpoint->getString(nested_mix_model + rate_name, best_model_logl_df);
+            ASSERT(check);
             stringstream ss(best_model_logl_df);
             ss >> cur_logl;
 
@@ -1210,16 +1224,10 @@ void ModelFactory::initFromClassMinusOne(double init_weight) {
     int nmix = model->getNMixtures();
     if (nmix > 1) {
         model->initFromClassMinusOne(init_weight);
-        checkpoint->startStruct("BestOfTheKClass");
-        if (nmix > 2) {
-            checkpoint->startStruct("ModelMixture" + convertIntToString(nmix-1));
-        }
+        site_rate->getCheckpoint()->startStruct("BestOfThe" + convertIntToString(nmix-1) + "Class");
         site_rate->restoreCheckpoint();
         site_rate->phylo_tree->restoreCheckpoint();
-        if (nmix > 2) {
-            checkpoint->endStruct();
-        }
-        checkpoint->endStruct();
+        site_rate->getCheckpoint()->endStruct();
     }
 }
 
@@ -1593,11 +1601,11 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     //bool optimize_rate = true;
 //    double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
     
-    // for mixture model, increase the maximum number of iterations
-    if (model->isMixture()) {
-        tree->params->num_param_iterations = model->getNMixtures() * 100;
-        // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
-    }
+//    // for mixture model, increase the maximum number of iterations
+//    if (model->isMixture()) {
+//        tree->params->num_param_iterations = model->getNMixtures() * 100;
+//        // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
+//    }
     
 #ifdef _IQTREE_MPI
     // synchronize the checkpoints of the other processors
