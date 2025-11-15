@@ -1233,7 +1233,12 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-	
+    if (name == "M7" | name == "M8") {
+        cout << "Shape parameters" << endl;
+        cout << "alpha: " << variables[ndim-1] << endl;
+        cout << "beta: " << variables[ndim] << endl;
+    }
+
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;

@@ -2433,7 +2433,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-	
+
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;

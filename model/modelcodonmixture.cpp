@@ -79,17 +79,17 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             //RateBeta beta_dist;
             double* omega = RateBeta::SampleOmegas(shape_alpha,shape_beta);
 
-            model_list = model_name + "{" + std::to_string(omega[0]) + "}," +
-                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}," +
-                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}," +
-                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}," +
-                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}," +
-                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}," +
-                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}," +
-                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}," +
-                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}," +
-                                                    model_name + "{>0.001" + kappa_str + "}";
+            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
+                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
+                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
+                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.09," +
+                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.09," +
+                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.09," +
+                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.09," +
+                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.09," +
+                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.09," +
+                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.09," +
+                                                    model_name + "{>1.001" + kappa_str + "}";
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
@@ -157,11 +157,17 @@ bool ModelCodonMixture::getVariables(double *variables) {
             model->omega = omega[i];
         }
     }else if (name=="M8") {
-        for (int i = 1; i < size()-1; i++) {
+        for (int i = 0; i < size()-1; i++) {
             ModelCodon *model = (ModelCodon*)at(i);
             model->omega = omega[i];
-            prop[i] = prop[0];
+            //prop[i] = prop[0];
+            prop[i] = (1.0-variables[getNDim()-2])/(size()-1);
+            //cout << "i: " << i << endl;
+            //cout << "omega: " << omega[i] << endl;
         }
+        prop[size()-1] = variables[getNDim()-2];
+        //cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << endl;
+        //cout << "weight: " << variables[getNDim()-2] << endl;
     }
     for (int i = 1; i < size(); i++) {
         ModelCodon *model = (ModelCodon*)at(i);
@@ -172,9 +178,13 @@ bool ModelCodonMixture::getVariables(double *variables) {
 }
 
 int ModelCodonMixture::getNDim() {
-    if (name == "M7" || name == "M8") {
+    if (name == "M7") {
         //Adds 2 beta distribution shape parameters for the beta distribution
         return ModelMixture::getNDim()+2;
+    }
+    else if(name == "M8") {
+        //M8 needs an extra category for the >1 omega category weight
+        return ModelMixture::getNDim()+3;
     }
     else{
         return ModelMixture::getNDim();
@@ -186,6 +196,9 @@ void ModelCodonMixture::setVariables(double *variables) {
     if (name == "M7" || name == "M8") {
         variables[getNDim()-1] = 1.0;
         variables[getNDim()] = 1.0;
+        if (name == "M8") {
+            variables[getNDim()-2] = 0.1;
+        }
     }
 }
 
@@ -198,6 +211,11 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
         lower_bound[getNDim()]=0.01;
         upper_bound[getNDim()]=10.0000;
         bound_check[getNDim()]=false;
+        if (name == "M8") {
+            lower_bound[getNDim()-2]=0.001;
+            upper_bound[getNDim()-2]=0.999;
+            bound_check[getNDim()-2]=false;
+        }
     }
 }
 
