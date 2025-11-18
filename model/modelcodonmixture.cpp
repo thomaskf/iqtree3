@@ -207,10 +207,10 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
     if (name == "M7" || name == "M8") {
         lower_bound[getNDim()-1]=0.01;
         upper_bound[getNDim()-1]=10.0000;
-        bound_check[getNDim()-1]=false;
+        bound_check[getNDim()-1]=true;
         lower_bound[getNDim()]=0.01;
         upper_bound[getNDim()]=10.0000;
-        bound_check[getNDim()]=false;
+        bound_check[getNDim()]=true;
         if (name == "M8") {
             lower_bound[getNDim()-2]=0.001;
             upper_bound[getNDim()-2]=0.999;
