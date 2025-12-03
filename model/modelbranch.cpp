@@ -135,7 +135,7 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
 }
 
 string ModelBranch::getName() {
-    if (name != "") return name;
+    // if (name != "") return name;
     string retname = "BR";
     retname += OPEN_BRACKET;
     for (iterator it = begin(); it != end(); it++) {
@@ -270,10 +270,13 @@ int ModelBranch::getNDim() {
     }
     
     int totndim = 0;
-    for (iterator it = begin(); it != end(); it++)
-        totndim += (*it)->getNDim();
+    for (iterator it = begin(); it != end(); it++) {
+        if (!(*it)->fixed_parameters) {
+            totndim += (*it)->getNDim();
+        }
+    }
     
-    if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+    if (separate_root_freq && freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         totndim += ModelMarkov::num_states-1;
     }
     
@@ -349,10 +352,12 @@ void ModelBranch::setVariables(double *variables) {
     
     int dim = 0;
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->ModelMarkov::setVariables(&variables[dim]);
-        dim += (*it)->ModelMarkov::getNDim();
+        if (!(*it)->fixed_parameters) {
+            (*it)->ModelMarkov::setVariables(&variables[dim]);
+            dim += (*it)->ModelMarkov::getNDim();
+        }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         double* var = &variables[dim+1];
         memcpy(var, ModelMarkov::state_freq, (ModelMarkov::num_states-1)*sizeof(double));
         dim += (ModelMarkov::num_states-1);
@@ -378,10 +383,12 @@ bool ModelBranch::getVariables(double *variables) {
     int dim = 0;
     bool changed = false;
     for (iterator it = begin(); it != end(); it++) {
-        changed |= (*it)->ModelMarkov::getVariables(&variables[dim]);
-        dim += (*it)->ModelMarkov::getNDim();
+        if (!(*it)->fixed_parameters) {
+            changed |= (*it)->ModelMarkov::getVariables(&variables[dim]);
+            dim += (*it)->ModelMarkov::getNDim();
+        }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE&& !fixed_parameters) {
         double* var = &variables[dim+1];
         for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
             changed |= (ModelMarkov::state_freq[i] != var[i]);
@@ -408,10 +415,12 @@ void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *boun
 
     int dim = 0;
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->ModelMarkov::setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
-        dim += (*it)->ModelMarkov::getNDim();
+        if (!(*it)->fixed_parameters) {
+            (*it)->ModelMarkov::setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+            dim += (*it)->ModelMarkov::getNDim();
+        }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         for (size_t i = 1; i <= ModelMarkov::num_states-1; i++) {
             lower_bound[dim+i] = Params::getInstance().min_state_freq;;
             upper_bound[dim+i] = 1.0;
@@ -441,7 +450,7 @@ double ModelBranch::targetFunk(double x[]) {
         phylo_tree->clearAllPartialLH();
     }
     
-    return -phylo_tree->computeLikelihood();;
+    return -phylo_tree->computeLikelihood();
 }
 
 void ModelBranch::scaleStateFreq(bool sum_one) {
@@ -450,5 +459,31 @@ void ModelBranch::scaleStateFreq(bool sum_one) {
     }
     if (separate_root_freq) {
         ModelMarkov::scaleStateFreq(sum_one);
+    }
+}
+
+/**
+    fix parameters of the model
+    @param fix true to fix, false to not fix
+    @return the current state of fixing parameters
+ */
+bool ModelBranch::fixParameters(bool fix) {
+    bool current = fixed_parameters;
+    fixed_parameters = fix;
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->fixed_parameters = fix;
+    }
+    return current;
+}
+
+// set the state freq to all models with estimated frequency type
+void ModelBranch::adaptStateFrequency(double *state_freq) {
+    if (freq_type == FREQ_ESTIMATE) {
+        ModelSubst::setStateFrequency(state_freq);
+    }
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it)->freq_type == FREQ_ESTIMATE) {
+            (*it)->ModelSubst::setStateFrequency(state_freq);
+        }
     }
 }

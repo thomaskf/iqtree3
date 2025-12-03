@@ -91,6 +91,12 @@ public:
     // scale the state frequencies
     void scaleStateFreq(bool sum_one);
     
+    // fix or unfix the parameters
+    virtual bool fixParameters(bool fix);
+    
+    // set the state freq to all models
+    virtual void adaptStateFrequency(double *state_freq);
+
 private:
     
     bool optimizing_root_freq;

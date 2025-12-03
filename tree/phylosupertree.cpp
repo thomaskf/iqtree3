@@ -50,13 +50,20 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree, bool 
     int part = 0;
 
     StrVector model_names;
+    Params params = Params::getInstance();
     for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++, part++) {
         if (create_tree) {
             PhyloTree *tree;
-            if (new_iqtree)
-                tree = new IQTree(*it);
-            else
+            if (new_iqtree) {
+                if (params.model_name.find("BR{") != string::npos || params.model_joint.find("BR{") != string::npos) {
+                    // branch model
+                    tree = new PhyloTreeBranchModel(*it);
+                } else {
+                    tree = new IQTree(*it);
+                }
+            } else {
                 tree = new PhyloTree(*it);
+            }
             push_back(tree);
         }
         PartitionInfo info;
@@ -68,24 +75,23 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree, bool 
     }
     
     aln = alignment;
-    
 }
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
-	totalNNIs = evalNNIs = 0;
+    totalNNIs = evalNNIs = 0;
     rescale_codon_brlen = super_tree->rescale_codon_brlen;
-	part_info = super_tree->part_info;
-	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
-		PhyloTree *tree = new PhyloTree((*it));
-		push_back(tree);
-	}
-	// Initialize the counter for evaluated NNIs on subtrees
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-		part_info[part].evalNNIs = 0.0;
-	}
-
-	aln = alignment;
+    part_info = super_tree->part_info;
+    for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
+        PhyloTree *tree = new PhyloTree((*it));
+        push_back(tree);
+    }
+    // Initialize the counter for evaluated NNIs on subtrees
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        part_info[part].evalNNIs = 0.0;
+    }
+    
+    aln = alignment;
 }
 
 void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {

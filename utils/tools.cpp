@@ -6026,6 +6026,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     } else {
         params.optimize_params_use_hmm = false;
     }
+    
+    if (params.model_name.find("BR{") != string::npos || params.model_joint.find("BR{") != string::npos) {
+        // use BFGS for free-rate model if using branch model
+        params.optimize_alg_freerate = "2-BFGS";
+    }
 
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");

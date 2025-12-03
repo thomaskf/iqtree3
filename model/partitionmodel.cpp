@@ -69,9 +69,14 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if ((*it)->isTreeMix()) {
             ((IQTreeMixHmm*)(*it))->initializeModel(params, model_name, models_block);
         } else {
-            (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
-            (*it)->setModel((*it)->getModelFactory()->model);
-            (*it)->setRate((*it)->getModelFactory()->site_rate);
+            if ((*it)->isBranchModel()) {
+                // branch model
+                ((PhyloTreeBranchModel*)(*it))->initializeModel(params, model_name, models_block);
+            } else {
+                (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
+                (*it)->setModel((*it)->getModelFactory()->model);
+                (*it)->setRate((*it)->getModelFactory()->site_rate);
+            }
 
             // link models between partitions
             if (params.link_model) {
@@ -111,60 +116,69 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         delete [] state_freq;
         delete [] pair_freq;
 
-    } else
-    for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
-        if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
-            continue;
-        // count state occurrences
-        size_t *sum_state_counts = NULL;
-        int num_parts = 0;
-        for (it = stree->begin(); it != stree->end(); it++) {
-            if ((*it)->getModel()->getName() == mit->second->getName()) {
-                num_parts++;
-                if ((*it)->aln->seq_type == SEQ_CODON)
-                    outError("Linking codon models not supported");
-                if ((*it)->aln->seq_type == SEQ_POMO)
-                    outError("Linking POMO models not supported");
-                size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
-                size_t unknown_states = 0;
-                if( params.partition_type != TOPO_UNLINKED)
-                    unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
-                (*it)->aln->countStates(state_counts, unknown_states);
-                if (!sum_state_counts) {
-                    sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
-                    memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
+    } else {
+        
+        for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
+            if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
+                continue;
+            // count state occurrences
+            size_t *sum_state_counts = NULL;
+            int num_parts = 0;
+            for (it = stree->begin(); it != stree->end(); it++) {
+                if ((*it)->getModel()->getName() == mit->second->getName()) {
+                    num_parts++;
+                    if ((*it)->aln->seq_type == SEQ_CODON)
+                        outError("Linking codon models not supported");
+                    if ((*it)->aln->seq_type == SEQ_POMO)
+                        outError("Linking POMO models not supported");
+                    size_t* state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
+                    size_t unknown_states = 0;
+                    if( params.partition_type != TOPO_UNLINKED)
+                        unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
+                    (*it)->aln->countStates(state_counts, unknown_states);
+                    
+                    if (!sum_state_counts) {
+                        sum_state_counts = new size_t[(*it)->aln->STATE_UNKNOWN+1];
+                        memset(sum_state_counts, 0, sizeof(size_t)*((*it)->aln->STATE_UNKNOWN+1));
+                    }
+                    for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
+                        sum_state_counts[state] += state_counts[state];
+                    }
+                    delete[] state_counts;
                 }
-                for (int state = 0; state <= (*it)->aln->STATE_UNKNOWN; ++state) {
-                    sum_state_counts[state] += state_counts[state];
+            }
+            cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
+
+            int nstates = mit->second->num_states;
+            double* sum_state_freq = new double[nstates];
+            // convert counts to frequencies
+            for (it = stree->begin(); it != stree->end(); it++) {
+                if ((*it)->getModel()->getName() == mit->second->getName()) {
+                    (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
+                    break;
                 }
             }
+            
+            cout << "Mean state frequencies:";
+            int prec = cout.precision(8);
+            for (int state = 0; state < mit->second->num_states; state++)
+                cout << " " << sum_state_freq[state];
+            cout << endl;
+            cout.precision(prec);
+            
+            for (it = stree->begin(); it != stree->end(); it++)
+                if ((*it)->getModel()->getName() == mit->second->getName()) {
+                    ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
+                    (*it)->getModel()->decomposeRateMatrix();
+                }
+            
+            delete [] sum_state_freq;
+            
+            if (sum_state_counts != NULL)
+                delete [] sum_state_counts;
         }
-        cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
-        int nstates = mit->second->num_states;
-        double sum_state_freq[nstates];
-        // convert counts to frequencies
-        for (it = stree->begin(); it != stree->end(); it++) {
-            if ((*it)->getModel()->getName() == mit->second->getName()) {
-                (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
-                break;
-            }
-        }
-
-        cout << "Mean state frequencies:";
-        int prec = cout.precision(8);
-        for (int state = 0; state < mit->second->num_states; state++)
-            cout << " " << sum_state_freq[state];
-        cout << endl;
-        cout.precision(prec);
-
-        for (it = stree->begin(); it != stree->end(); it++)
-            if ((*it)->getModel()->getName() == mit->second->getName()) {
-                ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
-                (*it)->getModel()->decomposeRateMatrix();
-            }
-        delete [] sum_state_counts;
-    }
+   }
 }
 
 void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {
@@ -662,7 +676,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     // return if nothing to be optimized
     if (ndim == 0) return 0.0;
     
-    if (write_info)
+    // if (write_info)
         cout << "Optimizing linked " << model->getName() << " parameters across all partitions (" << ndim << " free parameters)" << endl;
     
     if (verbose_mode >= VB_MAX)
@@ -803,6 +817,9 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
             if (tree->at(part)->isTreeMix()) {
                 ((IQTreeMixHmm*)tree->at(part))->optimizeModelParameters(write_info && verbose_mode >= VB_MED, logl_epsilon);
                 score = ((IQTreeMixHmm*)tree->at(part))->getCurScore();
+            } else if (tree->at(part)->isBranchModel()) {
+                ((PhyloTreeBranchModel*)tree->at(part))->optimizeModelParameters(write_info && verbose_mode >= VB_MED, logl_epsilon);
+                score = ((PhyloTreeBranchModel*)tree->at(part))->computeLikelihood();
             } else {
                 if (opt_gamma_invar)
                     score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,

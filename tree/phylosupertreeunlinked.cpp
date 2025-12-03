@@ -38,8 +38,9 @@ void PhyloSuperTreeUnlinked::setAlignment(Alignment *alignment) {
  */
 void PhyloSuperTreeUnlinked::initSettings(Params& params) {
     PhyloSuperTree::initSettings(params);
-    for (auto it = begin(); it != end(); it++)
+    for (auto it = begin(); it != end(); it++) {
         ((IQTree*)(*it))->initSettings(params);
+    }
 }
 
 void PhyloSuperTreeUnlinked::mapTrees() {

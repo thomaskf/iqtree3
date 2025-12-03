@@ -82,7 +82,9 @@ public:
 
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
-    /**
+    int getNParameters();
+    
+        /**
      model factories
      */
     vector<ModelFactory*> model_facts;

@@ -58,16 +58,48 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
 
     int nBranchModels = numBranchModels();
     ASSERT(nBranchModels > 0);
-    cout << endl;
-    cout << "Number of branch models: " << nBranchModels << endl;
+//    cout << endl;
+//    cout << "Number of branch models: " << nBranchModels << endl;
 
-    // optain the models
+    // optain the shared rate model
+    string shared_rate = "";
     vector<string> modelparams;
     size_t p1 = model_name.find("BR{");
-    size_t p2 = model_name.find_last_of("}");
-    ASSERT(p1 != string::npos && p2 != string::npos && p2 > p1 + 3);
-    string shared_rate = model_name.substr(p2+1);
-    model_name = model_name.substr(p1 + 3, p2 - p1 - 3);
+    size_t p2;
+    if (p1 != string::npos) {
+        p2 = model_name.find_last_of("}");
+        ASSERT(p2 != string::npos && p2 > p1 + 3);
+        shared_rate = model_name.substr(p2+1);
+        model_name = model_name.substr(0, p2+1);
+    } else {
+        // a branch model with single class (and root freq)
+        p2 = model_name.find_last_of("+");
+        if (p2 != string::npos && p2 < model_name.length()-1) {
+            // check whether it is rate model
+            if (model_name[p2+1] == 'R' || model_name[p2+1] == 'G' || model_name[p2+1] == 'I' || model_name[p2+1] == 'H') {
+                shared_rate = model_name.substr(p2);
+                model_name = model_name.substr(0, p2);
+            }
+        }
+    }
+    
+    // for model_joint if set
+    string orig_model_joint = "";
+    if (!params.model_joint.empty()) {
+        orig_model_joint = params.model_joint;
+        model_name = params.model_joint;
+        params.model_joint.clear();
+    }
+    
+    // remove the "BR{" and "}" from model_name
+    p1 = model_name.find("BR{");
+    if (p1 != string::npos) {
+        p2 = model_name.find_last_of("}");
+        ASSERT(p2 != string::npos && p2 > p1 + 3);
+        model_name = model_name.substr(p1+3, p2-p1-3);
+    }
+    
+    // create a set of models
     size_t fr_pos = 0;
     size_t p_comma = model_name.find(",", fr_pos);
     while (p_comma != string::npos) {
@@ -76,8 +108,11 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         p_comma = model_name.find(",", fr_pos);
     }
     modelparams.push_back(model_name.substr(fr_pos) + shared_rate);
-    
     ASSERT(modelparams.size() > 0);
+    
+    if (modelparams.size() != nBranchModels) {
+        outError("The number of models on the trees (i.e. " + convertIntToString(nBranchModels) + ") does not match with the number of classes specified in the branch model (i.e. " + convertIntToString(modelparams.size()) + ")");
+    }
     
     // a dummy model with the root frequencies and the shared site rate
     ModelFactory *dm = new ModelFactory(params, modelparams[0], this, models_block);
@@ -96,11 +131,11 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
             // model with user input parameters
             curr_model = modelparams[i];
         }
-        if (i == 0) {
-            cout << "Base model: " << curr_model << endl;
-        } else {
-            cout << "Model " << i << "   : " << curr_model << endl;
-        }
+//        if (i == 0) {
+//            cout << "Base model: " << curr_model << endl;
+//        } else {
+//            cout << "Model " << i << "   : " << curr_model << endl;
+//        }
         ModelFactory *mf = new ModelFactory(params, curr_model, this, models_block);
         model_facts.push_back(mf);
         model_branch->push_back((ModelMarkov*)mf->model);
@@ -109,9 +144,9 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         mf->site_rate = getRate();
     }
     
-    if (shared_rate.length() > 0) {
-        cout << "Rate shared among them: " << shared_rate << endl;
-    }
+//    if (shared_rate.length() > 0) {
+//        cout << "Rate shared among them: " << shared_rate << endl;
+//    }
     
     // set the root frequences
     if (params.root_freq_str != "") {
@@ -123,6 +158,11 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     for (int i = 0; i < nBranchModels; i++) {
         model_facts[i]->setCheckpoint(checkpoint);
     }
+    
+    // set back the params.model_joint to the original value
+    if (!orig_model_joint.empty())
+        params.model_joint = orig_model_joint;
+
 }
 
 /**
@@ -384,4 +424,23 @@ string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl
     if (logl_epsilon == -1)
         br_models->logl_epsilon = params->modelEps;
     return IQTree::optimizeModelParameters(printInfo, logl_epsilon);
+}
+
+int PhyloTreeBranchModel::getNParameters() {
+    int df = 0;
+    
+    if (verbose_mode >= VB_MED)
+        cout << endl << "Number of parameters:" << endl;
+    
+    int nmodels = getNumBrModel();
+    for (int modelid = 0; modelid < nmodels; modelid++) {
+        df += getModel(modelid)->getNDim() + getModel(modelid)->getNDimFreq();
+    }
+    df += model->getNDimFreq(); // root frequency
+    df += site_rate->getNDim(); // site model
+    if (params->fixed_branch_length != BRLEN_FIX) {
+        df += site_rate->getTree()->getNBranchParameters(BRLEN_OPTIMIZE);
+    }
+    
+    return df;
 }

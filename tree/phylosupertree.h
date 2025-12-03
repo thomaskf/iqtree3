@@ -23,6 +23,7 @@
 #include "iqtree.h"
 #include "supernode.h"
 #include "alignment/superalignment.h"
+#include "phylotreebrmodel.h"
 
 /**
     Partition information for each partition

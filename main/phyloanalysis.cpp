@@ -583,6 +583,12 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
         m->writeInfo(out);
         return;
     }
+    
+    if ( m->getName().find("BR{") != string::npos ) {
+        // branch model
+        m->writeInfo(out);
+        return;
+    }
 
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
@@ -3620,6 +3626,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         int model_df;
         if (iqtree->isTreeMix()) {
             model_df = ((IQTreeMix*) iqtree)->getNParameters();
+        } else if (iqtree->isBranchModel()) {
+            model_df = ((PhyloTreeBranchModel*) iqtree)->getNParameters();
         } else {
             model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
         }
@@ -5201,11 +5209,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     /****************** read in alignment **********************/
     if (params.partition_file) {
         // Partition model analysis
-        if (!align_is_given)
+        if (!align_is_given) {
             if (params.partition_type == TOPO_UNLINKED)
                 alignment = new SuperAlignmentUnlinked(params);
             else
                 alignment = new SuperAlignment(params);
+        }
     } else {
         if (!align_is_given)
             alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
