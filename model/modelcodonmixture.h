@@ -33,6 +33,9 @@ public:
 private:
 
     bool link_kappa = true;
+    //shape parameters for the beta distribution (M7 and M8 model)
+    double alpha;
+    double beta;
 
 protected:
     /**

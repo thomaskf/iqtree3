@@ -13,19 +13,34 @@
 ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                                      ModelsBlock *models_block, StateFreqType freq, string freq_params,
                                      PhyloTree *tree, bool optimize_weights)
-: ModelMarkov(tree), ModelMixture(tree)
-{
+: ModelMarkov(tree), ModelMixture(tree) {
+
     if (tree->aln->seq_type != SEQ_CODON)
         outError("Can't apply codon mixture model as sequence type is not codon");
     auto cmix_pos = orig_model_name.find("+CMIX");
     ASSERT(cmix_pos != string::npos);
     auto end_pos = orig_model_name.find_first_of("+*{", cmix_pos+1);
     string cmix_type;
+
     if (end_pos == string::npos)
         cmix_type = orig_model_name.substr(cmix_pos+5);
     else
         cmix_type = orig_model_name.substr(cmix_pos+5, end_pos-cmix_pos-5);
-    
+
+    //Yuri - Determine number of categories
+    auto ncat_pos = cmix_type.find(".");
+    int ncat = 0;
+    if (ncat_pos != string::npos) {
+        auto ncat_str = cmix_type.substr(ncat_pos+1);
+        ncat = stoi(ncat_str);
+        //***Might be a more preferred way to address this check***
+        if (ncat < 1) {
+            outError("Invalid number of categories " + orig_model_name.substr(cmix_pos+1));
+        }
+        cmix_type = cmix_type.substr(0,ncat_pos);
+    }
+    alpha = 1.0;
+    beta = 1.0;
     // read the input parameters for +CMIXi{...}
     StrVector vec;
     if (end_pos != string::npos && orig_model_name[end_pos] == '{') {
@@ -56,13 +71,28 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}," + model_name + "{>1.001" + kappa_str + "}";
         } else if (cmix_type == "3") {
             // M3 model with 3 classes with no constraint
-            model_list = model_name + "{>0.001}," + model_name + "{>0.001" + kappa_str + "}," + model_name + "{>0.001" + kappa_str + "}";
+            //default value for ncat
+            if (ncat == 0)
+                ncat = 3;
+            model_list = model_name + "{>0.001}";
+            for (int i = 1; i < ncat; i++)
+                model_list += "," + model_name + "{>0.001" + kappa_str + "}";
         } else if (cmix_type == "7") {
+            // M7 model with category omegas following a beta distribution
+            //default value for ncat
+            if (ncat == 0)
+                ncat = 10;
             double shape_alpha = 1.0;
             double shape_beta = 1.0;
-            //RateBeta beta_dist;
-            double* omega = RateBeta::SampleOmegas(shape_alpha,shape_beta);
 
+            //RateBeta beta_dist;
+            double* omega = RateBeta::SampleOmegas(ncat,shape_alpha,shape_beta);
+
+            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1";
+            for (int i = 1; i < ncat; i++) {
+                model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
+            }
+            /*
             model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.1," +
                     model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.1," +
@@ -72,14 +102,24 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                                     model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.1," +
                                         model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.1," +
                                             model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.1," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.1";
+                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.1";*/
         } else if (cmix_type == "8") {
+            // M8 model with category omegas following a beta distribution
+            // and an addition category constrained to omega > 1.0
+            //default value for ncat
+            if (ncat == 0)
+                ncat = 11;
             double shape_alpha = 1.0;
             double shape_beta = 1.0;
             //RateBeta beta_dist;
-            double* omega = RateBeta::SampleOmegas(shape_alpha,shape_beta);
+            double* omega = RateBeta::SampleOmegas(ncat-1, shape_alpha,shape_beta);
 
-            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
+            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1";
+            for (int i = 1; i < ncat-1; i++) {
+                model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
+            }
+            model_list += "," + model_name + "{>1.001" + kappa_str + "}";
+            /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
                     model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
                          model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.09," +
@@ -89,7 +129,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                                         model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.09," +
                                             model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.09," +
                                                 model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.09," +
-                                                    model_name + "{>1.001" + kappa_str + "}";
+                                                    model_name + "{>1.001" + kappa_str + "}";*/
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
@@ -127,12 +167,16 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     if (user_input_param) {
         restrict_omega_values(cmix_type);
     }
-    
+
+    // Yuri - Added functions to set custom cnat initials
     // set the initial omega values for M3 model
     if (!user_input_param && cmix_type == "3") {
-        ((ModelCodon*)at(0))->omega = 0.4;
+        for (int i = 0; i < ncat; i++) {
+            ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
+        }
+        /*((ModelCodon*)at(0))->omega = 0.4;
         ((ModelCodon*)at(1))->omega = 0.9;
-        ((ModelCodon*)at(2))->omega = 1.8;
+        ((ModelCodon*)at(2))->omega = 1.8;*/
     }
 
     // show the initial parameters
@@ -150,13 +194,19 @@ bool ModelCodonMixture::getVariables(double *variables) {
     bool changed = ModelMixture::getVariables(variables);
     auto kappa = ((ModelCodon*)at(0))->kappa;
     auto kappa2 = ((ModelCodon*)at(0))->kappa2;
-    double* omega = RateBeta::SampleOmegas(variables[getNDim()-1],variables[getNDim()]);
+    //need to add ncat line here
     if (name=="M7") {
+        alpha = variables[getNDim()-1];
+        beta = variables[getNDim()];
+        double* omega = RateBeta::SampleOmegas(size(),alpha,beta);
         for (int i = 0; i < size(); i++) {
             ModelCodon *model = (ModelCodon*)at(i);
             model->omega = omega[i];
         }
     }else if (name=="M8") {
+        alpha = variables[getNDim()-1];
+        beta = variables[getNDim()];
+        double* omega = RateBeta::SampleOmegas(size()-1,alpha,beta);
         for (int i = 0; i < size()-1; i++) {
             ModelCodon *model = (ModelCodon*)at(i);
             model->omega = omega[i];
@@ -194,10 +244,11 @@ int ModelCodonMixture::getNDim() {
 void ModelCodonMixture::setVariables(double *variables) {
     ModelMixture::setVariables(variables);
     if (name == "M7" || name == "M8") {
-        variables[getNDim()-1] = 1.0;
-        variables[getNDim()] = 1.0;
+        variables[getNDim()-1] = alpha;
+        variables[getNDim()] = beta;
         if (name == "M8") {
-            variables[getNDim()-2] = 0.1;
+            //set to second last prop
+            variables[getNDim()-2] = prop[size()-1];
         }
     }
 }
