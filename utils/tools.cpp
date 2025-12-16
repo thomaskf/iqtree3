@@ -1286,6 +1286,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
+    params.est_from_one = false;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3761,6 +3762,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (params.opt_qmix_pthres == 0)
                     params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
                 */
+                continue;
+            }
+            if (strcmp(argv[cnt], "-est-from-one") == 0 || strcmp(argv[cnt], "--est-from-one") == 0) {
+                params.est_from_one = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -7707,6 +7712,7 @@ void Params::setDefault() {
     opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     opt_qmix_pthres = 0.05;
     check_combin_q_mat = true;
+    est_from_one = false;
     gamma_shape = -1.0;
     min_gamma_shape = MIN_GAMMA_SHAPE;
     gamma_median = false;

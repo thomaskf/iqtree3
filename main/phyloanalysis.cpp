@@ -942,7 +942,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         int ntrees; //mix_df;
         double mix_lh;
 
-        mix_lh = tree.getModelFactory()->computeMarginalLh();
+        mix_lh = tree.getModelFactory()->computeMarginalLh(params.remove_empty_seq);
         if (mix_lh < 0) {
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             ntrees = stree->size();

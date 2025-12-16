@@ -127,8 +127,9 @@ public:
 
     /**
      compute the marginal log-likelihood for mAIC, mAICc, mBIC calculation.
+     @param remove_empty_seq whether remove empty sequences when partition model estimation
      */
-    virtual double computeMarginalLh();
+    virtual double computeMarginalLh(bool remove_empty_seq);
 
     /**
      rescale the state frequencies

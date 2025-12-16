@@ -404,6 +404,9 @@ struct ModelPair {
     string set_name;
     /* best model name */
     string model_name;
+    /* distance between two partition pairs */
+    //double distance;
+    //double score_bic;
 };
 
 class ModelPairSet : public multimap<double, ModelPair> {
@@ -864,5 +867,10 @@ bool isRateTypeNested(string rate_type1, string rate_type2);
  * build the nest relationships of all candidate Q matrices
  */
 map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVector freq_names);
+
+/**
+ * generate model set, freq set and rate model by user input model string
+ */
+void generateModelLists(string input_model_str, StrVector& model_list, StrVector& freq_list, string& input_rate);
 
 #endif /* PHYLOTESTING_H_ */

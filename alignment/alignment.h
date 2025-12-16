@@ -542,8 +542,9 @@ public:
 
 	/**
 	 * return a new alignment if some sequence is totally gappy, or this if all sequence are okey
+	 * @param showMsg show extracting information in log file
 	 */
-	Alignment *removeGappySeq();
+	Alignment *removeGappySeq(bool showMsg = true);
 
     /**
             @return TRUE if seq_id contains only gaps or missing characters

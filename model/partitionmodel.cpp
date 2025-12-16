@@ -336,7 +336,7 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
-double PartitionModel::computeMarginalLh() {
+double PartitionModel::computeMarginalLh(bool remove_empty_seq) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int ntrees = tree->size();
 
@@ -384,11 +384,23 @@ double PartitionModel::computeMarginalLh() {
     vector<set<string> > t_seqs_set_array;
     t_seqs_vec_array.resize(ntrees);
     t_seqs_set_array.resize(ntrees);
+    int ntaxa = tree->getNumTaxa();
+    StrVector taxa_names;
 
-    for (int j = 0; j < ntrees; j++) {
-        PhyloTree *t = tree->at(j);
-        t->getTaxaName(t_seqs_vec_array[j]);
-        t_seqs_set_array[j].insert(t_seqs_vec_array[j].begin(), t_seqs_vec_array[j].end());
+    if (remove_empty_seq) {
+        for (int j = 0; j < ntrees; j++) {
+            PhyloTree *t = tree->at(j);
+            t->getTaxaName(t_seqs_vec_array[j]);
+            t_seqs_set_array[j].insert(t_seqs_vec_array[j].begin(), t_seqs_vec_array[j].end());
+        }
+    } else {
+        tree->getTaxaName(taxa_names);
+        for (int j = 0; j < ntrees; j++) {
+            Alignment *part_aln = NULL;
+            part_aln = tree->at(j)->aln->removeGappySeq(false);
+            t_seqs_vec_array[j] = part_aln->getSeqNames();
+            t_seqs_set_array[j].insert(t_seqs_vec_array[j].begin(), t_seqs_vec_array[j].end());
+        }
     }
 
     // compute the mixture-based log-likelihood
@@ -401,8 +413,9 @@ double PartitionModel::computeMarginalLh() {
         StrVector tree1_seqs = t_seqs_vec_array[j];
         //string modelpara = tree->at(j)->getModel()->getNameParams(true);
         //string ratepara = tree->at(j)->getRate()->getNameParams();
-        //string treepara = tree->at(j)->getTreeString();
-        //cout << "******[model para part " << j << "]: " << modelpara << ratepara << " " << treepara << endl;
+        //string treepara = tree->at(j)->getTopologyString(false);
+        //string part_name = tree1_aln->name;
+        //cout << "[check] model para part " << part_name << ": " << modelpara << ratepara << " " << treepara << endl;
 
         // get the site-log-likelihood the the partition under each tree and the corresponding model
         double *lh_array = new double [ntrees*tree1_nsite];
@@ -444,7 +457,7 @@ double PartitionModel::computeMarginalLh() {
             if (inter_seqs_id.size() > 1) {
                 // subset tree1_aln
                 Alignment *sub_tree1_aln = NULL;
-                if (tree1_seqs.size() != inter_seqs.size()) {
+                if (tree1_seqs.size() != inter_seqs.size() || (!remove_empty_seq && tree1_seqs.size() < ntaxa)) {
                     sub_tree1_aln = new Alignment();
                     sub_tree1_aln->extractSubAlignment(tree1_aln, inter_seqs_id, 0, 0, NULL, false);
                 } else {
@@ -453,15 +466,30 @@ double PartitionModel::computeMarginalLh() {
 
                 // subset tree2
                 PhyloTree *sub_tree2 = NULL;
-                string inter_seqs_set (tree2_seqs.size(), 0);
-                for (int l = 0; l < tree2_seqs.size(); l++) {
-                    if (inter_seqs.find(tree2_seqs[l]) != inter_seqs.end()) {
-                        inter_seqs_set[l] = 1;
-                    }
+                int tree2_ntaxa;
+                if (remove_empty_seq) {
+                    tree2_ntaxa = tree2_seqs.size();
+                } else {
+                    tree2_ntaxa = ntaxa;
                 }
+                string inter_seqs_set (tree2_ntaxa, 0);
 
                 sub_tree2 = new PhyloTree();
-                if (tree2_seqs.size() != inter_seqs.size()) {
+                if (tree2_seqs.size() != inter_seqs.size() || (!remove_empty_seq && tree2_seqs.size() < ntaxa)) {
+                    if (remove_empty_seq) {
+                        for (int l = 0; l < tree2_seqs.size(); l++) {
+                            if (inter_seqs.find(tree2_seqs[l]) != inter_seqs.end()) {
+                                inter_seqs_set[l] = 1;
+                            }
+                        }
+                    } else {
+                        for (int l = 0; l < ntaxa; l++) {
+                            if (inter_seqs.find(taxa_names[l]) != inter_seqs.end()) {
+                                inter_seqs_set[l] = 1;
+                            }
+                        }
+                    }
+
                     sub_tree2->copyTree(tree2, inter_seqs_set);
                     if (!tree2->getModel()->isReversible()) {
                         sub_tree2->nodeNum = 2 * sub_tree2->leafNum -2;

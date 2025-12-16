@@ -59,7 +59,7 @@ public:
     /**
      initialize seq_names, taxon_index, buildPattern
      */
-    virtual void init(StrVector *sequence_names = NULL);
+    virtual void init(StrVector *sequence_names = NULL, bool keep_order = false);
     
     /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }

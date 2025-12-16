@@ -723,7 +723,7 @@ Alignment *Alignment::removeAndFillUpGappySites() {
 
 }
 
-Alignment *Alignment::removeGappySeq() {
+Alignment *Alignment::removeGappySeq(bool showMsg) {
 	IntVector keep_seqs;
 	size_t nseq = getNSeq();
 	for (size_t i = 0; i < nseq; i++)
@@ -738,8 +738,13 @@ Alignment *Alignment::removeGappySeq() {
             if (isGapOnlySeq(i))
                 keep_seqs.push_back(i);
     }
+    sort(keep_seqs.begin(), keep_seqs.end());
 	Alignment *aln = new Alignment;
-	aln->extractSubAlignment(this, keep_seqs, 0);
+    if (showMsg) {
+        aln->extractSubAlignment(this, keep_seqs, 0);
+    } else {
+        aln->extractSubAlignment(this, keep_seqs, 0, 0, NULL, false);
+    }
 	return aln;
 }
 
