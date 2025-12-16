@@ -118,7 +118,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             for (int i = 1; i < ncat-1; i++) {
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
-            model_list += "," + model_name + "{>1.001" + kappa_str + "}";
+            model_list += "," + model_name + "{>0.001" + kappa_str + "}";
             /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
                     model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
@@ -215,7 +215,9 @@ bool ModelCodonMixture::getVariables(double *variables) {
             //cout << "i: " << i << endl;
             //cout << "omega: " << omega[i] << endl;
         }
+        ModelCodon *model = (ModelCodon*)at(size()-1);
         prop[size()-1] = variables[getNDim()-2];
+        model->omega = variables[getNDim()-3];
         //cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << endl;
         //cout << "weight: " << variables[getNDim()-2] << endl;
     }
@@ -234,7 +236,7 @@ int ModelCodonMixture::getNDim() {
     }
     else if(name == "M8") {
         //M8 needs an extra category for the >1 omega category weight
-        return ModelMixture::getNDim()+3;
+        return ModelMixture::getNDim()+4;
     }
     else{
         return ModelMixture::getNDim();
@@ -249,6 +251,8 @@ void ModelCodonMixture::setVariables(double *variables) {
         if (name == "M8") {
             //set to second last prop
             variables[getNDim()-2] = prop[size()-1];
+            ModelCodon *model = (ModelCodon*)at(size()-1);
+            variables[getNDim()-3] = model->omega;
         }
     }
 }
@@ -266,6 +270,9 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
             lower_bound[getNDim()-2]=0.001;
             upper_bound[getNDim()-2]=0.999;
             bound_check[getNDim()-2]=false;
+            lower_bound[getNDim()-3]=0.01;
+            upper_bound[getNDim()-3]=10.000;
+            bound_check[getNDim()-3]=false;
         }
     }
 }
