@@ -1312,7 +1312,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector weights;
     name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
     if (!models_block->findMixModel(name)) {
-        name = "";
+        if (orig_model_name.find("CMIX7") != string::npos) {
+            name = "M7";
+        }
+        else if (orig_model_name.find("CMIX8") != string::npos) {
+            name = "M8";
+        }
+        else {
+            name = "";
+        }
     }
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
@@ -2425,7 +2433,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-	
+
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;

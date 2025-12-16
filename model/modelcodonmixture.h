@@ -33,6 +33,9 @@ public:
 private:
 
     bool link_kappa = true;
+    //shape parameters for the beta distribution (M7 and M8 model)
+    double alpha;
+    double beta;
 
 protected:
     /**
@@ -42,6 +45,8 @@ protected:
     */
     virtual void setVariables(double *variables);
 
+    void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
     /**
         this function is served for the multi-dimension optimization. It should assign the model parameters
         from a vector of variables that is index from 1 (NOTE: not from 0)
@@ -50,7 +55,9 @@ protected:
     */
     virtual bool getVariables(double *variables);
 
-    
+    int getNDim();
+
+
     // impose restrictions on the omega values if user inputs the parameters
     // omega1 is resticted to < 1 for both M1a and M2a models
     // omega2 is resticted to 1.0 for both M1a and M2a models
