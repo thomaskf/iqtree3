@@ -548,7 +548,8 @@ double PartitionModel::computeMarginalLh(bool remove_empty_seq) {
                 sub_tree2->computeLikelihood(ptn_lh_array);
 
                 //compute site log-likelihood
-                if (tree1_seqs.size() != inter_seqs.size()) { //for sequences only appears in tree1, calculate the state frequencies based on the model in tree2
+                if (tree1_seqs.size() != inter_seqs.size()) {
+                    //for sequences only appears in tree1, calculate the state frequencies based on the model in tree2
                     for (int l = 0; l < tree1_nsite; l++) {
                         int ptn_id = sub_tree1_aln->getPatternID(l);
                         double site_lh = ptn_lh_array[ptn_id];
@@ -590,7 +591,7 @@ double PartitionModel::computeMarginalLh(bool remove_empty_seq) {
                 }
 
                 //release memory
-                if (tree1_seqs.size() != inter_seqs.size()) {
+                if (tree1_seqs.size() != inter_seqs.size() || (!remove_empty_seq && tree1_seqs.size() < ntaxa)) {
                     delete sub_tree1_aln;
                 }
                 sub_tree2->setModelFactory(NULL);
