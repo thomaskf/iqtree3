@@ -4261,11 +4261,12 @@ double PartitionFinder::getmAICforMergeScheme(vector<set<int> > gene_sets, StrVe
 
 
 ModelPairSet PartitionFinder::getBetterPairsmAIC() {
-    cout << "Compute mAIC score of partition models for compatible partition merging schemes..." << endl;
+    cout << "Compute mAIC score of partition models..." << endl;
     double cpu_time = getCPUTime();
     double real_time = getRealTime();
 
     double cur_score_maic = 0;
+    double greedy_lh_marginal;
     double greedy_score_maic = inf_score_maic;
     ModelPairSet sorted_pairs_bu = sorted_pairs;
     ModelPairSet cur_better_pairs;
@@ -4331,13 +4332,14 @@ ModelPairSet PartitionFinder::getBetterPairsmAIC() {
                      << " (Marginal LnL: " << lh_marginal << "  df: " << cur_df << ")" << endl;
             }*/
         } else {
-            if (cur_score_maic < min(inf_score_maic, greedy_score_maic)) {
-                cout << "Merging " << it->second.set_name << " with mAIC score: " << cur_score_maic
-                     << " (Marginal LnL: " << lh_marginal << "  df: " << cur_df << ")" << endl;/*, cAIC score:"
-                     << it->second.score << ", BIC score: " << it->second.score_bic << ", dist: " << it->second.distance << endl;*/
+            if (cur_score_maic < greedy_score_maic) {
+                //cout << "Merging " << it->second.set_name << " with mAIC score: " << cur_score_maic
+                //     << " (Marginal LnL: " << lh_marginal << "  df: " << cur_df << ")" << endl;/*, cAIC score:"
+                //     << it->second.score << ", BIC score: " << it->second.score_bic << ", dist: " << it->second.distance << endl;*/
                 cur_better_pairs.clear();
                 cur_better_pairs.insertPair(it_bu->second);
                 greedy_score_maic = cur_score_maic;
+                greedy_lh_marginal = lh_marginal;
             } /*else {
                 cout << "[mAIC] "<< it->second.set_name << " will [NOT] be merged with mAIC score: " << cur_score_maic
                      << " (Marginal LnL: " << lh_marginal << "  df: " << cur_df << "), cAIC score: "
@@ -4346,7 +4348,12 @@ ModelPairSet PartitionFinder::getBetterPairsmAIC() {
         }
     }
 
-
+    if (params->partition_merge == MERGE_GREEDY && better_pairs.size() > 0) {
+        auto it = cur_better_pairs.begin();
+        int cur_df = dfsum - dfvec[it->second.part1] - dfvec[it->second.part2] + it->second.df;
+        cout << "Merging " << it->second.set_name << " with mAIC score: " << greedy_score_maic
+             << " (Marginal LnL: " << greedy_lh_marginal << "  df: " << cur_df << ")" << endl;
+    }
     cout << cur_better_pairs.size() << " compatible better partition pairs found based on mAIC" << endl;
     /*if (cur_better_pairs.size() == 0 && better_pairs.size() == 0) {
         auto it = sorted_pairs.begin();
