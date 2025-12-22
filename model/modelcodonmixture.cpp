@@ -118,7 +118,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             for (int i = 1; i < ncat-1; i++) {
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
-            model_list += "," + model_name + "{>0.001" + kappa_str + "}";
+            model_list += "," + model_name + "{>1.001" + kappa_str + "}";
             /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
                     model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
@@ -218,6 +218,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
         ModelCodon *model = (ModelCodon*)at(size()-1);
         prop[size()-1] = variables[getNDim()-2];
         model->omega = variables[getNDim()-3];
+        cout << "Omega: " << variables[getNDim()-3] << endl;
         //cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << endl;
         //cout << "weight: " << variables[getNDim()-2] << endl;
     }
