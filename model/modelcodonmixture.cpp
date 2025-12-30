@@ -77,6 +77,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             model_list = model_name + "{>0.001}";
             for (int i = 1; i < ncat; i++)
                 model_list += "," + model_name + "{>0.001" + kappa_str + "}";
+
         } else if (cmix_type == "7") {
             // M7 model with category omegas following a beta distribution
             //default value for ncat
@@ -172,8 +173,13 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     // set the initial omega values for M3 model
     if (!user_input_param && cmix_type == "3") {
         for (int i = 0; i < ncat; i++) {
-            ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
+            if (ncat > 2){
+                ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
+            }else {
+                ((ModelCodon*)at(i))->omega = (i+0.01);
+            }
         }
+
         /*((ModelCodon*)at(0))->omega = 0.4;
         ((ModelCodon*)at(1))->omega = 0.9;
         ((ModelCodon*)at(2))->omega = 1.8;*/
