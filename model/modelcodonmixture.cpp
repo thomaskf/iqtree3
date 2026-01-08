@@ -141,8 +141,8 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             outError("Error! There should be 2 (or 4) parameters inside CMIX1a{} stating the omega value (and the weight) of each class");
         else if (cmix_type == "2a" && vec.size() != 3 && vec.size() != 6)
             outError("Error! There should be 3 (or 6) parameters inside CMIX2a{} stating the omega value (and the weight) of each class.");
-        else if (cmix_type == "3" && vec.size() != 3 && vec.size() != 6)
-            outError("Error! There should be 3 (or 6) parameters inside CMIX3{} stating the omega value (and the weight) of each class.");
+        else if (cmix_type == "3" && vec.size() <2 3 && vec.size() < 4)
+            outError("Error! There should be at least 2 (or 4) parameters inside CMIX3{} stating the omega value (and the weight) of each class.");
         if (vec.size() >= 4) {
             // with both omega and weight
             for (int i = 0; i < vec.size(); i+=2) {
