@@ -225,7 +225,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
         prop[size()-1] = variables[getNDim()-2];
         model->omega = variables[getNDim()-3];
         //cout << "Omega: " << variables[getNDim()-3] << endl;
-        cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << endl;
+        cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << "\tomega_free: " << model->omega << "\tfree_wight: "<<prop[size()-1]<< "\tkappa: " << kappa << endl;
         //cout << "weight: " << variables[getNDim()-2] << endl;
     }
     for (int i = 1; i < size(); i++) {
