@@ -4061,6 +4061,8 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
                     //cur_pair.distance = closest_pairs[pair].distance;
                     //cur_pair.score_bic = computeInformationScore(lhnew, dfnew, ssize, MTC_BIC);
                     sorted_pairs.insertPair(cur_pair);
+                } else if (params->partition_merge == MERGE_GREEDY) {
+                    better_pairs.insertPair(cur_pair);
                 }
 
                 to_delete.push_back(1);
@@ -4348,7 +4350,7 @@ ModelPairSet PartitionFinder::getBetterPairsmAIC() {
         }
     }
 
-    if (params->partition_merge == MERGE_GREEDY && better_pairs.size() > 0) {
+    if (params->partition_merge == MERGE_GREEDY && cur_better_pairs.size() > 0) {
         auto it = cur_better_pairs.begin();
         int cur_df = dfsum - dfvec[it->second.part1] - dfvec[it->second.part2] + it->second.df;
         cout << "Merging " << it->second.set_name << " with mAIC score: " << greedy_score_maic
