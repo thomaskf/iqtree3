@@ -120,7 +120,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
             model_list += "," + model_name + "{>1.001" + kappa_str + "}";
-            cout << model_list << endl;
+            //cout << model_list << endl;
             /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
                 model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
                     model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
