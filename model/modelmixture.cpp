@@ -2372,7 +2372,13 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
             decomposeRateMatrix();
             phylo_tree->clearAllPartialLH();
         }
+        //cout << "Score before change: " << score << endl;
+        //score = phylo_tree->computeLikelihood();
+        //cout << "Score AFTER change: " << score << endl;
     }
+    //cout << "Score before change: " << score << endl;
+    score = phylo_tree->computeLikelihood();
+    //cout << "Score AFTER change: " << score << endl;
 	return score;
 }
 

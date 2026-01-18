@@ -268,6 +268,7 @@ void ModelCodonMixture::setVariables(double *variables) {
 void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     ModelMixture::setBounds(lower_bound, upper_bound, bound_check);
     if (name == "M7" || name == "M8") {
+        //alpha/beta shape parameters
         lower_bound[getNDim()-1]=0.01;
         upper_bound[getNDim()-1]=10.0000;
         bound_check[getNDim()-1]=true;
@@ -275,9 +276,11 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
         upper_bound[getNDim()]=10.0000;
         bound_check[getNDim()]=true;
         if (name == "M8") {
+            //Free category weight
             lower_bound[getNDim()-2]=0.001;
             upper_bound[getNDim()-2]=0.999;
             bound_check[getNDim()-2]=false;
+            //Free category omega
             lower_bound[getNDim()-3]=1.01;
             upper_bound[getNDim()-3]=10.000;
             bound_check[getNDim()-3]=false;
