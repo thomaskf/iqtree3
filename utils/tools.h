@@ -1765,14 +1765,19 @@ public:
     double model_tamer;
 
     /**
-            Model tamer subsampling time.
+            ModelTamer subsampling time.
      */
     int model_tamer_sub;
 
     /**
-            Model tamer upsampling time.
+            ModelTamer upsampling time.
      */
     int model_tamer_up;
+
+    /**
+            ModelTamer subsampling method.
+     */
+    int model_tamer_method;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates

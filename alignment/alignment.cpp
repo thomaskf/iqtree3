@@ -6407,9 +6407,32 @@ void createSUAlignment(Params &params) {
     std::mt19937 gen;
     gen.seed(params.ran_seed);
     int n_site = alignment->getNSite();
-    int n_target_site = static_cast<int>(ceil((params.model_tamer/100.0)*n_site));
+    int n_target_site = static_cast<int>(ceil(params.model_tamer * n_site / 100.0)); //method 1: directly subsample sites
 
     for (int i=0; i<n_sub; i++ ) {
+        if (params.model_tamer_method == 0) {
+            // original ModelTamer method
+            //1. estimated how many distinct pattern are needeed
+            int n_ptn = alignment->getNPattern();
+            int n_target_ptn = static_cast<int>(ceil(params.model_tamer * n_ptn / 100.0));
+
+            //2. initially subsample the estimated needed number of pattern
+            vector<int> init_sub_sites(n_site);
+            std::iota(init_sub_sites.begin(), init_sub_sites.end(), 0);
+            std::shuffle(init_sub_sites.begin(), init_sub_sites.end(), gen);
+            init_sub_sites.resize(n_target_ptn);
+            Alignment *init_sub_alignment = NULL;
+            init_sub_alignment = new Alignment();
+            init_sub_alignment ->extractSites(alignment, init_sub_sites);
+
+            //3. compute how many site are needed to subsample enough pattern
+            int n_init_ptn = init_sub_alignment->getNPattern();
+            n_target_site = (n_target_ptn * n_target_ptn + n_init_ptn - 1) / n_init_ptn; //ceil( (n_target_ptn/n_init_ptn) * n_target_ptn )
+
+            delete init_sub_alignment;
+        }
+        // else: method 1 has been done
+
         // subsample sites
         vector<int> sub_sites(n_site);
         std::iota(sub_sites.begin(), sub_sites.end(), 0);

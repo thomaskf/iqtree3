@@ -1290,6 +1290,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_tamer = 100;
     params.model_tamer_sub = 1;
     params.model_tamer_up = 1;
+    params.model_tamer_method = 0;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3796,6 +3797,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_tamer_up = convert_int(argv[cnt]);
                 if (params.model_tamer_up < 1)
                     throw "Wrong number of ModelTamer upsampling time for -mt-up. Must be at least 1";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mt-method") == 0 || strcmp(argv[cnt], "--mt-method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mt-method <0|1>";
+                params.model_tamer_method = convert_int(argv[cnt]);
+                if (params.model_tamer_method < 0 || params.model_tamer_method > 1)
+                    throw "Wrong option for -mt-method. Only 0 or 1 is allowed.";
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -7746,6 +7756,7 @@ void Params::setDefault() {
     model_tamer = 100;
     model_tamer_sub = 1;
     model_tamer_up = 1;
+    model_tamer_method = 0;
     gamma_shape = -1.0;
     min_gamma_shape = MIN_GAMMA_SHAPE;
     gamma_median = false;
