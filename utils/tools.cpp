@@ -1287,6 +1287,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
     params.est_from_one = false;
+    params.model_tamer = 100;
+    params.model_tamer_sub = 1;
+    params.model_tamer_up = 1;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3766,6 +3769,33 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-est-from-one") == 0 || strcmp(argv[cnt], "--est-from-one") == 0) {
                 params.est_from_one = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mt") == 0 || strcmp(argv[cnt], "--modeltamer") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mt <percent>";
+                params.model_tamer = convert_double(argv[cnt]);
+                if (params.model_tamer < 0 || params.model_tamer > 100)
+                    throw "modeltamer percentage must be between 0 and 100";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mt-sub") == 0 || strcmp(argv[cnt], "--modeltamer-sub") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mt-sub <#subsampling-time>";
+                params.model_tamer_sub = convert_int(argv[cnt]);
+                if (params.model_tamer_sub < 1)
+                    throw "Wrong number of ModelTamer subsampling time for -mt-sub. Must be at least 1";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mt-up") == 0 || strcmp(argv[cnt], "--modeltamer-up") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mt-up <#upsampling-time>";
+                params.model_tamer_up = convert_int(argv[cnt]);
+                if (params.model_tamer_up < 1)
+                    throw "Wrong number of ModelTamer upsampling time for -mt-up. Must be at least 1";
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -7713,6 +7743,9 @@ void Params::setDefault() {
     opt_qmix_pthres = 0.05;
     check_combin_q_mat = true;
     est_from_one = false;
+    model_tamer = 100;
+    model_tamer_sub = 1;
+    model_tamer_up = 1;
     gamma_shape = -1.0;
     min_gamma_shape = MIN_GAMMA_SHAPE;
     gamma_median = false;

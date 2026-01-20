@@ -1759,6 +1759,22 @@ public:
     bool est_from_one;
 
     /**
+            % of distinct site pattern required in a sample.
+            if model_tamer < 100, do ModelTamer subsample-upsampling.
+     */
+    double model_tamer;
+
+    /**
+            Model tamer subsampling time.
+     */
+    int model_tamer_sub;
+
+    /**
+            Model tamer upsampling time.
+     */
+    int model_tamer_up;
+
+    /**
             shape parameter (alpha) of the Gamma distribution for site rates
      */
     double gamma_shape;

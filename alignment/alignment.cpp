@@ -6393,3 +6393,50 @@ void Alignment::outputMutation(ofstream &out, char state_char, int32_t pos, int3
         out << "\t" << length;
     out << endl;
 }
+
+void createSUAlignment(Params &params) {
+    Alignment *alignment;
+    alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+
+    cout << endl;
+    cout << "Generating ModelTamer subsample-upsampling alignments..." << endl;
+    cout << endl;
+
+    int n_sub = params.model_tamer_sub;
+    int n_up = params.model_tamer_up;
+    std::mt19937 gen;
+    gen.seed(params.ran_seed);
+    int n_site = alignment->getNSite();
+    int n_target_site = static_cast<int>(ceil((params.model_tamer/100.0)*n_site));
+
+    for (int i=0; i<n_sub; i++ ) {
+        // subsample sites
+        vector<int> sub_sites(n_site);
+        std::iota(sub_sites.begin(), sub_sites.end(), 0);
+        std::shuffle(sub_sites.begin(), sub_sites.end(), gen);
+        sub_sites.resize(n_target_site);
+
+        for (int j=0; j<n_up; j++) {
+            // upsample sites
+            std::uniform_int_distribution<int> dist(0, n_target_site-1);
+            vector<int> up_sites(n_site);
+            for (int k=0; k<n_site; k++) {
+                up_sites[k] = sub_sites[dist(gen)];
+            }
+
+            // create new alignment
+            Alignment *su_alignment = NULL;
+            su_alignment = new Alignment();
+            su_alignment->extractSites(alignment, up_sites);
+
+            double ptn_percent = 100.0*su_alignment->getNPattern()/alignment->getNPattern();
+            cout << ptn_percent << "% distinct site parttern are sampled in subsample round " << i+1 << " and upsample round " << j+1 << ". SU ";
+
+            string filename = (string)params.out_prefix + ".s" + to_string(i+1) + "u" + to_string(j+1) + ".phy";
+            su_alignment->printAlignment(params.aln_output_format, filename.c_str());
+
+            delete su_alignment;
+        }
+    }
+    cout << endl;
+}
