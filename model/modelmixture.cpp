@@ -1980,7 +1980,7 @@ double ModelMixture::targetFunk(double x[]) {
     	}
     	ASSERT(phylo_tree);
     
-        rescale_codon_mix();
+        // rescale_codon_mix();
     
     	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
     		phylo_tree->clearAllPartialLH();
