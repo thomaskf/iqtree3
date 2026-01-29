@@ -1980,8 +1980,6 @@ double ModelMixture::targetFunk(double x[]) {
     	}
     	ASSERT(phylo_tree);
     
-        // rescale_codon_mix();
-    
     	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
     		phylo_tree->clearAllPartialLH();
     //	if (prop[size()-1] < 0.0) return 1.0e+12;
@@ -2372,13 +2370,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
             decomposeRateMatrix();
             phylo_tree->clearAllPartialLH();
         }
-        //cout << "Score before change: " << score << endl;
-        //score = phylo_tree->computeLikelihood();
-        //cout << "Score AFTER change: " << score << endl;
     }
-    //cout << "Score before change: " << score << endl;
-    score = phylo_tree->computeLikelihood();
-    //cout << "Score AFTER change: " << score << endl;
 	return score;
 }
 

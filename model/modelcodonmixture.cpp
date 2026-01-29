@@ -234,6 +234,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
         model->kappa = kappa;
         model->kappa2 = kappa2;
     }
+    rescale_codon_mix();
     return changed;
 }
 
