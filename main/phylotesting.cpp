@@ -5374,7 +5374,7 @@ void PartitionFinder::test_PartitionModel() {
             string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             string bestModel;
             bool check = model_info->getString(bestModel_key, bestModel);
-            ASSSERT(check);
+            ASSERT(check);
             this_tree->aln->model_name = bestModel;
         }
     }
