@@ -1565,6 +1565,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
 
+
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
@@ -5300,6 +5301,10 @@ void PartitionFinder::test_PartitionModel() {
         lhvec.resize(in_tree->size());
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
+    }
+    if (params->num_threads > in_tree->size() && !params->parallel_over_sites) {
+        params->num_threads = in_tree->size();
+        cout << "Number of threads is changed to " << params->num_threads << endl;
     }
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
