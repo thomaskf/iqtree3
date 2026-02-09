@@ -4255,7 +4255,7 @@ double PartitionFinder::getmAICforMergeScheme(vector<set<int> > gene_sets, StrVe
         model_info->endStruct();
     }
     lh_marginal = maic_tree->getModelFactory()->computeMarginalLh(params->remove_empty_seq);
-    score_maic = computeInformationScore(lh_marginal, df, ssize, params->model_test_criterion);
+    score_maic = computeInformationScore(lh_marginal, df, ssize, MTC_AIC);
     delete maic_tree;
 
     return score_maic;
@@ -4570,6 +4570,13 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
             }
         }
     }
+    /*
+    if (better_pairs.empty() && !params->marginal_lh_aic) {
+        auto it = sorted_pairs.begin();
+        better_pairs.insertPair(it->second);
+        cout << "merge " << it->second.set_name << " for further analysis" << endl;
+    }
+     */
 }
 
 /**
@@ -4601,6 +4608,7 @@ void PartitionFinder::getBestModel(int job_type) {
         // for merges
         ASSERT(gene_sets.size() == lenvec.size());
         better_pairs.clear();
+        sorted_pairs.clear();
         // find closest partition pairs
         closest_pairs.clear();
         findClosestPairs(super_aln, lenvec, gene_sets, false, closest_pairs);
@@ -5131,7 +5139,7 @@ void PartitionFinder::test_PartitionModel() {
 
                 if (is_maic_pairs_empty){
                     if (switched_to_caic) {
-                        cout << "No better pairs based on mAIC after one round of cAIC merging and finish merging with previous optimal mAIC" << endl;
+                        cout << "No better pairs based on mAIC after one round of " << criterionName(params->model_test_criterion) << " merging and finish merging with previous optimal mAIC" << endl;
                         //load back back up
                         lhsum = lhsum_bu;
                         dfsum = dfsum_bu;
@@ -5144,11 +5152,11 @@ void PartitionFinder::test_PartitionModel() {
                         break;
                     } else {
                         if (is_pairs_empty || gene_sets.size() == 2) {
-                            cout << "No better pairs based on both mAIC and cAIC" << endl;
+                            cout << "No better pairs based on both mAIC and " << criterionName(params->model_test_criterion) << endl;
                             break;
                         };
-                        cout << "No better pairs based on mAIC, try merging better pairs based on cAIC" << endl;
-                        cout << compatible_pairs.size() << " compatible better partition pairs found based on cAIC" << endl;
+                        cout << "No better pairs based on mAIC, try merging better pairs based on " << criterionName(params->model_test_criterion) << endl;
+                        cout << compatible_pairs.size() << " compatible better partition pairs found based on " << criterionName(params->model_test_criterion) << endl;
                         switched_to_caic = true;
                         //back up
                         lhsum_bu = lhsum;
@@ -5162,7 +5170,7 @@ void PartitionFinder::test_PartitionModel() {
                     }
                 } else {
                     if (switched_to_caic) {
-                        cout << "Better pairs based on mAIC are found after one round of cAIC merging" << endl;
+                        cout << "Better pairs based on mAIC are found after one round of " << criterionName(params->model_test_criterion) << " merging" << endl;
                         switched_to_caic = false;
                     }
                     compatible_pairs = better_pairs;
@@ -5340,7 +5348,16 @@ void PartitionFinder::test_PartitionModel() {
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
     cout << "Best partition model " << criterionName(params->model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+    if (params->marginal_lh_aic) {
+        model_names.resize(in_tree->size());
+        for (i = 0; i < in_tree->size(); i++) {
+            model_names[i] = in_tree->at(i)->aln->model_name;
+        }
 
+        //double score_bic = computeInformationScore(lhsum, dfsum, ssize, MTC_BIC);
+        inf_score_maic = getmAICforMergeScheme(gene_sets, model_names, dfsum, false);
+        cout << "Best partition model mAIC score: " << inf_score_maic << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  ")" << endl;
+    }
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params->out_prefix) + ".best_scheme.nex").c_str());
     ((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params->out_prefix) + ".best_scheme").c_str());
     model_info->dump();

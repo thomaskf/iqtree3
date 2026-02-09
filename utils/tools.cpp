@@ -5098,9 +5098,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.model_test_criterion = MTC_AIC;
                 } else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0) {
                     params.model_test_criterion = MTC_AICC;
-                } else if (strcmp(argv[cnt], "mAIC") == 0 || strcmp(argv[cnt], "MAIC") == 0) {
-                    params.model_test_criterion = MTC_AIC;
-                    params.marginal_lh_aic = true;
                 } else if (strcmp(argv[cnt], "BIC") == 0) {
                     params.model_test_criterion = MTC_BIC;
                 } else {
@@ -5108,6 +5105,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            if (strcmp(argv[cnt], "-mAIC") == 0 || strcmp(argv[cnt], "--mAIC") == 0) {
+                params.marginal_lh_aic = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-ms") == 0) {
 				cnt++;
 				if (cnt >= argc)
