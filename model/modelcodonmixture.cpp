@@ -93,17 +93,6 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             for (int i = 1; i < ncat; i++) {
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
-            /*
-            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1," +
-                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.1," +
-                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.1," +
-                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.1," +
-                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.1," +
-                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.1," +
-                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.1," +
-                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.1," +
-                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.1," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.1";*/
         } else if (cmix_type == "8") {
             // M8 model with category omegas following a beta distribution
             // and an addition category constrained to omega > 1.0
@@ -120,18 +109,6 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
             model_list += "," + model_name + "{>1.001" + kappa_str + "}";
-            //cout << model_list << endl;
-            /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
-                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
-                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
-                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.09," +
-                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.09," +
-                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.09," +
-                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.09," +
-                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.09," +
-                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.09," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.09," +
-                                                    model_name + "{>1.001" + kappa_str + "}";*/
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
@@ -185,6 +162,10 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         ((ModelCodon*)at(1))->omega = 0.9;
         ((ModelCodon*)at(2))->omega = 1.8;*/
     }
+    
+    // the newton optimization does not work properly for codon mixture model
+    Params::getInstance().optimize_by_newton = false;
+    phylo_tree->optimize_by_newton = false;
 
     // show the initial parameters
     cout << "Initial parameters in the Codon Mixture:" << endl;

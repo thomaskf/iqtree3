@@ -285,6 +285,8 @@ public:
     // return true if the values of total_num_subst have been updated
     bool rescale_codon_mix();
     
+    // For codon mixture, update the rate matrices according to the updated omega and kappa values
+    void updateCodonRates();
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
