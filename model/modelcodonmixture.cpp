@@ -77,6 +77,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             model_list = model_name + "{>0.001}";
             for (int i = 1; i < ncat; i++)
                 model_list += "," + model_name + "{>0.001" + kappa_str + "}";
+
         } else if (cmix_type == "7") {
             // M7 model with category omegas following a beta distribution
             //default value for ncat
@@ -92,17 +93,6 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             for (int i = 1; i < ncat; i++) {
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
-            /*
-            model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.1," +
-                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.1," +
-                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.1," +
-                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.1," +
-                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.1," +
-                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.1," +
-                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.1," +
-                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.1," +
-                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.1," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.1";*/
         } else if (cmix_type == "8") {
             // M8 model with category omegas following a beta distribution
             // and an addition category constrained to omega > 1.0
@@ -118,18 +108,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             for (int i = 1; i < ncat-1; i++) {
                 model_list += "," + model_name + "{" + std::to_string(omega[i]) + kappa_str + "}:1:0.1";
             }
-            model_list += "," + model_name + "{>0.001" + kappa_str + "}";
-            /*model_list = model_name + "{" + std::to_string(omega[0]) + "}:1:0.09," +
-                model_name + "{" + std::to_string(omega[1]) + kappa_str + "}:1:0.09," +
-                    model_name + "{" + std::to_string(omega[2]) + kappa_str + "}:1:0.09," +
-                         model_name + "{" + std::to_string(omega[3]) + kappa_str + "}:1:0.09," +
-                            model_name + "{" + std::to_string(omega[4]) + kappa_str + "}:1:0.09," +
-                                model_name + "{" + std::to_string(omega[5]) + kappa_str + "}:1:0.09," +
-                                    model_name + "{" + std::to_string(omega[6]) + kappa_str + "}:1:0.09," +
-                                        model_name + "{" + std::to_string(omega[7]) + kappa_str + "}:1:0.09," +
-                                            model_name + "{" + std::to_string(omega[8]) + kappa_str + "}:1:0.09," +
-                                                model_name + "{" + std::to_string(omega[9]) + kappa_str + "}:1:0.09," +
-                                                    model_name + "{>1.001" + kappa_str + "}";*/
+            model_list += "," + model_name + "{>1.001" + kappa_str + "}";
         } else {
             outError("Unknown codon mixture " + orig_model_name.substr(cmix_pos));
         }
@@ -140,8 +119,8 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             outError("Error! There should be 2 (or 4) parameters inside CMIX1a{} stating the omega value (and the weight) of each class");
         else if (cmix_type == "2a" && vec.size() != 3 && vec.size() != 6)
             outError("Error! There should be 3 (or 6) parameters inside CMIX2a{} stating the omega value (and the weight) of each class.");
-        else if (cmix_type == "3" && vec.size() != 3 && vec.size() != 6)
-            outError("Error! There should be 3 (or 6) parameters inside CMIX3{} stating the omega value (and the weight) of each class.");
+        else if (cmix_type == "3" && vec.size() <2 && vec.size() < 4)
+            outError("Error! There should be at least 2 (or 4) parameters inside CMIX3{} stating the omega value (and the weight) of each class.");
         if (vec.size() >= 4) {
             // with both omega and weight
             for (int i = 0; i < vec.size(); i+=2) {
@@ -172,12 +151,21 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     // set the initial omega values for M3 model
     if (!user_input_param && cmix_type == "3") {
         for (int i = 0; i < ncat; i++) {
-            ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
+            if (ncat > 2){
+                ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
+            }else {
+                ((ModelCodon*)at(i))->omega = (i+0.01);
+            }
         }
+
         /*((ModelCodon*)at(0))->omega = 0.4;
         ((ModelCodon*)at(1))->omega = 0.9;
         ((ModelCodon*)at(2))->omega = 1.8;*/
     }
+    
+    // the newton optimization does not work properly for codon mixture model
+    Params::getInstance().optimize_by_newton = false;
+    phylo_tree->optimize_by_newton = false;
 
     // show the initial parameters
     cout << "Initial parameters in the Codon Mixture:" << endl;
@@ -218,7 +206,8 @@ bool ModelCodonMixture::getVariables(double *variables) {
         ModelCodon *model = (ModelCodon*)at(size()-1);
         prop[size()-1] = variables[getNDim()-2];
         model->omega = variables[getNDim()-3];
-        //cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << endl;
+        //cout << "Omega: " << variables[getNDim()-3] << endl;
+        cout << "alpha: " << variables[getNDim()-1] << "\tbeta: " << variables[getNDim()] << "\tomega_free: " << model->omega << "\tfree_wight: "<<prop[size()-1]<< "\tkappa: " << kappa << endl;
         //cout << "weight: " << variables[getNDim()-2] << endl;
     }
     for (int i = 1; i < size(); i++) {
@@ -226,6 +215,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
         model->kappa = kappa;
         model->kappa2 = kappa2;
     }
+    rescale_codon_mix();
     return changed;
 }
 
@@ -260,6 +250,7 @@ void ModelCodonMixture::setVariables(double *variables) {
 void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     ModelMixture::setBounds(lower_bound, upper_bound, bound_check);
     if (name == "M7" || name == "M8") {
+        //alpha/beta shape parameters
         lower_bound[getNDim()-1]=0.01;
         upper_bound[getNDim()-1]=10.0000;
         bound_check[getNDim()-1]=true;
@@ -267,10 +258,12 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
         upper_bound[getNDim()]=10.0000;
         bound_check[getNDim()]=true;
         if (name == "M8") {
+            //Free category weight
             lower_bound[getNDim()-2]=0.001;
             upper_bound[getNDim()-2]=0.999;
             bound_check[getNDim()-2]=false;
-            lower_bound[getNDim()-3]=0.01;
+            //Free category omega
+            lower_bound[getNDim()-3]=1.01;
             upper_bound[getNDim()-3]=10.000;
             bound_check[getNDim()-3]=false;
         }

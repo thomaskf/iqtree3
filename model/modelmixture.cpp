@@ -1980,8 +1980,6 @@ double ModelMixture::targetFunk(double x[]) {
     	}
     	ASSERT(phylo_tree);
     
-        rescale_codon_mix();
-    
     	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
     		phylo_tree->clearAllPartialLH();
     //	if (prop[size()-1] < 0.0) return 1.0e+12;
@@ -2671,6 +2669,7 @@ bool ModelMixture::rescale_codon_mix() {
         vector<double> nsubs;
         double overall_nsub = 0.0;
         int i,j,k;
+        updateCodonRates(); // update the rate matrices according to the updated omega and kappa values
         for (k = 0; k < size(); k++) {
             int nstate = at(k)->num_states;
             // calculate the estimated number of substitutions per site
@@ -2701,4 +2700,15 @@ bool ModelMixture::rescale_codon_mix() {
         return true;
     }
     return false;
+}
+
+// For codon mixture, update the rate matrices according to the updated omega and kappa values
+void ModelMixture::updateCodonRates() {
+    if (phylo_tree->aln->seq_type == SEQ_CODON) {
+        for (int k = 0; k < size(); k++) {
+            if (dynamic_cast<ModelCodon*>(at(k))) {
+                ((ModelCodon*)at(k))->computeCodonRateMatrix();
+            }
+        }
+    }
 }
