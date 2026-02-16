@@ -1033,6 +1033,8 @@ end;
 
 const double MIN_MIXTURE_PROP = 0.001;
 const double MAX_MIXTURE_PROP = 1000.0;
+const double MIN_CODON_MIXTURE_PROP = 0.01;
+const double MAX_CODON_MIXTURE_PROP = 100.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
@@ -2596,14 +2598,19 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         }
 		if (fix_prop) return;
 		int i, ncategory = size();
-		for (i = 1; i < ncategory; i++) {
-			lower_bound[dim+i] = MIN_MIXTURE_PROP;
-			upper_bound[dim+i] = MAX_MIXTURE_PROP;
-            if (phylo_tree->aln->seq_type == SEQ_CODON)
+        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_CODON_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_CODON_MIXTURE_PROP;
                 bound_check[dim+i] = true;
-            else
+            }
+        } else {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_MIXTURE_PROP;
                 bound_check[dim+i] = false;
-		}
+            }
+        }
     }
 }
 
