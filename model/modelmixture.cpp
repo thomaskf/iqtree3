@@ -2599,7 +2599,10 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 		for (i = 1; i < ncategory; i++) {
 			lower_bound[dim+i] = MIN_MIXTURE_PROP;
 			upper_bound[dim+i] = MAX_MIXTURE_PROP;
-			bound_check[dim+i] = false;
+            if (phylo_tree->aln->seq_type == SEQ_CODON)
+                bound_check[dim+i] = true;
+            else
+                bound_check[dim+i] = false;
 		}
     }
 }
