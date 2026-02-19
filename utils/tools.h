@@ -630,6 +630,11 @@ private:
 public:
 
     /**
+     * Assign the default values to the variables
+     */
+    void setDefault();
+    
+    /**
     *  Fast and accurate optimiation for alpha and p_invar
     */
     bool fai;
@@ -760,6 +765,11 @@ public:
 	 */
 	double initPS;
 
+    /**
+     * a switch to apply bias towards shorter branches during radom perturbation
+     */
+    bool weightedPerturbation;
+    
 	/**
 	 *  logl epsilon for model parameter optimization
 	 */
@@ -1649,6 +1659,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** TRUE to optimize mixture model nucleotide/amino acide frequency */
+    bool optimize_mixmodel_freq;
+
     /** number of mixture branch lengths, default 1 */
     int num_mixlen;
     /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
@@ -2453,6 +2466,9 @@ public:
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
     
+    /** true if forcing IQ-TREE to run MixtureFinder for amino acid data */
+    bool force_aa_mix_finder;
+    
     /** TRUE to print checkpoints to 1.ckp.gz, 2.ckp.gz,... */
     bool print_all_checkpoints;
 
@@ -2556,6 +2572,11 @@ public:
     *  TRUE to disable copying gaps from input sequences
     */
     bool alisim_no_copy_gaps;
+    
+    /**
+    *  TRUE if users have specified the random seed
+    */
+    bool seed_specified;
     
     /**
     *  original parameters
@@ -2721,6 +2742,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to skip branch length checking
+    */
+    bool alisim_skip_bl_check;
+    
+    /**
     *  TRUE to output all replicate alignments into a single file
     */
     bool alisim_single_output;
@@ -2852,6 +2878,16 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+
+    /**
+    * Whether to output a MrBayes Block File
+    */
+    bool mr_bayes_output;
+    
+    /**
+     *  input tree string (instead of a file)
+     */
+    string intree_str;
 };
 
 /**
@@ -3812,5 +3848,22 @@ double frob_norm (double m[], int n, double scale=1.0);
 */
 string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
+/**
+ * ensures a number, to be inputted into MrBayes, is larger than the minimum value for MrBayes (0.01)
+ */
+double minValueCheckMrBayes(double orig_value);
+
+
+/**
+ * get a map of iqtree amino acid/protein substitution models to MrBayes amino acid/protein substitution models.<br>
+ * models which are not supported by mrbayes are not included. GTR20 is assumed as default.
+ */
+unordered_map<string, string> getIqTreeToMrBayesAAModels();
+
+/**
+ * get the MrBayes equivalent of a genetic code, given the id of the code. Returns and empty string if that code
+ * is not supported in MrBayes.
+ */
+string getMrBayesGeneticCode(int geneticCodeId);
 
 #endif

@@ -1679,6 +1679,65 @@ string IQTree::perturbStableSplits(double suppValue) {
     return getTreeString();
 }
 
+static double branchLengthSafe(const Branch& b) {
+    Node* u = b.first;
+    Node* v = b.second;
+    double L = 0.0;
+
+    if (Neighbor* n = u->findNeighbor(v)) {
+        L = n->length;
+    } else if (Neighbor* m = v->findNeighbor(u)) {
+        L = m->length;
+    }
+
+    if (!(L >= 0.0) || std::isnan(L)) {
+        L = 0.0;
+    }
+
+    return L;
+}
+
+static std::vector<double> computeRankOverE(const std::vector<Branch>& branches,
+                                            const std::vector<double>& lengths) {
+    const size_t E = branches.size();
+
+    std::vector<size_t> idx(E);
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::sort(idx.begin(), idx.end(),
+              [&](size_t i, size_t j) {
+                  return lengths[i] < lengths[j];
+              });
+
+    std::vector<double> rOverE(E, 0.0);
+
+    for (size_t r = 0; r < E; ++r) {
+        rOverE[idx[r]] = static_cast<double>(r + 1) / static_cast<double>(E); // 1..E → (0,1]
+    }
+
+    return rOverE;
+}
+
+static int sampleIndexByWeights(const std::vector<double>& w) {
+    double sumW = 0.0;
+    for (double x : w) {
+        sumW += x;
+    }
+    if (!(sumW > 0.0)) {
+        return random_int((int)w.size()); // uniform fallback
+    }
+    const double u = random_double() * sumW;
+    double acc = 0.0;
+
+    for (size_t i = 0; i < w.size(); ++i) {
+        acc += w[i];
+        if (u <= acc) {
+            return (int)i;
+        }
+    }
+    return (int)w.size() - 1;
+}
+
 string IQTree::doRandomNNIs(bool storeTabu) {
     int cntNNI = 0;
     int numRandomNNI;
@@ -1706,8 +1765,52 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); ++it) {
             vectorNNIBranches.push_back(it->second);
         }
-        int randInt = random_int((int) vectorNNIBranches.size());
-        NNIMove randNNI = getRandomNNI(vectorNNIBranches[randInt]);
+        
+        int pickedIndex = -1;
+        if (!Params::getInstance().weightedPerturbation || vectorNNIBranches.size() == 1) {
+            // default: uniform
+            pickedIndex = random_int(static_cast<int>(vectorNNIBranches.size()));
+        } else {
+            // weighted: w_i = (beta*Lmed + rank_i/E)^(-alpha)
+            const double alpha = 64.0;
+            const double beta  = 0.5;
+            constexpr double eps = 1e-12;
+
+            std::vector<double> lengths;
+            lengths.reserve(vectorNNIBranches.size());
+
+            for (const auto& br : vectorNNIBranches) {
+                lengths.push_back(branchLengthSafe(br));
+            }
+
+            double Lmed = 0.0;
+            if (!lengths.empty()) {
+                std::vector<double> sorted = lengths;
+                std::sort(sorted.begin(), sorted.end());
+
+                const size_t E = sorted.size();
+                if (E % 2 == 0) {
+                    Lmed = 0.5 * (sorted[E / 2 - 1] + sorted[E / 2]);
+                } else {
+                    Lmed = sorted[E / 2];
+                }
+            }
+
+            std::vector<double> rOverE = computeRankOverE(vectorNNIBranches, lengths);
+
+            const double shift = std::max(beta * Lmed, eps);
+            std::vector<double> w(rOverE.size());
+
+            for (size_t i = 0; i < rOverE.size(); ++i) {
+                const double base = shift + rOverE[i];
+                w[i] = std::pow(base, -alpha);
+            }
+
+            pickedIndex = sampleIndexByWeights(w);
+        }
+
+        NNIMove randNNI = getRandomNNI(vectorNNIBranches[pickedIndex]);
+        
         if (constraintTree.isCompatible(randNNI)) {
             // only if random NNI satisfies constraintTree
             doNNI(randNNI);
@@ -2187,6 +2290,15 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
         initTree = getTreeString();
         cout << "CHECKPOINT: Model parameters restored, LogL: " << getCurScore() << endl;
     } else {
+        // for mixtureFinder, verify whether the likelihood is the same as the best likelihood obtained in mixtureFinder
+        double mixFinderLogL;
+        if (getCheckpoint()->get("MixFinderLogL", mixFinderLogL)) {
+            double allowableDiff = 0.01;
+            double currLogL = computeLikelihood();
+            ASSERT(fabs(currLogL - mixFinderLogL) < allowableDiff);
+            getCheckpoint()->eraseKeyPrefix("MixFinderLogL");
+        }
+        
         initTree = optimizeModelParameters(true, initEpsilon);
         if (isMixlen()) {
             initTree = ((ModelFactoryMixlen*)getModelFactory())->sortClassesByTreeLength();
@@ -3204,7 +3316,11 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         }
         trackProgress(1);
     }
-    doneProgress();
+    bool showMsg = false;
+    if (verbose_mode >= VB_MED) {
+        showMsg = true;
+    }
+    doneProgress(showMsg);
 
     if (totalNNIApplied == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Input tree is already NNI-optimal" << endl;
@@ -4699,6 +4815,11 @@ int PhyloTree::testNumThreads() {
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
     setNumThreads(bestProc+1);
+    
+    // clear the relative treelength arrays if it is GHOST model
+    if (isMixlen()) {
+        ((PhyloTreeMixlen*)this)->clear_relative_treelen();
+    }
 
     return bestProc+1;
 #endif

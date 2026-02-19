@@ -121,6 +121,14 @@ public:
     Alignment(NxsDataBlock *data_block, char *sequence_type, string model);
 
     /**
+     constructor
+     @param names names of sequences
+     @param seqs sequences
+     @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+     */
+    Alignment(StrVector& names, StrVector& seqs, char *sequence_type, string model);
+    
+    /**
             destructor
      */
     virtual ~Alignment();
@@ -232,6 +240,15 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylipSequential(char *filename, char *sequence_type);
+
+    /**
+            read the alignment from vector of strings
+            @param seq_names a set of names
+            @param sequences a set of sequences
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readStrVec(StrVector &names, StrVector &sequences, char *sequence_type);
     
     /**
             do-read the alignment in FASTA format
@@ -484,11 +501,10 @@ public:
     int getMaxSeqNameLength();
 
     /*
-        check if some state is absent, which may cause numerical issues
+        check if some states are absent, which may cause numerical issues
         @param msg additional message into the warning
-        @return number of absent states in the alignment
     */
-    virtual int checkAbsentStates(string msg);
+    virtual void checkAbsentStates(string msg);
 
     /**
             check proper and undupplicated sequence names
@@ -1041,6 +1057,12 @@ public:
         Extract Maple file from an alignment file
      */
     void extractMapleFile(const std::string& aln_name, const InputType& format);
+
+    /**
+     * Get the numerical id of the genetic code
+     * @return id the genetic code id, or 0 if not a codon type
+     */
+    int getGeneticCodeId();
 
 protected:
 
