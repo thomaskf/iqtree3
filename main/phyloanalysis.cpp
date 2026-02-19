@@ -3588,8 +3588,16 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     //(we cannot do it until we *have* one).
     if (!params.compute_ml_tree_only) {
         
-        iqtree->ensureNumberOfThreadsIsSet(&params);
+        if (params.num_threads > 1) {
+            int best_threads = numThres(iqtree, params.num_threads);
+            if (best_threads != iqtree->num_threads) {
+                cout << "Number of threads is changed to " << best_threads << endl;
+                iqtree->num_threads = best_threads;
+            }
+        }
 
+        iqtree->ensureNumberOfThreadsIsSet(&params);
+        
         iqtree->initializeAllPartialLh();
 
         if (iqtree->getRate()->name.find("+I+G") != string::npos) {

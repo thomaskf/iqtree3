@@ -4588,6 +4588,19 @@ int PhyloTree::ensureNumberOfThreadsIsSet(Params *params) {
                 params->num_threads = bestThreads;
             }
         } else {
+            if (!isSuperTree()) {
+                int bestThreads = numThresSinglePart(aln, num_threads);
+                if (bestThreads != num_threads) {
+                    if (verbose_mode == VB_MED) {
+                        cout << "Number of threads is changed to " << bestThreads << endl;
+                    }
+                    omp_set_num_threads(bestThreads);
+                    num_threads = bestThreads;
+                    if (params!=nullptr) {
+                        params->num_threads = bestThreads;
+                    }
+                }
+            }
             warnNumThreads();
         }
         return num_threads;

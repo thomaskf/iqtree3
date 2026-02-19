@@ -252,6 +252,101 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+/**
+ * compute the number of threads should be used for a single partition
+ */
+int numThresSinglePart(Alignment* aln, int nAvailThres) {
+    SeqType seqType;
+    int thres, nptn;
+    
+    nptn = aln->getNPattern();
+    seqType = aln->seq_type;
+    switch(seqType) {
+        case SEQ_CODON:
+            thres = nptn * 3 / 100;
+            break;
+        case SEQ_PROTEIN:
+            thres = nptn / 200;
+            break;
+        default: // DNA, binary data or others
+            thres = nptn / 1000;
+            break;
+    }
+    if (thres < 1)
+        thres = 1;
+    if (thres > nAvailThres)
+        thres = nAvailThres;
+    return thres;
+}
+
+/**
+ * compute the max number of threads for an alignment with partitions (over the sites)
+ */
+int maxThresMultiPart(PhyloSuperTree *intree, int nAvailThres) {
+    int nthresMax, nthresPart;
+    int npart, i;
+    
+    npart = intree->size();
+    assert(npart >= 1);
+
+    // all threads work on same partition one by one
+    // max number of threads is the max of the number of threads needed for each partition
+    nthresMax = numThresSinglePart(intree->at(0)->aln, nAvailThres);
+    for (i = 1; i < npart; i++) {
+        nthresPart = numThresSinglePart(intree->at(i)->aln, nAvailThres);
+        if (nthresMax < nthresPart) {
+            nthresMax = nthresPart;
+        }
+    }
+    return nthresMax;
+}
+
+/**
+ * compute the min number of threads for an alignment with partitions (over the sites)
+ */
+int minThresMultiPart(PhyloSuperTree *intree, int nAvailThres) {
+    int nthresMin, nthresPart;
+    int npart, i;
+    
+    npart = intree->size();
+    assert(npart >= 1);
+
+    // all threads work on same partition one by one
+    // max number of threads is the max of the number of threads needed for each partition
+    nthresMin = numThresSinglePart(intree->at(0)->aln, nAvailThres);
+    for (i = 1; i < npart; i++) {
+        nthresPart = numThresSinglePart(intree->at(i)->aln, nAvailThres);
+        if (nthresMin > nthresPart) {
+            nthresMin = nthresPart;
+        }
+    }
+    return nthresMin;
+}
+
+/**
+ * compute the number of threads for the tree to compute the likelihood
+ */
+int numThres(IQTree* iqtree, int nAvailThreads) {
+    int nthreads = nAvailThreads;
+    if (nthreads > 1) {
+        int best_threads = nthreads;
+        if (iqtree->isSuperTree()) {
+            PhyloSuperTree* super_iqtree = (PhyloSuperTree*)iqtree;
+            if (iqtree->params->parallel_over_sites) {
+                best_threads = minThresMultiPart(super_iqtree, nAvailThreads);
+            } else {
+                best_threads = super_iqtree->size();
+            }
+        } else if (!iqtree->isSuperTree()) {
+            best_threads = numThresSinglePart(iqtree->aln, nAvailThreads);
+        }
+        if (best_threads < nthreads) {
+            nthreads = best_threads;
+        }
+    }
+    return nthreads;
+}
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -731,7 +826,18 @@ string computeFastMLTree(Params &params, Alignment *aln,
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->setNumThreads(num_threads);
+    
+    int curr_threads = num_threads;
+    if (curr_threads > 1) {
+        int best_threads = numThres(iqtree, curr_threads);
+        if (best_threads < curr_threads) {
+            cout << "Number of threads is changed to " << best_threads << endl;
+            curr_threads = best_threads;
+        }
+    }
+
+    iqtree->setNumThreads(curr_threads);
+
     iqtree->setCheckpoint(&model_info);
 
     iqtree->dist_file = dist_file;
@@ -4190,12 +4296,20 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
 #ifdef _OPENMP
     // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites && jobs.size() > 1);
+    
     // show the message
     if (parallel_job)
         cout << "In ModelFinder: parallelization over partitions" << endl;
-    else if (nthreads > 1)
-        cout << "In ModelFinder: parallelization over sites" << endl;
+    else if (nthreads > 1) {
+        cout << "In ModelFinder: parallelization over sites";
+        int max_threads = maxThresMultiPart(in_tree, nthreads);
+        if (nthreads > max_threads) {
+            nthreads = max_threads;
+            cout << " and number of threads is changed to " << max_threads << endl;
+        }
+        cout << endl;
+    }
 
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
 #endif
@@ -4268,7 +4382,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
 
 #ifdef _OPENMP
     // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites && jobs.size() > 1);
 #pragma omp parallel for schedule(dynamic) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
@@ -4323,6 +4437,16 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
             tree->sse = params->SSE;
             tree->optimize_by_newton = params->optimize_by_newton;
             tree->setNumThreads(params->model_test_and_tree ? num_threads : 1);
+            
+            int curr_threads = nthreads;
+            if (!parallel_job && nthreads > 1) {
+                int best_threads = numThresSinglePart(tree->aln, curr_threads);
+                if (curr_threads > best_threads) {
+                    cout << "Number of threads is changed to " << best_threads << endl;
+                    curr_threads = best_threads;
+                }
+            }
+            
             {
                 tree->setCheckpoint(&part_model_info);
                 // trick to restore checkpoint
@@ -4330,7 +4454,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
                 tree->saveCheckpoint();
             }
             best_model = CandidateModelSet().test(*params, tree, part_model_info, models_block,
-                                                  parallel_job ? 1 : nthreads, params->partition_type, cur_pair.set_name, "", true);
+                                                  parallel_job ? 1 : curr_threads, params->partition_type, cur_pair.set_name, "", true);
             best_model.restoreCheckpoint(&part_model_info);
             delete tree;
             delete aln;

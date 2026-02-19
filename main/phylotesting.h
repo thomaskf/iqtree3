@@ -764,6 +764,26 @@ double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCrite
 string criterionName(ModelTestCriterion mtc);
 
 /**
+ * compute the number of threads should be used for a single partition
+ */
+int numThresSinglePart(Alignment* aln, int nAvailThres);
+
+/**
+ * compute the max number of threads for an alignment with partitions (over the sites)
+ */
+int maxThresMultiPart(PhyloSuperTree *intree, int nAvailThres);
+
+/**
+ * compute the min number of threads for an alignment with partitions (over the sites)
+ */
+int minThresMultiPart(PhyloSuperTree *intree, int nAvailThres);
+
+/**
+ * compute the number of threads for the tree to compute the likelihood
+ */
+int numThres(IQTree* iqtree, int nAvailThreads);
+
+/**
  perform ModelFinder to find the best-fit model
  @param params program parameters
  @param iqtree phylogenetic tree
