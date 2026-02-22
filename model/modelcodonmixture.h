@@ -64,6 +64,7 @@ protected:
     // omega3 is resticted to > 1 for M2a model
     void restrict_omega_values(string cmix_type);
 
+    double optimizeParameters(double gradient_epsilon);
 };
 
 #endif /* modelcodonmixture_h */

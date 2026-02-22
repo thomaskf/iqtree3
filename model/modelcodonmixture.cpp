@@ -312,3 +312,48 @@ void ModelCodonMixture::restrict_omega_values(string cmix_type) {
         }
     }
 }
+
+double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
+    
+    int dim = getNDim();
+    if (dim == 0)
+        return 0.0;
+    double score = 0.0;
+    IntVector params;
+    int i, j, ncategory = size();
+    if (dim != 0) {
+        score = 1.0;
+    }
+    
+    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
+        outError("Mixture model +ASC is not supported yet. Contact author if needed.");
+    }
+    
+    // for Codon Mixture Model, use EM to optimize the weights,
+    // and use BFGS to optimize the other parameters
+    
+    bool orig_fix_prop = fix_prop;
+    
+    // first optimize the other parameters using BFGS
+    fix_prop = true;
+    
+    score = phylo_tree->computeLikelihood();
+    cout << "befores parameter optimization, score = " << score << endl;
+    
+    score = ModelMarkov::optimizeParameters(gradient_epsilon);
+    cout << "after parameter optimization, score = " << score << endl;
+    
+    // then optimize the weights
+    fix_prop = orig_fix_prop;
+    if (!fix_prop) {
+        score = ModelMarkov::optimizeParameters(gradient_epsilon);
+    }
+    
+    // rescale the Codon Q Matrices
+    rescale_codon_mix();
+    score = phylo_tree->computeLikelihood();
+    cout << "after weight optimization and rescaling, score = " << score << endl;
+
+    
+    return score;
+}

@@ -1034,7 +1034,7 @@ end;
 const double MIN_MIXTURE_PROP = 0.001;
 const double MAX_MIXTURE_PROP = 1000.0;
 const double MIN_CODON_MIXTURE_PROP = 0.001;
-const double MAX_CODON_MIXTURE_PROP = 100.0;
+const double MAX_CODON_MIXTURE_PROP = 1000.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
