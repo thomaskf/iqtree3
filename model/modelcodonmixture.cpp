@@ -343,16 +343,16 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
     score = ModelMarkov::optimizeParameters(gradient_epsilon);
     cout << "after parameter optimization, score = " << score << endl;
     
-    // then optimize the weights
+    // then optimize the weights using EM
     fix_prop = orig_fix_prop;
     if (!fix_prop) {
-        score = ModelMarkov::optimizeParameters(gradient_epsilon);
+        score = optimizeWeights();
     }
     
     // rescale the Codon Q Matrices
     rescale_codon_mix();
     score = phylo_tree->computeLikelihood();
-    cout << "after weight optimization and rescaling, score = " << score << endl;
+    cout << "after weight optimization (EM) and rescaling, score = " << score << endl;
 
     
     return score;
