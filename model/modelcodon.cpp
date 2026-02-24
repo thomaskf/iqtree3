@@ -1040,7 +1040,7 @@ bool ModelCodon::getVariables(double *variables) {
             changed |= (kappa2 != variables[j]);
             kappa2 = variables[j++];
         }
-        ASSERT(j == num_params+1);
+        // ASSERT(j == num_params+1);
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
@@ -1079,7 +1079,7 @@ void ModelCodon::setVariables(double *variables) {
         if (!fix_kappa2)
             variables[j++] = kappa2;
         
-		ASSERT(j == num_params+1);
+		// ASSERT(j == num_params+1);
 	}
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization

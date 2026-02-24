@@ -53,28 +53,55 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     
     string model_list = "";
     bool user_input_param = false;
+    bool kappa_given = false;
     
     if (vec.size() == 0) {
         /* setting fix_kappa for class 2 and 3 for GY0K model */
         string kappa_str = ",1.0";
-        if (model_name != "GY0K") {
+        // get the value of kappa if specified
+        auto s = model_name.find("{");
+        if (s != string::npos) {
+            auto t = model_name.find("}", s);
+            if (t != string::npos && t > s + 1) {
+                kappa_given = true;
+                kappa_str = "," + model_name.substr(s+1, t-s-1);
+                model_name = model_name.substr(0, s);
+            }
+        }
+        
+        /*
+        if (model_name != "GY0K" && !kappa_given) {
             // kappa is not fixed, thus cannot use EM algorithm
             if (Params::getInstance().optimize_alg_qmix == "EM") {
                 outError("EM algorithm cannot be used for the codon mixture model with unfixed kappa value.");
             }
         }
+        */
+        
         if (cmix_type == "1a") {
             // M1a neural model with 2 classes, omega2 = 1.0
-            model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}";
+            if (kappa_given) {
+                model_list = model_name + "{<0.999" + kappa_str + "}," + model_name + "{1.0" + kappa_str + "}";
+            } else {
+                model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}";
+            }
         } else if (cmix_type == "2a") {
             // M2a selection model with 3 classes
-            model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}," + model_name + "{>1.001" + kappa_str + "}";
+            if (kappa_given) {
+                model_list = model_name + "{<0.999" + kappa_str + "}," + model_name + "{1.0" + kappa_str + "}," + model_name + "{>1.001" + kappa_str + "}";
+            } else {
+                model_list = model_name + "{<0.999}," + model_name + "{1.0" + kappa_str + "}," + model_name + "{>1.001" + kappa_str + "}";
+            }
         } else if (cmix_type == "3") {
             // M3 model with 3 classes with no constraint
             //default value for ncat
             if (ncat == 0)
                 ncat = 3;
-            model_list = model_name + "{>0.001}";
+            if (kappa_given) {
+                model_list = model_name + "{>0.001" + kappa_str + "}";
+            } else {
+                model_list = model_name + "{>0.001}";
+            }
             for (int i = 1; i < ncat; i++)
                 model_list += "," + model_name + "{>0.001" + kappa_str + "}";
 
@@ -328,31 +355,60 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
-    
-    // for Codon Mixture Model, use EM to optimize the weights,
-    // and use BFGS to optimize the other parameters
-    
-    bool orig_fix_prop = fix_prop;
-    
-    // first optimize the other parameters using BFGS
-    fix_prop = true;
-    
+
     score = phylo_tree->computeLikelihood();
     cout << "befores parameter optimization, score = " << score << endl;
     
-    score = ModelMarkov::optimizeParameters(gradient_epsilon);
-    cout << "after parameter optimization, score = " << score << endl;
-    
-    // then optimize the weights using EM
-    fix_prop = orig_fix_prop;
-    if (!fix_prop) {
-        score = optimizeWeights();
+    if (Params::getInstance().optimize_alg_qmix == "EM") {
+        assert(size() > 0);
+        ModelCodon* first_model = (ModelCodon*)at(0);
+        if (!first_model->fix_kappa) {
+            // fix all the omega values
+            bool* orig_fix_omega = new bool[size()];
+            for (i = 0; i < size(); i++) {
+                orig_fix_omega[i] = ((ModelCodon*)at(i))->fix_omega;
+                ((ModelCodon*)at(i))->fix_omega = true;
+            }
+            // fix the weights
+            bool orig_fix_prop = fix_prop;
+            fix_prop = true;
+            // optimize the shared kappa value using BFGS
+            score = ModelMarkov::optimizeParameters(gradient_epsilon);
+            cout << "after shared kappa optimization, score = " << score << endl;
+            
+            // restore the original values
+            for (i = 0; i < size(); i++) {
+                ((ModelCodon*)at(i))->fix_omega = orig_fix_omega[i];
+            }
+            fix_prop = orig_fix_prop;
+            delete[] orig_fix_omega;
+        }
+        // optimize the other parameters using EM algorithm
+        // fix the kappa values
+        bool orig_fix_kappa = first_model->fix_kappa;
+        first_model->fix_kappa = true;
+        score = optimizeWithEM(gradient_epsilon);
+        // restore the original value
+        first_model->fix_kappa = orig_fix_kappa;
+        cout << "after EM optimization ";
+    } else {
+        bool orig_fix_prop = fix_prop;
+        // first optimize the other parameters using BFGS
+        fix_prop = true;
+        score = ModelMarkov::optimizeParameters(gradient_epsilon);
+        cout << "after parameter optimization, score = " << score << endl;
+        // then optimize the weights using EM
+        fix_prop = orig_fix_prop;
+        if (!fix_prop) {
+            score = optimizeWeights();
+            cout << "after weight optimization (EM) ";
+        }
     }
     
     // rescale the Codon Q Matrices
     rescale_codon_mix();
     score = phylo_tree->computeLikelihood();
-    cout << "after weight optimization (EM) and rescaling, score = " << score << endl;
+    cout << "and rescaling, score = " << score << endl;
 
     
     return score;
