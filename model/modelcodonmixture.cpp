@@ -391,7 +391,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // restore the original value
         first_model->fix_kappa = orig_fix_kappa;
         cout << "after EM optimization ";
-    } else {
+    } else if (Params::getInstance().optimize_alg_qmix == "BFGS") {
         bool orig_fix_prop = fix_prop;
         // first optimize the other parameters using BFGS
         fix_prop = true;
@@ -403,6 +403,9 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             score = optimizeWeights();
             cout << "after weight optimization (EM) ";
         }
+    } else {
+        score = ModelMarkov::optimizeParameters(gradient_epsilon);
+        cout << "after all-BFGS parameter optimization ";
     }
     
     // rescale the Codon Q Matrices
