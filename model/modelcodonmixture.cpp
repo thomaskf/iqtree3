@@ -177,13 +177,18 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     // Yuri - Added functions to set custom cnat initials
     // set the initial omega values for M3 model
     if (!user_input_param && cmix_type == "3") {
+        double shape_alpha = 1.0;
+        double shape_beta = 1.0;
+        //RateBeta beta_dist;
+        double* omega = RateBeta::SampleOmegas(ncat, shape_alpha,shape_beta);
+
         for (int i = 0; i < ncat; i++) {
-            if (ncat > 2){
-                ((ModelCodon*)at(i))->omega = (i+0.01)/(ncat-2);
-            }else {
-                ((ModelCodon*)at(i))->omega = (i+0.01);
+            //if (ncat > 2){
+            ((ModelCodon*)at(i))->omega = omega[i]/0.5; //(i+0.01)/(ncat-2);
+            //}else {
+            //    ((ModelCodon*)at(i))->omega = (i+0.01);
             }
-        }
+        //}
 
         /*((ModelCodon*)at(0))->omega = 0.4;
         ((ModelCodon*)at(1))->omega = 0.9;
