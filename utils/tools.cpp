@@ -1288,6 +1288,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.check_combin_q_mat = true;
     params.est_from_one = false;
     params.model_tamer = 100;
+    params.model_tamer_only = false;
     params.model_tamer_sub = 1;
     params.model_tamer_up = 1;
     params.model_tamer_method = 0;
@@ -3781,6 +3782,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "modeltamer percentage must be between 0 and 100";
                 continue;
             }
+            if (strcmp(argv[cnt], "-mto") == 0 || strcmp(argv[cnt], "--modeltameronly") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mt <percent>";
+                params.model_tamer = convert_double(argv[cnt]);
+                params.model_tamer_only = true;
+                if (params.model_tamer < 0 || params.model_tamer > 100)
+                    throw "modeltamer percentage must be between 0 and 100";
+                continue;
+            }
             if (strcmp(argv[cnt], "-mt-sub") == 0 || strcmp(argv[cnt], "--modeltamer-sub") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5100,15 +5111,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.model_test_criterion = MTC_AICC;
                 } else if (strcmp(argv[cnt], "BIC") == 0) {
                     params.model_test_criterion = MTC_BIC;
+                } else if (strcmp(argv[cnt], "mAIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_AIC;
+                } else if (strcmp(argv[cnt], "mAIC+BIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_BIC;
                 } else {
                     throw "Use -merit AIC|AICC|BIC";
                 }
 				continue;
 			}
-            if (strcmp(argv[cnt], "-mAIC") == 0 || strcmp(argv[cnt], "--mAIC") == 0) {
-                params.marginal_lh_aic = true;
-                continue;
-            }
 			if (strcmp(argv[cnt], "-ms") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -7760,6 +7773,7 @@ void Params::setDefault() {
     check_combin_q_mat = true;
     est_from_one = false;
     model_tamer = 100;
+    model_tamer_only = false;
     model_tamer_sub = 1;
     model_tamer_up = 1;
     model_tamer_method = 0;

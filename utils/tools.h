@@ -1770,6 +1770,10 @@ public:
     double model_tamer;
 
     /**
+        Only do ModelTamer, without downstream analyses.
+    */
+    int model_tamer_only;
+    /**
             ModelTamer subsampling time.
      */
     int model_tamer_sub;
