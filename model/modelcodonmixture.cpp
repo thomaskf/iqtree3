@@ -41,6 +41,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     }
     alpha = 1.0;
     beta = 1.0;
+    iteration_num = 0;
     // read the input parameters for +CMIXi{...}
     StrVector vec;
     if (end_pos != string::npos && orig_model_name[end_pos] == '{') {
@@ -362,7 +363,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
     }
 
     score = phylo_tree->computeLikelihood();
-    cout << "befores parameter optimization, score = " << score << endl;
+    cout << "before parameter optimization, score = " << score << endl;
     
     if (Params::getInstance().optimize_alg_qmix == "EM") {
         assert(size() > 0);
@@ -405,7 +406,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // then optimize the weights using EM
         fix_prop = orig_fix_prop;
         if (!fix_prop) {
-            score = optimizeWeights();
+            score = optimizeWeights(++iteration_num);
             cout << "after weight optimization (EM) ";
         }
     } else {

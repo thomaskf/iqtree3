@@ -36,6 +36,9 @@ private:
     //shape parameters for the beta distribution (M7 and M8 model)
     double alpha;
     double beta;
+    
+    // iteration #
+    int iteration_num;
 
 protected:
     /**

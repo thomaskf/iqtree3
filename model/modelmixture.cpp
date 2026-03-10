@@ -1989,7 +1989,7 @@ double ModelMixture::targetFunk(double x[]) {
     
 }
 
-double ModelMixture::optimizeWeights() {
+double ModelMixture::optimizeWeights(int nsteps) {
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_MIXTURE);
     size_t ptn, c;
@@ -2001,10 +2001,18 @@ double ModelMixture::optimizeWeights() {
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
 
-    for (int step = 0; step < optimize_steps; step++) {
+    int max_steps = optimize_steps;
+    if (nsteps > 0)
+        max_steps = nsteps;
+    for (int step = 0; step < max_steps; step++) {
         // E-step
 
         if (step > 0) {
+            if (phylo_tree->aln->seq_type == SEQ_CODON) {
+                // for codon mixture
+                rescale_codon_mix();
+                phylo_tree->computePatternLhCat(WSL_MIXTURE);
+            }
             // convert _pattern_lh_cat taking into account new weights
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
@@ -2039,6 +2047,7 @@ double ModelMixture::optimizeWeights() {
             if (std::isnan(ratio_prop[c])) {
                 cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
             }
+            cout << "[" << step << "," << c << "]" << prop[c] << " -> " << new_prop[c] << endl;
             prop[c] = new_prop[c];
 //            new_pinvar += prop[c];
         }
@@ -2060,6 +2069,9 @@ double ModelMixture::optimizeWeights() {
     aligned_free(ratio_prop);
     aligned_free(new_prop);
 //    aligned_free(lk_ptn);
+    
+    rescale_codon_mix(); // rescaling for codon sequences
+    
     return phylo_tree->computeLikelihood();
 }
 
