@@ -30,12 +30,13 @@ public:
      */
     virtual ~ModelCodonMixture();
 
-private:
-
-    bool link_kappa = true;
     //shape parameters for the beta distribution (M7 and M8 model)
     double alpha;
     double beta;
+
+private:
+
+    bool link_kappa = true;
     
     // iteration #
     int iteration_num;
@@ -68,6 +69,12 @@ protected:
     void restrict_omega_values(string cmix_type);
 
     double optimizeParameters(double gradient_epsilon);
+    
+    /**
+        write information
+        @param out output stream
+    */
+    virtual void writeInfo(ostream &out);
 };
 
 #endif /* modelcodonmixture_h */

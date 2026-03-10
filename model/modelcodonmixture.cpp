@@ -422,3 +422,14 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
     
     return score;
 }
+
+/**
+    write information
+    @param out output stream
+*/
+void ModelCodonMixture::writeInfo(ostream &out) {
+    if (name == "M7" || name == "M8") {
+        cout << "Beta distribution -- " << "alpha: " << alpha << ", beta: " << beta << endl;
+    }
+    ModelMixture::writeInfo(out);
+}
