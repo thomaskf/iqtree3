@@ -958,8 +958,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             //out << "Marginal corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
             //out << "Marginal Bayesian information criterion (mBIC) score: " << mBIC << endl;
         } else {
+            // mixed data types: compute mAIC per data type group and sum
+            double mAIC = ((PartitionModel*)tree.getModelFactory())->computeMarginalAIC(params.remove_empty_seq);
             out << endl;
-            out << "mAIC calculation is skipped because not all partition sequence types are same" << endl;
+            out << "Marginal Akaike information criterion (mAIC) score: " << mAIC << " (computed per data type)" << endl;
         }
     }
 
@@ -6296,5 +6298,10 @@ void runRootstrap(Params &params) {
     else
         tree.computeRootstrapUnrooted(trees, params.root, false);
     cout << getRealTime() - start_time << " sec" << endl;
-    
+
+}
+
+void runModelTamerAnalysis(Params &params, Checkpoint *checkpoint) {
+    // TODO: implement ModelTamer analysis
+    outError("ModelTamer analysis is not yet implemented");
 }
