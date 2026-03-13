@@ -29,7 +29,7 @@ PartitionModel::PartitionModel()
 {
 	linked_alpha = -1.0;
     opt_gamma_invar = false;
-    partLike = NULL;
+    partLike = nullptr;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -60,7 +60,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     double init_by_divmat = false;
     if (params.model_name_init && strcmp(params.model_name_init, "DIVMAT") == 0) {
         init_by_divmat = true;
-        params.model_name_init = NULL;
+        params.model_name_init = nullptr;
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
@@ -118,7 +118,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if (mit->second->freq_type != FREQ_ESTIMATE && mit->second->freq_type != FREQ_EMPIRICAL)
             continue;
         // count state occurrences
-        size_t *sum_state_counts = NULL;
+        size_t *sum_state_counts = nullptr;
         int num_parts = 0;
         for (it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
@@ -457,7 +457,7 @@ double PartitionModel::computeMarginalLhForPartitions(vector<int> &part_indices,
 
             if (inter_seqs_id.size() > 1) {
                 // subset tree1_aln
-                Alignment *sub_tree1_aln = NULL;
+                Alignment *sub_tree1_aln = nullptr;
                 if (tree1_seqs.size() != inter_seqs.size() || (!remove_empty_seq && tree1_seqs.size() < ntaxa)) {
                     sub_tree1_aln = new Alignment();
                     sub_tree1_aln->extractSubAlignment(tree1_aln, inter_seqs_id, 0, 0, NULL, false);
@@ -466,7 +466,7 @@ double PartitionModel::computeMarginalLhForPartitions(vector<int> &part_indices,
                 }
 
                 // subset tree2
-                PhyloTree *sub_tree2 = NULL;
+                PhyloTree *sub_tree2 = nullptr;
                 int tree2_ntaxa;
                 if (remove_empty_seq) {
                     tree2_ntaxa = tree2_seqs.size();
@@ -595,8 +595,8 @@ double PartitionModel::computeMarginalLhForPartitions(vector<int> &part_indices,
                 if (tree1_seqs.size() != inter_seqs.size() || (!remove_empty_seq && tree1_seqs.size() < ntaxa)) {
                     delete sub_tree1_aln;
                 }
-                sub_tree2->setModelFactory(NULL);
-                sub_tree2->aln = NULL;
+                sub_tree2->setModelFactory(nullptr);
+                sub_tree2->aln = nullptr;
                 delete sub_tree2;
                 delete[] ptn_lh_array;
             } else if (tree2->getModel()->isReversible() || inter_seqs.size() == 0) {
@@ -1047,7 +1047,7 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
 
 PartitionModel::~PartitionModel()
 {
-    if (partLike != NULL)
+    if (partLike != nullptr)
         delete[] partLike;
 }
 

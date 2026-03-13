@@ -735,7 +735,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     string concat_tree;
 
-    IQTree *iqtree = NULL;
+    IQTree *iqtree = nullptr;
 
     StrVector saved_model_names;
 
@@ -1565,7 +1565,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
 
-
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
@@ -1845,9 +1844,9 @@ PhyloSuperTree* mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &g
                 }
 			}
 		}
-		info.cur_ptnlh = NULL;
-		info.nniMoves[0].ptnlh = NULL;
-		info.nniMoves[1].ptnlh = NULL;
+		info.cur_ptnlh = nullptr;
+		info.nniMoves[0].ptnlh = nullptr;
+		info.nniMoves[1].ptnlh = nullptr;
 		part_info.push_back(info);
         if (replace_super_tree) {
             PhyloTree *tree = super_tree->extractSubtree(*it);
@@ -1917,7 +1916,7 @@ string CandidateModel::evaluate(Params &params,
 {
     //string model_name = name;
     Alignment *in_aln = aln;
-    IQTree *iqtree = NULL;
+    IQTree *iqtree = nullptr;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
         if (params.partition_type == BRLEN_OPTIMIZE)
@@ -2161,7 +2160,7 @@ string CandidateModel::evaluateConcatenation(Params &params, SuperAlignment *sup
     computeICScores(ssize);
 
     delete aln;
-    aln = NULL;
+    aln = nullptr;
     return concat_tree;
 }
 
@@ -2937,8 +2936,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 	    in_tree->params = &params;
     
     // for ModelOMatic
-    Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
+    Alignment *prot_aln = nullptr;
+    Alignment *dna_aln = nullptr;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (generate_candidates) {
         if (in_model_name.empty()) {
@@ -3323,9 +3322,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         delete in_tree->aln;
         in_tree->aln = best_aln;
         if (best_aln == prot_aln)
-            prot_aln = NULL;
+            prot_aln = nullptr;
         else
-            dna_aln = NULL;
+            dna_aln = nullptr;
     }
 
     if (dna_aln)
@@ -3380,8 +3379,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     in_tree->params = &params;
     
-    Alignment *prot_aln = NULL;
-    Alignment *dna_aln = NULL;
+    Alignment *prot_aln = nullptr;
+    Alignment *dna_aln = nullptr;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     
     
@@ -3551,9 +3550,9 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         delete in_tree->aln;
         in_tree->aln = at(best_model).aln;
         if (in_tree->aln == prot_aln)
-            prot_aln = NULL;
+            prot_aln = nullptr;
         else
-            dna_aln = NULL;
+            dna_aln = nullptr;
     }
     
     if (dna_aln)
@@ -4474,7 +4473,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
         ModelPair cur_pair;
         cur_pair.part1 = closest_pairs[pair].first;
         cur_pair.part2 = closest_pairs[pair].second;
-        //cur_pair.distance = closest_pairs[pair].distance;
         ASSERT(cur_pair.part1 < cur_pair.part2);
         cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
         cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
@@ -4540,7 +4538,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
         double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
         int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
         cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
-        //cur_pair.score_bic = computeInformationScore(lhnew, dfnew, ssize, MTC_BIC);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -4571,13 +4568,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
             }
         }
     }
-    /*
-    if (better_pairs.empty() && !params->marginal_lh_aic) {
-        auto it = sorted_pairs.begin();
-        better_pairs.insertPair(it->second);
-        cout << "merge " << it->second.set_name << " for further analysis" << endl;
-    }
-     */
 }
 
 /**
@@ -5055,6 +5045,7 @@ void PartitionFinder::test_PartitionModel() {
         return;
     }
 
+    StrVector model_names;
     StrVector greedy_model_trees;
 
     gene_sets.resize(in_tree->size());
@@ -5347,7 +5338,6 @@ void PartitionFinder::test_PartitionModel() {
         // but this time "test_merge = false"
         test_merge = false;
         job_type = 1; // for all partitions
-        //params->marginal_lh_aic = false;
         getBestModel(job_type);
     }
 
@@ -5425,14 +5415,14 @@ void PartitionFinder::initialMPIShareMemory() {
 #ifdef ONESIDE_COMM
     if (MPIHelper::getInstance().getProcessID()==PROC_MASTER) {
         val_ptr = (int*) malloc(sizeof(int));
-        MPI_Win_create(val_ptr, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+        MPI_Win_create(val_ptr, sizeof(int), sizeof(int), MPI_INFO_nullptr, MPI_COMM_WORLD, &win);
     } else {
-        val_ptr = NULL;
-        MPI_Win_create(val_ptr, 0, sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &win);
+        val_ptr = nullptr;
+        MPI_Win_create(val_ptr, 0, sizeof(int), MPI_INFO_nullptr, MPI_COMM_WORLD, &win);
     }
 #else
-    win = NULL;
-    val_ptr = NULL;
+    win = nullptr;
+    val_ptr = nullptr;
 #endif // ONESIDE_COMM
 }
 
@@ -5571,11 +5561,11 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     int n = num_processes * num_threads;
     int* scounts = new int[num_processes];
     int* displs = new int[num_processes];
-    int* alljoblens = NULL;
+    int* alljoblens = nullptr;
     int* joblens = new int[num_threads];
     int pid;
-    char* sendbuf = NULL;
-    char* recvbuf = NULL;
+    char* sendbuf = nullptr;
+    char* recvbuf = nullptr;
     int recvlen;
     if (MPIHelper::getInstance().isMaster()) {
         // assign one job to every thread
@@ -5641,9 +5631,9 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     delete[] displs;
     delete[] joblens;
     delete[] recvbuf;
-    if (sendbuf != NULL)
+    if (sendbuf != nullptr)
         delete[] sendbuf;
-    if (alljoblens != NULL)
+    if (alljoblens != nullptr)
         delete[] alljoblens;
     return currJobs.size();
 }
@@ -6306,7 +6296,7 @@ void SyncChkPoint::loadFrIntArr(vector<set<int> >& gene_sets, int* buff, int buf
 
 char* SyncChkPoint::toCharArr(vector<string>& model_names, int& buffsize) {
     string buff_str = "";
-    char* buff = NULL;
+    char* buff = nullptr;
     int i;
     for (i = 0; i < model_names.size(); i++) {
         buff_str.append(model_names[i]);
@@ -6323,7 +6313,7 @@ char* SyncChkPoint::toCharArr(vector<string>& model_names, int& buffsize) {
 
 void SyncChkPoint::loadFrCharArr(vector<string>& model_names, char* buff) {
     model_names.clear();
-    if (buff == NULL)
+    if (buff == nullptr)
         return;
     string buff_str = string(buff);
     int start_pos = 0;
@@ -6342,7 +6332,7 @@ void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
     // broadcast vector<set<int> > object to all workers
     set<int>::iterator itr;
     int buffsize;
-    int* buff = NULL;
+    int* buff = nullptr;
 
     // broadcast the buffsize to workers
     if (MPIHelper::getInstance().isMaster())
@@ -6362,13 +6352,13 @@ void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
             loadFrIntArr(gene_sets, buff, buffsize);
     }
 
-    if (buff != NULL)
+    if (buff != nullptr)
         delete[] buff;
 }
 
 void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
     int buffsize;
-    char* buff = NULL;
+    char* buff = nullptr;
 
     // for Master, build the long string
     if (MPIHelper::getInstance().isMaster()) {
@@ -6390,7 +6380,7 @@ void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
         }
     }
 
-    if (buff != NULL)
+    if (buff != nullptr)
         delete[] buff;
 }
 
@@ -6678,9 +6668,9 @@ CandidateModel findMixtureComponent(Params &params, IQTree &iqtree, ModelCheckpo
     orig_ratehet_set = params.ratehet_set;
     orig_model_set = params.model_set;
 
-    // params.model_extra_set = NULL;
-    // params.model_subset = NULL;
-    // params.state_freq_set = NULL;
+    // params.model_extra_set = nullptr;
+    // params.model_subset = nullptr;
+    // params.state_freq_set = nullptr;
     generate_candidates = false;
     candidate_models.nest_network = nest_network;
 
@@ -6972,16 +6962,16 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
 
-    model_info.getString("best_model_AIC", best_model_AIC_pre);
-    model_info.getString("best_model_AICc", best_model_AICc_pre);
-    model_info.getString("best_model_BIC", best_model_BIC_pre);
-    model_info.getString("best_model_list_" + criteria_str, best_model_list_pre);
-    model_info.getString("best_score_AIC", best_score_AIC_pre);
-    model_info.getString("best_score_AICc", best_score_AICc_pre);
-    model_info.getString("best_score_BIC", best_score_BIC_pre);
-    model_info.getString("best_tree_AIC", best_tree_AIC_pre);
-    model_info.getString("best_tree_AICc", best_tree_AICc_pre);
-    model_info.getString("best_tree_BIC", best_tree_BIC_pre);
+    ASSERT(model_info.getString("best_model_AIC", best_model_AIC_pre));
+    ASSERT(model_info.getString("best_model_AICc", best_model_AICc_pre));
+    ASSERT(model_info.getString("best_model_BIC", best_model_BIC_pre));
+    ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_list_pre));
+    ASSERT(model_info.getString("best_score_AIC", best_score_AIC_pre));
+    ASSERT(model_info.getString("best_score_AICc", best_score_AICc_pre));
+    ASSERT(model_info.getString("best_score_BIC", best_score_BIC_pre));
+    ASSERT(model_info.getString("best_tree_AIC", best_tree_AIC_pre));
+    ASSERT(model_info.getString("best_tree_AICc", best_tree_AICc_pre));
+    ASSERT(model_info.getString("best_tree_BIC", best_tree_BIC_pre));
 
 
     // Step 3: keep adding a new class until no further improvement
@@ -7027,16 +7017,16 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
             curr_score = best_model.getScore();
             model_str = best_subst_name;
 
-            model_info.getString("best_model_AIC", best_model_AIC_pre);
-            model_info.getString("best_model_AICc", best_model_AICc_pre);
-            model_info.getString("best_model_BIC", best_model_BIC_pre);
-            model_info.getString("best_model_list_" + criteria_str, best_model_list_pre);
-            model_info.getString("best_score_AIC", best_score_AIC_pre);
-            model_info.getString("best_score_AICc", best_score_AICc_pre);
-            model_info.getString("best_score_BIC", best_score_BIC_pre);
-            model_info.getString("best_tree_AIC", best_tree_AIC_pre);
-            model_info.getString("best_tree_AICc", best_tree_AICc_pre);
-            model_info.getString("best_tree_BIC", best_tree_BIC_pre);
+            ASSERT(model_info.getString("best_model_AIC", best_model_AIC_pre));
+            ASSERT(model_info.getString("best_model_AICc", best_model_AICc_pre));
+            ASSERT(model_info.getString("best_model_BIC", best_model_BIC_pre));
+            ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_list_pre));
+            ASSERT(model_info.getString("best_score_AIC", best_score_AIC_pre));
+            ASSERT(model_info.getString("best_score_AICc", best_score_AICc_pre));
+            ASSERT(model_info.getString("best_score_BIC", best_score_BIC_pre));
+            ASSERT(model_info.getString("best_tree_AIC", best_tree_AIC_pre));
+            ASSERT(model_info.getString("best_tree_AICc", best_tree_AICc_pre));
+            ASSERT(model_info.getString("best_tree_BIC", best_tree_BIC_pre));
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
 
