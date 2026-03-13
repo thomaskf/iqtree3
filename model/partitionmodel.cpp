@@ -337,6 +337,26 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
+/**
+    compute the distance from root to a named leaf via DFS
+    @param node current node
+    @param dad parent node (NULL for root)
+    @param target leaf name to find
+    @return distance from node to the target leaf, or -1.0 if not found
+*/
+static double rootToLeafDist(Node *node, Node *dad, const string &target) {
+    if (node->isLeaf() && node->name == target)
+        return 0.0;
+    for (auto nei : node->neighbors) {
+        if (nei->node != dad) {
+            double d = rootToLeafDist(nei->node, node, target);
+            if (d >= 0)
+                return d + nei->length;
+        }
+    }
+    return -1.0;
+}
+
 double PartitionModel::computeMarginalLhForPartitions(vector<int> &part_indices, bool remove_empty_seq) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int nparts = part_indices.size();
@@ -617,7 +637,87 @@ double PartitionModel::computeMarginalLhForPartitions(vector<int> &part_indices,
                 }
             } else {
                 // intersection has only 1 taxon and non-reversible model
-                outError("mAIC calculation doesn't work yet for intersection of 1 taxon and non-reversible model");
+                // compute site likelihood from root to the tip:
+                // L(x) = sum_r pi(r) * P(r -> x | t_root_to_tip)
+                string inter_seq_name = *inter_seqs.begin();
+                double dist = rootToLeafDist(tree2->root, NULL, inter_seq_name);
+                ASSERT(dist >= 0);
+
+                // compute transition matrix for root-to-tip distance
+                double *trans_matrix = new double[n_states * n_states];
+                tree2->getModel()->computeTransMatrix(dist, trans_matrix);
+
+                // precompute log of root-to-tip probabilities: log(sum_r pi(r) * P(r -> x | t))
+                vector<double> log_root_to_tip_prob(n_states);
+                for (int x = 0; x < n_states; x++) {
+                    double prob = 0.0;
+                    for (int r = 0; r < n_states; r++) {
+                        prob += state_freq[r] * trans_matrix[r * n_states + x];
+                    }
+                    log_root_to_tip_prob[x] = log(prob);
+                }
+
+                for (int l = 0; l < tree1_nsite; l++) {
+                    double site_lh = 0.0;
+                    Pattern p = tree1_aln->at(tree1_aln->getPatternID(l));
+
+                    for (string seq_name : tree1_seqs) {
+                        int missing_id = tree1_aln->getSeqID(seq_name);
+                        int char_id = p[missing_id];
+                        if (inter_seqs.find(seq_name) != inter_seqs.end()) {
+                            // intersecting taxon: use root-to-tip probability
+                            if (char_id < n_states) {
+                                site_lh += log_root_to_tip_prob[char_id];
+                            } else {
+                                // ambiguous state: sum over possible states
+                                if (seqtype == SEQ_DNA) {
+                                    int cstate = char_id - n_states + 1;
+                                    double amb_prob = 0;
+                                    for (int m = 0; m < n_states; m++) {
+                                        if ((cstate) & (1 << m)) {
+                                            amb_prob += exp(log_root_to_tip_prob[m]);
+                                        }
+                                    }
+                                    site_lh += log(amb_prob);
+                                } else if (seqtype == SEQ_PROTEIN) {
+                                    if (char_id < 23) {
+                                        int cstate = char_id - n_states;
+                                        double amb_prob = 0;
+                                        amb_prob += exp(log_root_to_tip_prob[ambi_aa[cstate*2]]);
+                                        amb_prob += exp(log_root_to_tip_prob[ambi_aa[cstate*2+1]]);
+                                        site_lh += log(amb_prob);
+                                    }
+                                }
+                            }
+                        } else {
+                            // missing taxon: use state frequencies (same as reversible case)
+                            if (char_id < n_states) {
+                                site_lh += log_state_freq[char_id];
+                            } else {
+                                if (seqtype == SEQ_DNA) {
+                                    int cstate = char_id - n_states + 1;
+                                    double amb_freq = 0;
+                                    for (int m = 0; m < n_states; m++) {
+                                        if ((cstate) & (1 << m)) {
+                                            amb_freq += state_freq[m];
+                                        }
+                                    }
+                                    site_lh += log(amb_freq);
+                                } else if (seqtype == SEQ_PROTEIN) {
+                                    if (char_id < 23) {
+                                        int cstate = char_id - n_states;
+                                        double amb_freq = 0;
+                                        amb_freq += state_freq[ambi_aa[cstate*2]];
+                                        amb_freq += state_freq[ambi_aa[cstate*2+1]];
+                                        site_lh += log(amb_freq);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    lh_array[tree1_nsite * k + l] = site_lh;
+                }
+                delete[] trans_matrix;
             }
             delete[] state_freq;
         }
@@ -696,10 +796,10 @@ double PartitionModel::computeMarginalAIC(bool remove_empty_seq) {
         }
 
         // compute ssize for this group: sum of per-partition site counts
-        int group_ssize = 0;
+        /*int group_ssize = 0;
         for (int idx : group_indices) {
             group_ssize += tree->at(idx)->getAlnNSite();
-        }
+        }*/
 
         // mAIC = -2 * marginal_lh + 2 * df
         double group_maic = -2.0 * group_marginal_lh + 2.0 * group_df;
