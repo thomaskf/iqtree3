@@ -6394,13 +6394,14 @@ void Alignment::outputMutation(ofstream &out, char state_char, int32_t pos, int3
     out << endl;
 }
 
-void createSUAlignment(Params &params) {
-    Alignment *alignment;
-    alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
-
+Alignment *createSUAlignment(Params &params,Alignment *alignment) {
     cout << endl;
     cout << "Generating ModelTamer subsample-upsampling alignments..." << endl;
     cout << endl;
+
+    if (params.model_tamer_only) {
+        alignment = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+    }
 
     int n_sub = params.model_tamer_sub;
     int n_up = params.model_tamer_up;
@@ -6457,6 +6458,10 @@ void createSUAlignment(Params &params) {
 
             string filename = (string)params.out_prefix + ".s" + to_string(i+1) + "u" + to_string(j+1) + ".phy";
             su_alignment->printAlignment(params.aln_output_format, filename.c_str());
+
+            if (!params.model_tamer_only) {
+                return su_alignment;
+            }
 
             delete su_alignment;
         }

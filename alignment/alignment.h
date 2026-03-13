@@ -1127,6 +1127,6 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
 
 /***/
-void createSUAlignment(Params &params);
+Alignment *createSUAlignment(Params &params,Alignment *alignment = NULL);
 
 #endif
