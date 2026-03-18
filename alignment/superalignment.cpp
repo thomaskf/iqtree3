@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include <stdarg.h>
+#include <queue>
 #include "superalignment.h"
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
@@ -195,50 +196,49 @@ void SuperAlignment::init(StrVector *sequence_names, bool keep_order) {
     }
 
     // 2025-12-9 Huaiyan: keep the sequence order in the superalignment same as partition alignments, do it once when applying mAIC to PartitionFinder.
+    // Uses topological sort (Kahn's algorithm) to merge the per-partition sequence orderings into a single consistent global order.
     if (keep_order) {
-        // use topollogical sorting with Kahn's Algorithm (BFS) to order the sequences
-        unordered_map<string, unordered_set<string> > graph;
-        unordered_map<string, int> indeg;
-        unordered_set<string> items;
+        // build a DAG: edge a->b means a appears immediately before b in some partition
+        unordered_map<string, unordered_set<string>> successors;
+        unordered_map<string, int> indegree;
 
-        for (auto it = partitions.begin(); it != partitions.end(); ++it) {
-            size_t nseq = (*it)->getNSeq();
-            for (size_t seq = 0; seq < nseq; ++seq) {
-                items.insert((*it)->getSeqName(seq));
+        for (auto *aln : partitions) {
+            size_t nseq = aln->getNSeq();
+            for (size_t seq = 0; seq < nseq; seq++) {
+                const string &name = aln->getSeqName(seq);
+                if (indegree.find(name) == indegree.end())
+                    indegree[name] = 0;
             }
-
             for (size_t i = 0; i + 1 < nseq; i++) {
-                string& a = (*it)->getSeqName(i);
-                string& b = (*it)->getSeqName(i+1);
-
-                if (!graph[a].count(b)) {
-                    graph[a].insert(b);
-                    indeg[b]++;
+                const string &a = aln->getSeqName(i);
+                const string &b = aln->getSeqName(i + 1);
+                if (!successors[a].count(b)) {
+                    successors[a].insert(b);
+                    indegree[b]++;
                 }
             }
         }
 
-        vector<string> q;
-        for (auto &x : items) {
-            if (indeg[x] == 0) q.push_back(x);
+        // BFS from nodes with no predecessors
+        queue<string> q;
+        for (auto &entry : indegree) {
+            if (entry.second == 0)
+                q.push(entry.first);
         }
 
-        size_t idx = 0;
-
-        while (idx < q.size()) {
-            string x = q[idx++];
+        while (!q.empty()) {
+            const string &x = q.front();
             seq_names.push_back(x);
-            IntVector vec(nsite, -1);
-            taxa_index.push_back(vec);
-
-            for (const string& y : graph[x]) {
-                if (--indeg[y] == 0)
-                    q.push_back(y);
+            taxa_index.push_back(IntVector(nsite, -1));
+            for (const string &y : successors[x]) {
+                if (--indegree[y] == 0)
+                    q.push(y);
             }
+            q.pop();
         }
 
-        if (seq_names.size() != items.size())
-            outError("Sequence orders are not same in different partitions, PartitionFinder with mAIC can't work properly.");
+        if (seq_names.size() != indegree.size())
+            outError("Conflicting sequence orders across partitions prevent consistent ordering for mAIC PartitionFinder.");
     }
 
     size_t site = 0;
