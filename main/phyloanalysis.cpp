@@ -925,30 +925,16 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     // mAIC report
     if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED) {
         // compute mAIC/mBIC/mAICc if it is a partition model
-        int ntrees; //mix_df;
-        double mix_lh;
+        double mix_lh = tree.getModelFactory()->computeMarginalLh(params.remove_empty_seq);
 
-        mix_lh = tree.getModelFactory()->computeMarginalLh(params.remove_empty_seq);
-        if (mix_lh < 0) {
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-            ntrees = stree->size();
-            //mix_df = df + ntrees - 1;  // Ed Susko: The weights are fixed by the partition length, so there are no extra degrees of freedom
-            //nsites = tree.getAlnNSite();
+        double mAIC, mAICc, mBIC;
+        computeInformationScores(mix_lh, df, ssize, mAIC, mAICc, mBIC);
 
-            double mAIC, mAICc, mBIC;
-            computeInformationScores(mix_lh, df, ssize, mAIC, mAICc, mBIC);
-
-            out << endl;
-            out << "Marginal log-likelihood of the tree: " << mix_lh << endl;
-            out << "Marginal Akaike information criterion (mAIC) score: " << mAIC << endl;
-            //out << "Marginal corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
-            //out << "Marginal Bayesian information criterion (mBIC) score: " << mBIC << endl;
-        } else {
-            // mixed data types: compute mAIC per data type group and sum
-            double mAIC = ((PartitionModel*)tree.getModelFactory())->computeMarginalAIC(params.remove_empty_seq);
-            out << endl;
-            out << "Marginal Akaike information criterion (mAIC) score: " << mAIC << " (computed per data type)" << endl;
-        }
+        out << endl;
+        out << "Marginal log-likelihood of the tree: " << mix_lh << endl;
+        out << "Marginal Akaike information criterion (mAIC) score: " << mAIC << endl;
+        //out << "Marginal corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
+        //out << "Marginal Bayesian information criterion (mBIC) score: " << mBIC << endl;
     }
 
     if (ssize <= df && main_tree) {
