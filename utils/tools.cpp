@@ -1763,8 +1763,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-optalg_qmix") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -optalg_qmix <BFGS|EM>";
-                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
+                    throw "Use -optalg_qmix <BFGS|EM|BFGS-all>";
+                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") && strcmp(argv[cnt], "BFGS-all") != 0)
                     throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
                 params.optimize_alg_qmix = argv[cnt];
                 continue;

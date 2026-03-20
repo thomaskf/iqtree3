@@ -206,7 +206,7 @@ public:
         optimize mixture weights using EM algorithm 
         @return log-likelihood of optimized weights
     */
-    double optimizeWeights();
+    double optimizeWeights(int nsteps = 0);
 
     /** 
         optimize rate parameters using EM algorithm

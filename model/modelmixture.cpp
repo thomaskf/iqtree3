@@ -1033,6 +1033,8 @@ end;
 
 const double MIN_MIXTURE_PROP = 0.001;
 const double MAX_MIXTURE_PROP = 1000.0;
+const double MIN_CODON_MIXTURE_PROP = 0.001;
+const double MAX_CODON_MIXTURE_PROP = 1000.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
@@ -1987,7 +1989,7 @@ double ModelMixture::targetFunk(double x[]) {
     
 }
 
-double ModelMixture::optimizeWeights() {
+double ModelMixture::optimizeWeights(int nsteps) {
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_MIXTURE);
     size_t ptn, c;
@@ -1999,10 +2001,18 @@ double ModelMixture::optimizeWeights() {
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
 
-    for (int step = 0; step < optimize_steps; step++) {
+    int max_steps = optimize_steps;
+    if (nsteps > 0)
+        max_steps = nsteps;
+    for (int step = 0; step < max_steps; step++) {
         // E-step
 
         if (step > 0) {
+            if (phylo_tree->aln->seq_type == SEQ_CODON) {
+                // for codon mixture
+                rescale_codon_mix();
+                phylo_tree->computePatternLhCat(WSL_MIXTURE);
+            }
             // convert _pattern_lh_cat taking into account new weights
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
@@ -2037,6 +2047,7 @@ double ModelMixture::optimizeWeights() {
             if (std::isnan(ratio_prop[c])) {
                 cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
             }
+            cout << "[" << step << "," << c << "]" << prop[c] << " -> " << new_prop[c] << endl;
             prop[c] = new_prop[c];
 //            new_pinvar += prop[c];
         }
@@ -2058,6 +2069,9 @@ double ModelMixture::optimizeWeights() {
     aligned_free(ratio_prop);
     aligned_free(new_prop);
 //    aligned_free(lk_ptn);
+    
+    rescale_codon_mix(); // rescaling for codon sequences
+    
     return phylo_tree->computeLikelihood();
 }
 
@@ -2596,11 +2610,19 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         }
 		if (fix_prop) return;
 		int i, ncategory = size();
-		for (i = 1; i < ncategory; i++) {
-			lower_bound[dim+i] = MIN_MIXTURE_PROP;
-			upper_bound[dim+i] = MAX_MIXTURE_PROP;
-			bound_check[dim+i] = false;
-		}
+        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_CODON_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_CODON_MIXTURE_PROP;
+                bound_check[dim+i] = true;
+            }
+        } else {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_MIXTURE_PROP;
+                bound_check[dim+i] = false;
+            }
+        }
     }
 }
 
