@@ -8,7 +8,7 @@
 # Data types and their effective states:
 #   DNA   : 4  states  -> cap triggers at nptn * 4  / 4000
 #   AA    : 20 states  -> cap triggers at nptn * 20 / 4000
-#   CODON : 60 states  -> cap triggers at nptn * 60 / 4000
+#   CODON : 61 states  -> cap triggers at nptn * 61 / 4000
 #
 # Usage:
 #   bash simulate_alignments.sh [IQTREE_BIN] [OUTDIR]
@@ -44,11 +44,15 @@ echo ""
 #
 #  DNA (4 states):   threshold sites ~ 1000 per thread
 #  AA  (20 states):  threshold sites ~  200 per thread
-#  Codon (60 states):threshold sites ~   67 per thread
+#  Codon (61 states):threshold sites ~   66 per thread
+#
+# NOTE: for codon models --length is in nucleotides and MUST be divisible by 3.
+#       Each value below equals the intended codon count * 3.
+#       e.g. 150 nt = 50 codons, 300 nt = 100 codons, etc.
 # -----------------------------------------------------------------------------
 DNA_LENGTHS=(200 500 1000 2000 4000 8000 16000)
 AA_LENGTHS=(50  100  200  500  1000 2000  5000)
-CODON_LENGTHS=(50  100  200  500  1000 2000  4000)  # in codons (x3 nucleotides)
+CODON_LENGTHS=(150 300 600 1500 3000 6000 12000)  # in nucleotides (divisible by 3)
 
 # Tree topology shared across data types (Yule-Harding random tree)
 TREE="RANDOM{yh/$NTAXA}"
@@ -100,10 +104,11 @@ done
 echo ""
 
 # =============================================================================
-# Codon alignments  (GY+G, 60 states)
-# --length for codon models specifies number of codons
+# Codon alignments  (GY+G, 61 states)
+# --length is in nucleotides; each value must be divisible by 3.
+# The output alignment will have length/3 codons per sequence.
 # =============================================================================
-echo "=== Codon alignments (GY+G, 60 states) ==="
+echo "=== Codon alignments (GY+G, 61 states) ==="
 for len in "${CODON_LENGTHS[@]}"; do
     prefix="$OUTDIR/codon_n${NTAXA}_l${len}"
     run_alisim "$prefix" "GY+G" "$len" "CODON"
