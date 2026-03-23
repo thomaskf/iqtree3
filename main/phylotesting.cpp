@@ -1892,6 +1892,18 @@ void fixPartitions(PhyloSuperTree* super_tree) {
     super_tree->deleteAllPartialLh();
 }
 
+/**
+ * Compute the maximum number of CPU threads appropriate for evaluating a model
+ * on the given alignment, based on alignment size (patterns x states).
+ * Using more threads than this on a short alignment incurs overhead that
+ * outweighs the parallelism benefit.
+ * @param aln  the alignment being evaluated
+ * @return maximum recommended thread count (at least 1)
+ */
+int maxThreadsForAlignment(Alignment *aln) {
+    return max(1, (int)(aln->getNPattern() * aln->num_states / 4000));
+}
+
 string CandidateModel::evaluate(Params &params,
     ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
     ModelsBlock *models_block,
@@ -1920,7 +1932,16 @@ string CandidateModel::evaluate(Params &params,
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->setNumThreads(num_threads);
+    // cap threads per model based on alignment size to avoid overhead on short alignments
+    int effective_threads = num_threads;
+    if (!params.model_test_and_tree && !in_aln->isSuperAlignment()) {
+        effective_threads = min(num_threads, maxThreadsForAlignment(in_aln));
+        if (effective_threads < num_threads)
+            cout << "ModelFinder: capping threads " << num_threads << " -> "
+                 << effective_threads << " (nptn=" << in_aln->getNPattern()
+                 << ", nstate=" << in_aln->num_states << ")" << endl;
+    }
+    iqtree->setNumThreads(effective_threads);
 
     iqtree->setCheckpoint(&in_model_info);
 #ifdef _OPENMP
