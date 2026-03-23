@@ -86,7 +86,8 @@ for aln in "$SIMDIR"/*.phy; do
         echo -n "  -nt $nt  (expected effective: $expected) ... "
 
         # Time the ModelFinder run
-        start=$(date +%s%3N)
+        # Use python3 for millisecond precision (date +%s%3N is GNU-only, fails on macOS)
+        start=$(python3 -c "import time; print(int(time.time() * 1000))")
         "$IQTREE" -s "$aln" \
             -m TEST \
             -nt "$nt" \
@@ -94,10 +95,10 @@ for aln in "$SIMDIR"/*.phy; do
             --prefix "$prefix" \
             --redo -quiet 2>/dev/null
         status=$?
-        end=$(date +%s%3N)
+        end=$(python3 -c "import time; print(int(time.time() * 1000))")
 
         elapsed_ms=$(( end - start ))
-        elapsed_sec=$(echo "scale=3; $elapsed_ms / 1000" | bc)
+        elapsed_sec=$(python3 -c "print(f'{$elapsed_ms / 1000:.3f}')")
 
         if [[ $status -eq 0 ]]; then
             echo "${elapsed_sec}s"
