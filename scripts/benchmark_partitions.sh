@@ -5,7 +5,7 @@
 # Run ModelFinder on each simulated partition dataset with different thread
 # counts, record wall-clock time, and summarise results in a TSV file.
 #
-# Optionally accepts a second (unmodified/original) IQ-TREE binary to run a
+# Optionally accepts a second (unmodified/original) IQ-TREE binary for a
 # side-by-side comparison.
 #
 # Usage:
@@ -46,7 +46,7 @@ if [[ ! -f "$META_TSV" ]]; then
 fi
 
 RESULTS="$OUTDIR/results.tsv"
-echo -e "version\tscenario\tn_parts\ttotal_len\tmin_len\tmax_len\tnum_threads\twall_sec" > "$RESULTS"
+echo -e "version\tscenario\tseq_type\tn_parts\ttotal_len\tmin_len\tmax_len\tnum_threads\twall_sec" > "$RESULTS"
 
 echo "Modified binary : $IQTREE_NEW"
 if [[ -n "$IQTREE_ORIG" ]]; then
@@ -58,12 +58,15 @@ echo ""
 
 # -----------------------------------------------------------------------------
 # Helper: time one ModelFinder run on a partitioned dataset.
-# Args: version_label  iqtree_bin  phy  nex  nt  prefix
-# Appends one row to $RESULTS.
+# Args: label bin phy nex nt prefix scenario seq_type n_parts total_len min_len max_len
 # -----------------------------------------------------------------------------
 run_one() {
     local label="$1" bin="$2" phy="$3" nex="$4" nt="$5" prefix="$6"
-    local scenario="$7" n_parts="$8" total_len="$9" min_len="${10}" max_len="${11}"
+    local scenario="$7" seq_type="$8" n_parts="$9" total_len="${10}" \
+          min_len="${11}" max_len="${12}"
+
+    # Pass sequence type explicitly so IQ-TREE interprets the alignment correctly
+    local st_flag="-st $seq_type"
 
     printf "  [%-8s] -nt %2d ... " "$label" "$nt"
 
@@ -73,6 +76,7 @@ run_one() {
         -p "$nex" \
         -m TEST \
         -nt "$nt" \
+        $st_flag \
         --prefix "$prefix" \
         --redo -quiet 2>/dev/null
     status=$?
@@ -88,13 +92,13 @@ run_one() {
         elapsed_sec="NA"
     fi
 
-    echo -e "$label\t$scenario\t$n_parts\t$total_len\t$min_len\t$max_len\t$nt\t$elapsed_sec" >> "$RESULTS"
+    echo -e "$label\t$scenario\t$seq_type\t$n_parts\t$total_len\t$min_len\t$max_len\t$nt\t$elapsed_sec" >> "$RESULTS"
 }
 
 # -----------------------------------------------------------------------------
 # Main benchmark loop — iterate over scenarios from metadata TSV
 # -----------------------------------------------------------------------------
-while IFS=$'\t' read -r scenario n_parts total_len min_len max_len phy nex; do
+while IFS=$'\t' read -r scenario seq_type n_parts total_len min_len max_len phy nex; do
     # Skip header
     [[ "$scenario" == "scenario" ]] && continue
     # Skip failed simulations
@@ -105,17 +109,17 @@ while IFS=$'\t' read -r scenario n_parts total_len min_len max_len phy nex; do
         continue
     fi
 
-    echo "--- $scenario  ($n_parts partitions, $total_len bp) ---"
+    echo "--- $scenario  (type=$seq_type, $n_parts partitions, $total_len sites) ---"
 
     for nt in "${THREAD_COUNTS[@]}"; do
         prefix_mod="$OUTDIR/${scenario}_modified_nt${nt}"
         run_one "modified" "$IQTREE_NEW" "$phy" "$nex" "$nt" "$prefix_mod" \
-            "$scenario" "$n_parts" "$total_len" "$min_len" "$max_len"
+            "$scenario" "$seq_type" "$n_parts" "$total_len" "$min_len" "$max_len"
 
         if [[ -n "$IQTREE_ORIG" ]]; then
             prefix_orig="$OUTDIR/${scenario}_original_nt${nt}"
             run_one "original" "$IQTREE_ORIG" "$phy" "$nex" "$nt" "$prefix_orig" \
-                "$scenario" "$n_parts" "$total_len" "$min_len" "$max_len"
+                "$scenario" "$seq_type" "$n_parts" "$total_len" "$min_len" "$max_len"
         fi
     done
     echo ""

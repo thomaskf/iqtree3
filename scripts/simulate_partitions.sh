@@ -5,28 +5,29 @@
 # Simulate multi-partition alignments using IQ-TREE AliSim for benchmarking
 # the new thread-scheduling strategy in PartitionFinder.
 #
-# Each scenario varies the number of partitions and their sizes (nptn * nstate)
-# to exercise different regions of the scheduler's behaviour:
+# Three data types are simulated (DNA, AA, CODON), each with five partition
+# scenarios that exercise different regions of the thread-cap formula
+# max(1, nptn * nstate / 4000):
 #
-#   Scenario A – Many uniform light partitions   (16 x 500 bp DNA)
-#   Scenario B – Mixed heavy + light partitions  (1 x 8000 bp + 15 x 200 bp DNA)
-#   Scenario C – Few heavy partitions            (4 x 4000 bp DNA)
-#   Scenario D – Many heavy partitions           (8 x 2000 bp DNA)
-#   Scenario E – Very many very light partitions (32 x 100 bp DNA)
+#   DNA  (4  states): 500 sites -> m_p=1,  2000 -> m_p=2,  8000 -> m_p=8
+#   AA   (20 states): 500 sites -> m_p=2,  2000 -> m_p=10, 8000 -> m_p=40
+#   CODON(61 states): 100 sites -> m_p=1,  500  -> m_p=7,  2000 -> m_p=30
+#
+# Scenarios (site counts are in alignment sites: bp for DNA/AA, codons for CODON):
+#   A – Many uniform light   (16 x 500)
+#   B – Mixed heavy + light  (1 x 8000 + 15 x 200)
+#   C – Few heavy            (4 x 4000)
+#   D – Many heavy           (8 x 2000)
+#   E – Very many very light (32 x 100)
 #
 # Usage:
 #   bash simulate_partitions.sh [IQTREE_BIN] [OUTDIR]
-#
-# Examples:
-#   bash simulate_partitions.sh
-#   bash simulate_partitions.sh ./iqtree3 sim_partitions
 # =============================================================================
 
 IQTREE=${1:-iqtree3}
 OUTDIR=${2:-sim_partitions}
 NTAXA=20
 SEED=12345
-DNA_MODEL="GTR+G"
 
 mkdir -p "$OUTDIR"
 
@@ -42,8 +43,15 @@ echo "Taxa: $NTAXA  Seed: $SEED"
 echo ""
 
 # -----------------------------------------------------------------------------
+# Data types: parallel arrays (index-aligned)
+# -----------------------------------------------------------------------------
+DTYPE_NAMES=("DNA"   "AA"   "CODON")
+DTYPE_MODELS=("GTR+G" "LG+G" "GY+G")
+
+# -----------------------------------------------------------------------------
 # Helper: write a NEXUS partition file.
 # Usage: write_nexus <nexus_path> <model> <len1> <len2> ...
+# The tree length {1.0} is required by AliSim under proportional branch lengths.
 # -----------------------------------------------------------------------------
 write_nexus() {
     local nex_path="$1"
@@ -61,11 +69,11 @@ write_nexus() {
             printf "  charset part%d = %d-%d;\n" $((i + 1)) "$pos" "$end"
             pos=$(( end + 1 ))
         done
-        # Build charpartition line
+        # {1.0} = tree length per partition, required by AliSim (-p mode)
         local cp=""
         for ((i = 0; i < n; i++)); do
             [[ $i -gt 0 ]] && cp+=", "
-            cp+="${model}:part$((i + 1))"
+            cp+="${model}:part$((i + 1)){1.0}"
         done
         echo "  charpartition myparts = $cp;"
         echo "end;"
@@ -73,14 +81,15 @@ write_nexus() {
 }
 
 # -----------------------------------------------------------------------------
-# Helper: run AliSim for one scenario and print result.
-# Usage: run_alisim <scenario_name> <len1> <len2> ...
-# Returns: 0 on success, 1 on failure
-# Sets global PHY_OUT and NEX_OUT to the output file paths.
+# Helper: run AliSim for one scenario.
+# Usage: run_alisim <scenario_name> <model> <seqtype> <len1> <len2> ...
+# Sets globals PHY_OUT and NEX_OUT. Appends one row to META_TSV.
 # -----------------------------------------------------------------------------
 run_alisim() {
     local sname="$1"
-    shift
+    local model="$2"
+    local seqtype="$3"
+    shift 3
     local lengths=("$@")
     local n_parts=${#lengths[@]}
     local total_len=0
@@ -96,26 +105,45 @@ run_alisim() {
     NEX_OUT="${prefix}_partition.nex"
     PHY_OUT="${prefix}.phy"
 
-    write_nexus "$NEX_OUT" "$DNA_MODEL" "${lengths[@]}"
+    # Codon charset positions are in nucleotides — multiply each length by 3
+    local nex_lengths=("${lengths[@]}")
+    if [[ "$seqtype" == "CODON" ]]; then
+        for ((i = 0; i < ${#nex_lengths[@]}; i++)); do
+            nex_lengths[i]=$(( nex_lengths[i] * 3 ))
+        done
+    fi
+
+    write_nexus "$NEX_OUT" "$model" "${nex_lengths[@]}"
+
+    local err_tmp
+    err_tmp=$(mktemp)
 
     "$IQTREE" --alisim "$prefix" \
         -p "$NEX_OUT" \
         -t "RANDOM{yh/$NTAXA}" \
+        -st "$seqtype" \
         --seed "$SEED" \
-        --redo -quiet 2>/dev/null
+        --redo -quiet 2>"$err_tmp"
+    local status=$?
 
-    if [[ $? -eq 0 && -f "$PHY_OUT" ]]; then
-        printf "  OK   %-25s  %2d partitions  total %6d bp\n" \
+    if [[ $status -eq 0 && -f "$PHY_OUT" ]]; then
+        printf "  OK   %-30s  %2d partitions  total %6d sites\n" \
             "$sname" "$n_parts" "$total_len"
-        # Append metadata row: scenario n_parts total_len min_len max_len phy nex
-        printf "%s\t%d\t%d\t%d\t%d\t%s\t%s\n" \
-            "$sname" "$n_parts" "$total_len" "$min_len" "$max_len" \
+        printf "%s\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n" \
+            "$sname" "$seqtype" "$n_parts" "$total_len" "$min_len" "$max_len" \
             "$PHY_OUT" "$NEX_OUT" >> "$META_TSV"
+        rm -f "$err_tmp"
         return 0
     else
-        printf "  FAIL %-25s\n" "$sname"
-        printf "%s\t%d\t%d\t%d\t%d\tNA\tNA\n" \
-            "$sname" "$n_parts" "$total_len" "$min_len" "$max_len" >> "$META_TSV"
+        printf "  FAIL %-30s\n" "$sname"
+        if [[ -s "$err_tmp" ]]; then
+            echo "    --- IQ-TREE error output ---"
+            sed 's/^/    /' "$err_tmp"
+            echo "    ---"
+        fi
+        rm -f "$err_tmp"
+        printf "%s\t%s\t%d\t%d\t%d\t%d\tNA\tNA\n" \
+            "$sname" "$seqtype" "$n_parts" "$total_len" "$min_len" "$max_len" >> "$META_TSV"
         return 1
     fi
 }
@@ -124,39 +152,33 @@ run_alisim() {
 # Write metadata TSV header
 # -----------------------------------------------------------------------------
 META_TSV="$OUTDIR/scenarios.tsv"
-echo -e "scenario\tn_parts\ttotal_len\tmin_len\tmax_len\tphy\tnex" > "$META_TSV"
+echo -e "scenario\tseq_type\tn_parts\ttotal_len\tmin_len\tmax_len\tphy\tnex" > "$META_TSV"
 
 # -----------------------------------------------------------------------------
-# Define and run scenarios
+# Build scenario length arrays (sites: bp for DNA/AA, codons for CODON)
 # -----------------------------------------------------------------------------
-echo "=== Simulating partition alignments ==="
+A_LENS=();  for ((i=0; i<16; i++)); do A_LENS+=(500);  done   # 16 x 500
+B_LENS=(8000); for ((i=0; i<15; i++)); do B_LENS+=(200); done # 1 x 8000 + 15 x 200
+C_LENS=();  for ((i=0; i<4;  i++)); do C_LENS+=(4000); done   # 4 x 4000
+D_LENS=();  for ((i=0; i<8;  i++)); do D_LENS+=(2000); done   # 8 x 2000
+E_LENS=();  for ((i=0; i<32; i++)); do E_LENS+=(100);  done   # 32 x 100
 
-# Scenario A: 16 uniform light partitions (16 × 500 bp)
-A_LENS=()
-for ((i = 0; i < 16; i++)); do A_LENS+=(500); done
-run_alisim "A_uniform_light" "${A_LENS[@]}"
+# -----------------------------------------------------------------------------
+# Run all scenarios for each data type
+# -----------------------------------------------------------------------------
+for dtype_idx in "${!DTYPE_NAMES[@]}"; do
+    dtype="${DTYPE_NAMES[$dtype_idx]}"
+    model="${DTYPE_MODELS[$dtype_idx]}"
 
-# Scenario B: Mixed (1 × 8000 bp + 15 × 200 bp)
-B_LENS=(8000)
-for ((i = 0; i < 15; i++)); do B_LENS+=(200); done
-run_alisim "B_mixed" "${B_LENS[@]}"
+    echo "=== $dtype scenarios (model: $model) ==="
+    run_alisim "${dtype}_A_uniform_light"   "$model" "$dtype" "${A_LENS[@]}"
+    run_alisim "${dtype}_B_mixed"           "$model" "$dtype" "${B_LENS[@]}"
+    run_alisim "${dtype}_C_few_heavy"       "$model" "$dtype" "${C_LENS[@]}"
+    run_alisim "${dtype}_D_many_heavy"      "$model" "$dtype" "${D_LENS[@]}"
+    run_alisim "${dtype}_E_many_very_light" "$model" "$dtype" "${E_LENS[@]}"
+    echo ""
+done
 
-# Scenario C: Few heavy partitions (4 × 4000 bp)
-C_LENS=()
-for ((i = 0; i < 4; i++)); do C_LENS+=(4000); done
-run_alisim "C_few_heavy" "${C_LENS[@]}"
-
-# Scenario D: Many heavy partitions (8 × 2000 bp)
-D_LENS=()
-for ((i = 0; i < 8; i++)); do D_LENS+=(2000); done
-run_alisim "D_many_heavy" "${D_LENS[@]}"
-
-# Scenario E: Very many very light partitions (32 × 100 bp)
-E_LENS=()
-for ((i = 0; i < 32; i++)); do E_LENS+=(100); done
-run_alisim "E_many_very_light" "${E_LENS[@]}"
-
-echo ""
 echo "Metadata saved to: $META_TSV"
 echo ""
 echo "Scenario summary:"
