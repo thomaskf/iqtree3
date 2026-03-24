@@ -7,13 +7,9 @@
 #
 # Three data types (DNA, AA, CODON) × six scenarios per type = 18 datasets.
 #
-# Per-data-type size definitions (alignment sites: bp for DNA/AA, codons for CODON).
-# "Very light" means one thread is sufficient (m_p = max(1, nptn*nstate/4000) = 1).
-# "Very heavy" means multiple threads are useful.
-#
-#   DNA   (4  states): very_light = 200  (m_p=1),  very_heavy = 4000  (m_p=4)
-#   AA    (20 states): very_light = 100  (m_p=1),  very_heavy = 1000  (m_p=5)
-#   CODON (61 states): very_light =  50  (m_p=1),  very_heavy =  300  (m_p=4)
+# Partition sizes (same for all data types; divisible by 3 for CODON):
+#   very_light = 102   sites (codons for CODON)
+#   very_heavy = 10002 sites (codons for CODON)
 #
 # Scenarios (a-f):
 #   a – 2  very light partitions
@@ -50,9 +46,9 @@ echo ""
 DTYPE_NAMES=("DNA"   "AA"   "CODON")
 DTYPE_MODELS=("GTR+G" "LG+G" "GY+G")
 
-# Per-type site counts for "very light" and "very heavy" partitions
-DTYPE_VERY_LIGHT=(200  100  50)
-DTYPE_VERY_HEAVY=(4000 1000 300)
+# Partition sizes — same for all data types; divisible by 3 so CODON works
+VERY_LIGHT=102
+VERY_HEAVY=10002
 
 # -----------------------------------------------------------------------------
 # Helper: write a NEXUS partition file.
@@ -164,34 +160,29 @@ echo -e "scenario\tseq_type\tn_parts\ttotal_len\tmin_len\tmax_len\tphy\tnex" > "
 for dtype_idx in "${!DTYPE_NAMES[@]}"; do
     dtype="${DTYPE_NAMES[$dtype_idx]}"
     model="${DTYPE_MODELS[$dtype_idx]}"
-    vl="${DTYPE_VERY_LIGHT[$dtype_idx]}"
-    vh="${DTYPE_VERY_HEAVY[$dtype_idx]}"
 
-    echo "=== $dtype  model=$model  very_light=${vl}  very_heavy=${vh} ==="
+    echo "=== $dtype  model=$model  very_light=${VERY_LIGHT}  very_heavy=${VERY_HEAVY} ==="
 
     # a: 2 very light
-    a_lens=($vl $vl)
-    run_alisim "${dtype}_a_2_very_light"   "$model" "$dtype" "${a_lens[@]}"
+    run_alisim "${dtype}_a_2_very_light"   "$model" "$dtype" $VERY_LIGHT $VERY_LIGHT
 
     # b: 10 very light
-    b_lens=(); for ((i=0; i<10; i++)); do b_lens+=($vl); done
+    b_lens=(); for ((i=0; i<10; i++)); do b_lens+=($VERY_LIGHT); done
     run_alisim "${dtype}_b_10_very_light"  "$model" "$dtype" "${b_lens[@]}"
 
     # c: 2 very heavy
-    c_lens=($vh $vh)
-    run_alisim "${dtype}_c_2_very_heavy"   "$model" "$dtype" "${c_lens[@]}"
+    run_alisim "${dtype}_c_2_very_heavy"   "$model" "$dtype" $VERY_HEAVY $VERY_HEAVY
 
     # d: 10 very heavy
-    d_lens=(); for ((i=0; i<10; i++)); do d_lens+=($vh); done
+    d_lens=(); for ((i=0; i<10; i++)); do d_lens+=($VERY_HEAVY); done
     run_alisim "${dtype}_d_10_very_heavy"  "$model" "$dtype" "${d_lens[@]}"
 
     # e: 2 mixed (1 very heavy + 1 very light)
-    e_lens=($vh $vl)
-    run_alisim "${dtype}_e_2_mixed"        "$model" "$dtype" "${e_lens[@]}"
+    run_alisim "${dtype}_e_2_mixed"        "$model" "$dtype" $VERY_HEAVY $VERY_LIGHT
 
-    # f: 10 mixed (5 very heavy + 5 very light)
-    f_lens=(); for ((i=0; i<5; i++)); do f_lens+=($vh); done
-                for ((i=0; i<5; i++)); do f_lens+=($vl); done
+    # f: 10 mixed (alternating heavy/light: 10002 102 10002 102 ...)
+    f_lens=()
+    for ((i=0; i<5; i++)); do f_lens+=($VERY_HEAVY $VERY_LIGHT); done
     run_alisim "${dtype}_f_10_mixed"       "$model" "$dtype" "${f_lens[@]}"
 
     echo ""
