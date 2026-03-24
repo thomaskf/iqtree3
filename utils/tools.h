@@ -2376,6 +2376,10 @@ public:
     /** sample size for AICc and BIC */
     int model_test_sample_size;
 
+    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
+     *  Default 4000. Set via --mf-thread-factor. */
+    int mf_thread_factor;
+
     /** root state, for Tina's zoombie domain */
     char *root_state;
 

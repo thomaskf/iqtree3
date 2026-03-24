@@ -4540,6 +4540,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_sample_size = convert_int(argv[cnt]);
 				continue;
 			}
+			if (strcmp(argv[cnt], "--mf-thread-factor") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --mf-thread-factor <int>";
+				params.mf_thread_factor = convert_int(argv[cnt]);
+				if (params.mf_thread_factor <= 0)
+					throw "--mf-thread-factor must be a positive integer";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-nt") == 0 || strcmp(argv[cnt], "-c") == 0 ||
                 strcmp(argv[cnt], "-T") == 0  || strcmp(argv[cnt], "--threads") == 0) {
 				cnt++;
@@ -7357,6 +7366,7 @@ void Params::setDefault() {
     model_test_criterion = MTC_BIC;
 //    model_test_stop_rule = MTC_ALL;
     model_test_sample_size = 0;
+    mf_thread_factor = 4000;
     root_state = nullptr;
     print_bootaln = false;
     print_boot_site_freq = false;

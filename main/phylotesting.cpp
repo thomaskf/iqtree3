@@ -1899,11 +1899,12 @@ void fixPartitions(PhyloSuperTree* super_tree) {
  * on the given alignment, based on alignment size (patterns x states).
  * Using more threads than this on a short alignment incurs overhead that
  * outweighs the parallelism benefit.
- * @param aln  the alignment being evaluated
+ * @param aln     the alignment being evaluated
+ * @param factor  denominator j in max(1, nptn*nstate/j); default 4000
  * @return maximum recommended thread count (at least 1)
  */
-int maxThreadsForAlignment(Alignment *aln) {
-    return max(1, (int)(aln->getNPattern() * aln->num_states / 4000));
+int maxThreadsForAlignment(Alignment *aln, int factor = 4000) {
+    return max(1, (int)(aln->getNPattern() * aln->num_states / factor));
 }
 
 string CandidateModel::evaluate(Params &params,
@@ -1937,7 +1938,7 @@ string CandidateModel::evaluate(Params &params,
     // cap threads per model based on alignment size to avoid overhead on short alignments
     int effective_threads = num_threads;
     if (!params.model_test_and_tree && !in_aln->isSuperAlignment()) {
-        effective_threads = min(num_threads, maxThreadsForAlignment(in_aln));
+        effective_threads = min(num_threads, maxThreadsForAlignment(in_aln, params.mf_thread_factor));
         if (effective_threads < num_threads)
             cout << "ModelFinder: capping threads " << num_threads << " -> "
                  << effective_threads << " (nptn=" << in_aln->getNPattern()
@@ -3466,7 +3467,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     int omp_threads_saved = -1;
 #endif
     if (!params.model_test_and_tree && !in_tree->isSuperTree()) {
-        int capped = min(num_threads, maxThreadsForAlignment(in_tree->aln));
+        int capped = min(num_threads, maxThreadsForAlignment(in_tree->aln, params.mf_thread_factor));
         if (capped < num_threads) {
             num_threads = capped;
 #ifdef _OPENMP
@@ -4294,7 +4295,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
         vector<int> size_cap(n_jobs);
         for (int j = 0; j < n_jobs; j++) {
             int tree_id = jobs[j].first;
-            size_cap[j] = maxThreadsForAlignment(in_tree->at(tree_id)->aln);
+            size_cap[j] = maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor);
             mp[j] = 1;
         }
         int remaining = nthreads - n_jobs;
@@ -4313,7 +4314,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
         // Case B: more jobs than threads — size-based cap
         for (int j = 0; j < n_jobs; j++) {
             int tree_id = jobs[j].first;
-            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln));
+            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor));
         }
     }
 
