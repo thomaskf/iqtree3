@@ -3453,8 +3453,16 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     // Cap the outer OMP thread count to match the per-model effective thread cap.
     // Without this, num_threads models run in parallel (each capped to 1 thread
     // internally), causing cache/memory contention that is slower than sequential.
+    // Also reduce the global OMP thread pool so idle threads don't spin-wait and
+    // compete for CPU/memory with the single working thread.
+#ifdef _OPENMP
+    int omp_threads_saved = omp_get_max_threads();
+#endif
     if (!params.model_test_and_tree && !in_tree->isSuperTree()) {
         num_threads = min(num_threads, maxThreadsForAlignment(in_tree->aln));
+#ifdef _OPENMP
+        omp_set_num_threads(num_threads);
+#endif
     }
 
     int64_t num_models = size();
@@ -3573,6 +3581,9 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     if (prot_aln)
         delete prot_aln;
 
+#ifdef _OPENMP
+    omp_set_num_threads(omp_threads_saved);
+#endif
     return at(best_model);
 }
 
