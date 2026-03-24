@@ -5,24 +5,21 @@
 # Run ModelFinder on each simulated partition dataset with different thread
 # counts, record wall-clock time, and summarise results in a TSV file.
 #
-# Compares three IQ-TREE binaries:
-#   IQTREE_CURRENT    – current (latest) modified version
-#   IQTREE_FIRST_UPDATE – first update (intermediate modified version)
-#   IQTREE_ORIG       – original unmodified IQ-TREE
+# Compares two IQ-TREE binaries:
+#   IQTREE_CURRENT – current (latest) modified version
+#   IQTREE_ORIG    – original unmodified IQ-TREE
 #
 # Usage:
-#   bash benchmark_partitions.sh [IQTREE_CURRENT] [IQTREE_FIRST_UPDATE] [IQTREE_ORIG] [SIMDIR] [OUTDIR]
+#   bash benchmark_partitions.sh [IQTREE_CURRENT] [IQTREE_ORIG] [SIMDIR] [OUTDIR]
 #
 # Examples:
-#   bash benchmark_partitions.sh ./iqtree3_current "" "" sim_partitions bench_partitions
-#   bash benchmark_partitions.sh ./iqtree3_current ./iqtree3_first ./iqtree3_orig sim_partitions bench_partitions
+#   bash benchmark_partitions.sh ./iqtree3_current ./iqtree3_orig sim_partitions bench_partitions
 # =============================================================================
 
 IQTREE_CURRENT=${1:-iqtree3}
-IQTREE_FIRST_UPDATE=${2:-}  # optional: first update (intermediate) binary
-IQTREE_ORIG=${3:-}          # optional: original (unmodified) binary
-SIMDIR=${4:-sim_partitions}
-OUTDIR=${5:-bench_partitions}
+IQTREE_ORIG=${2:-}          # optional: original (unmodified) binary
+SIMDIR=${3:-sim_partitions}
+OUTDIR=${4:-bench_partitions}
 
 THREAD_COUNTS=(1 2 4 8 12)
 
@@ -31,7 +28,7 @@ mkdir -p "$OUTDIR"
 # -----------------------------------------------------------------------------
 # Validate binaries
 # -----------------------------------------------------------------------------
-for bin in "$IQTREE_CURRENT" ${IQTREE_FIRST_UPDATE:+"$IQTREE_FIRST_UPDATE"} ${IQTREE_ORIG:+"$IQTREE_ORIG"}; do
+for bin in "$IQTREE_CURRENT" ${IQTREE_ORIG:+"$IQTREE_ORIG"}; do
     if [[ ! -x "$bin" ]] && ! command -v "$bin" &>/dev/null; then
         echo "ERROR: IQ-TREE binary not found or not executable: $bin"
         exit 1
@@ -51,12 +48,9 @@ fi
 RESULTS="$OUTDIR/results.tsv"
 echo -e "version\tscenario\tseq_type\tn_parts\ttotal_len\tmin_len\tmax_len\tnum_threads\twall_sec" > "$RESULTS"
 
-echo "Current binary      : $IQTREE_CURRENT"
-if [[ -n "$IQTREE_FIRST_UPDATE" ]]; then
-    echo "First-update binary : $IQTREE_FIRST_UPDATE"
-fi
+echo "Current binary  : $IQTREE_CURRENT"
 if [[ -n "$IQTREE_ORIG" ]]; then
-    echo "Original binary     : $IQTREE_ORIG"
+    echo "Original binary : $IQTREE_ORIG"
 fi
 echo "Simulation dir  : $SIMDIR"
 echo "Results         : $RESULTS"
@@ -121,12 +115,6 @@ while IFS=$'\t' read -r scenario seq_type n_parts total_len min_len max_len phy 
         prefix_cur="$OUTDIR/${scenario}_current_nt${nt}"
         run_one "current" "$IQTREE_CURRENT" "$phy" "$nex" "$nt" "$prefix_cur" \
             "$scenario" "$seq_type" "$n_parts" "$total_len" "$min_len" "$max_len"
-
-        if [[ -n "$IQTREE_FIRST_UPDATE" ]]; then
-            prefix_first="$OUTDIR/${scenario}_first_update_nt${nt}"
-            run_one "first_update" "$IQTREE_FIRST_UPDATE" "$phy" "$nex" "$nt" "$prefix_first" \
-                "$scenario" "$seq_type" "$n_parts" "$total_len" "$min_len" "$max_len"
-        fi
 
         if [[ -n "$IQTREE_ORIG" ]]; then
             prefix_orig="$OUTDIR/${scenario}_original_nt${nt}"
