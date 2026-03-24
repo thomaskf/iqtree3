@@ -74,7 +74,7 @@ run_one() {
     start=$(python3 -c "import time; print(int(time.time() * 1000))")
     "$bin" -s "$phy" \
         -p "$nex" \
-        -m TEST \
+        -m TESTONLY \
         -nt "$nt" \
         $st_flag \
         --prefix "$prefix" \

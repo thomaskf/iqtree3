@@ -3453,16 +3453,27 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     // Cap the outer OMP thread count to match the per-model effective thread cap.
     // Without this, num_threads models run in parallel (each capped to 1 thread
     // internally), causing cache/memory contention that is slower than sequential.
-    // Also reduce the global OMP thread pool so idle threads don't spin-wait and
-    // compete for CPU/memory with the single working thread.
+    //
+    // Also reduce the global OMP thread pool when the cap fires, so idle threads
+    // don't spin-wait and compete with the single working thread.
+    //
+    // IMPORTANT: omp_set_num_threads is a global operation and is NOT safe to call
+    // from concurrent std::thread workers (as used in getBestModelforPartitionsNoMPI).
+    // We guard it with "omp_threads_reduced" and only call it when num_threads was
+    // actually reduced.  Partition workers already receive m_p (the pre-capped value)
+    // so no reduction occurs in those calls and omp_set_num_threads is never touched.
 #ifdef _OPENMP
-    int omp_threads_saved = omp_get_max_threads();
+    int omp_threads_saved = -1;
 #endif
     if (!params.model_test_and_tree && !in_tree->isSuperTree()) {
-        num_threads = min(num_threads, maxThreadsForAlignment(in_tree->aln));
+        int capped = min(num_threads, maxThreadsForAlignment(in_tree->aln));
+        if (capped < num_threads) {
+            num_threads = capped;
 #ifdef _OPENMP
-        omp_set_num_threads(num_threads);
+            omp_threads_saved = omp_get_max_threads();
+            omp_set_num_threads(num_threads);
 #endif
+        }
     }
 
     int64_t num_models = size();
@@ -3582,7 +3593,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         delete prot_aln;
 
 #ifdef _OPENMP
-    omp_set_num_threads(omp_threads_saved);
+    if (omp_threads_saved != -1)
+        omp_set_num_threads(omp_threads_saved);
 #endif
     return at(best_model);
 }

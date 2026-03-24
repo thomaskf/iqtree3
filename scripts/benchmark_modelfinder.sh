@@ -77,7 +77,7 @@ run_one() {
     local start end elapsed_ms elapsed_sec status
     start=$(python3 -c "import time; print(int(time.time() * 1000))")
     "$bin" -s "$aln" \
-        -m TEST \
+        -m TESTONLY \
         -nt "$nt" \
         $st_flag \
         --prefix "$prefix" \
