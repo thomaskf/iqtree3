@@ -4260,13 +4260,61 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (jobs.empty())
         return;
 
-    // Precompute the maximum threads for each partition using the alignment-size formula.
-    // Cap at nthreads so that the condition "available >= m_p" is always eventually satisfied:
-    // if nthreads < maxThreadsForAlignment(aln), all nthreads are assigned to that partition.
-    vector<int> mp(jobs.size());
-    for (int j = 0; j < (int)jobs.size(); j++) {
-        int tree_id = jobs[j].first;
-        mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln));
+    // Precompute per-partition thread budget m_p using a two-case rule.
+    // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
+    //
+    // Case A — n_jobs <= nthreads (all partitions can run concurrently):
+    //   Assign 1 thread to every partition first, then greedily give the
+    //   remaining threads to the heaviest partitions that can absorb them.
+    //   This ensures all partitions start immediately while large ones get
+    //   the maximum useful parallelism from any leftover capacity.
+    //   Example: 2 partitions (10K sites, 100 sites), 4 threads →
+    //     remaining = 4 - 2 = 2
+    //     large: extra = min(size_cap-1, 2) → mp = 3
+    //     small: extra = min(0, 0)          → mp = 1   (total = 4)
+    //
+    // Case B — n_jobs > nthreads (cannot run all partitions at once):
+    //   Use the size-based cap directly so the heavy-first dispatcher gives
+    //   large partitions as many threads as they can use.
+    //   m_p = min(nthreads, maxThreadsForAlignment)
+    //
+    // In both cases m_p <= nthreads, so "available >= m_p" is always satisfiable.
+    int n_jobs = (int)jobs.size();
+    vector<int> mp(n_jobs);
+    if (n_jobs <= nthreads) {
+        // Case A: all partitions can run concurrently.
+        // Start with 1 thread each, then distribute the remaining threads
+        // round-robin (heavy-to-light within each round) until no thread can
+        // be usefully added.  Round-robin avoids the greedy pitfall of giving
+        // all surplus threads to the first partition, which would finish early
+        // and leave idle threads while the other partitions struggle with 1.
+        // Example: 4 equal 20K partitions, 7 threads →
+        //   remaining = 3; round 1 adds 1 to each of the first 3 → [2,2,2,1]
+        //   instead of greedy [4,1,1,1] where 4 threads go idle prematurely.
+        vector<int> size_cap(n_jobs);
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            size_cap[j] = maxThreadsForAlignment(in_tree->at(tree_id)->aln);
+            mp[j] = 1;
+        }
+        int remaining = nthreads - n_jobs;
+        while (remaining > 0) {
+            bool any_added = false;
+            for (int j = 0; j < n_jobs && remaining > 0; j++) {
+                if (mp[j] < size_cap[j]) {
+                    mp[j]++;
+                    remaining--;
+                    any_added = true;
+                }
+            }
+            if (!any_added) break;  // all partitions saturated
+        }
+    } else {
+        // Case B: more jobs than threads — size-based cap
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln));
+        }
     }
 
 #ifdef _OPENMP
