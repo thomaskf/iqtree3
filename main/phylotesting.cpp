@@ -5045,7 +5045,6 @@ void PartitionFinder::test_PartitionModel() {
         return;
     }
 
-    StrVector model_names;
     StrVector greedy_model_trees;
 
     gene_sets.resize(in_tree->size());
