@@ -3479,7 +3479,15 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     int64_t num_models = size();
 #ifdef _OPENMP
-#pragma omp parallel num_threads(num_threads)
+    // When called from a partition std::thread worker, getBestModelforPartitionsNoMPI
+    // has set max_active_levels to 2 to enable nested OMP.  In that case we run the
+    // outer model loop with a single OMP thread (serial models) so the full num_threads
+    // budget flows into the inner likelihood OMP at level 2.  This avoids the
+    // num_threads^2 oversubscription that would occur if both levels used num_threads.
+    // For the single-partition path (max_active_levels == 1) the outer loop keeps its
+    // existing model-parallelism behaviour.
+    int outer_model_threads = (omp_get_max_active_levels() >= 2) ? 1 : num_threads;
+#pragma omp parallel num_threads(outer_model_threads)
 #endif
     {
     int64_t model;
@@ -4423,6 +4431,16 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     omp_lock_t result_lock;
     omp_init_lock(&result_lock);
 
+    // Allow nested OMP so the inner likelihood OMP (level 2) is active inside
+    // each partition worker's test() call.  We pair this with a change in
+    // test(): when max_active_levels >= 2 the outer model loop runs with 1
+    // OMP thread (models evaluated serially) so the full m_p budget goes to
+    // the inner likelihood OMP — avoiding mp×mp oversubscription.
+#ifdef _OPENMP
+    int saved_max_levels = omp_get_max_active_levels();
+    omp_set_max_active_levels(2);
+#endif
+
     vector<std::thread> workers;
     workers.reserve(jobs.size());
 
@@ -4487,6 +4505,10 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
     for (auto& w : workers)
         w.join();
+
+#ifdef _OPENMP
+    omp_set_max_active_levels(saved_max_levels);
+#endif
 
     omp_destroy_lock(&result_lock);
 #endif
