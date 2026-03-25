@@ -3479,17 +3479,29 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
     int64_t num_models = size();
 #ifdef _OPENMP
-    // When called from a partition std::thread worker, getBestModelforPartitionsNoMPI
-    // has set max_active_levels to 2 to enable nested OMP.  In that case we run the
-    // outer model loop with a single OMP thread (serial models) so the full num_threads
-    // budget flows into the inner likelihood OMP at level 2.  This avoids the
-    // num_threads^2 oversubscription that would occur if both levels used num_threads.
-    // For the single-partition path (max_active_levels == 1) the outer loop keeps its
-    // existing model-parallelism behaviour.
+    // When called from a partition std::thread worker (getBestModelforPartitionsNoMPI),
+    // max_active_levels has been raised to 2 so the inner likelihood OMP (level 2) is
+    // active.  In that case run the outer model loop with a single OMP thread (models
+    // evaluated serially) so the full num_threads budget flows to the inner likelihood
+    // OMP — avoiding num_threads^2 oversubscription.
+    // For the single-partition path (max_active_levels == 1) keep existing model-
+    // parallelism behaviour.
     int outer_model_threads = (omp_get_max_active_levels() >= 2) ? 1 : num_threads;
 #pragma omp parallel num_threads(outer_model_threads)
 #endif
     {
+#ifdef _OPENMP
+#pragma omp single
+    {
+        cerr << "[DIAG] test() OMP team: omp_get_num_threads()=" << omp_get_num_threads()
+             << " omp_get_max_threads()=" << omp_get_max_threads()
+             << " num_threads(requested)=" << num_threads
+             << " outer_model_threads=" << outer_model_threads
+             << " omp_get_max_active_levels()=" << omp_get_max_active_levels()
+             << " omp_get_level()=" << omp_get_level()
+             << " aln=" << (in_tree ? in_tree->aln->name : "?") << endl;
+    }
+#endif
     int64_t model;
     do {
         model = getNextModel();
@@ -3617,6 +3629,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads)
 {
+    cerr << "[DIAG] testPartitionModel entry: num_threads=" << num_threads
+         << " params.num_threads=" << params.num_threads << endl;
     PartitionFinder partitionFinder(&params, in_tree, &model_info, models_block, num_threads);
     partitionFinder.test_PartitionModel();
 }
@@ -4269,6 +4283,10 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (jobs.empty())
         return;
 
+    cerr << "[DIAG] getBestModelforPartitionsNoMPI: nthreads=" << nthreads
+         << " n_jobs=" << jobs.size()
+         << " omp_get_max_threads()=" << omp_get_max_threads() << endl;
+
     // Precompute per-partition thread budget m_p using a two-case rule.
     // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
     //
@@ -4290,7 +4308,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     // In both cases m_p <= nthreads, so "available >= m_p" is always satisfiable.
     int n_jobs = (int)jobs.size();
     vector<int> mp(n_jobs);
-    if (n_jobs <= nthreads) {
+    if (n_jobs <= nthreads && !params->parallel_per_partition) {
         // Case A: all partitions can run concurrently.
         // Start with 1 thread each, then distribute the remaining threads
         // round-robin (heavy-to-light within each round) until no thread can
@@ -4330,6 +4348,8 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (!params->model_test_and_tree) {
         if (params->parallel_over_sites)
             cout << "In ModelFinder: parallelization over sites" << endl;
+        else if (params->parallel_per_partition)
+            cout << "In ModelFinder: assigning threads per partition (Case-B always, heavy to light)" << endl;
         else
             cout << "In ModelFinder: assigning threads to partitions from heavy to light" << endl;
     }
@@ -4431,16 +4451,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     omp_lock_t result_lock;
     omp_init_lock(&result_lock);
 
-    // Allow nested OMP so the inner likelihood OMP (level 2) is active inside
-    // each partition worker's test() call.  We pair this with a change in
-    // test(): when max_active_levels >= 2 the outer model loop runs with 1
-    // OMP thread (models evaluated serially) so the full m_p budget goes to
-    // the inner likelihood OMP — avoiding mp×mp oversubscription.
-#ifdef _OPENMP
-    int saved_max_levels = omp_get_max_active_levels();
-    omp_set_max_active_levels(2);
-#endif
-
     vector<std::thread> workers;
     workers.reserve(jobs.size());
 
@@ -4453,6 +4463,17 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             std::this_thread::yield();
 
         available.fetch_sub(m_p, std::memory_order_acq_rel);
+
+        {
+            int tree_id = jobs[j].first;
+            PhyloTree *diag_tree = in_tree->at(tree_id);
+            cerr << "[DIAG] Launching partition " << j << " (tree_id=" << tree_id
+                 << " name=" << diag_tree->aln->name
+                 << " nptn=" << diag_tree->aln->getNPattern()
+                 << " nstate=" << diag_tree->aln->num_states
+                 << ") with m_p=" << m_p
+                 << " available_after=" << (available.load() ) << endl;
+        }
 
         workers.emplace_back([this, j, m_p, &available, &result_lock, &jobs]() {
             int tree_id = jobs[j].first;
@@ -4505,10 +4526,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
     for (auto& w : workers)
         w.join();
-
-#ifdef _OPENMP
-    omp_set_max_active_levels(saved_max_levels);
-#endif
 
     omp_destroy_lock(&result_lock);
 #endif
@@ -5042,6 +5059,8 @@ void PartitionFinder::test_PartitionModel() {
         brlen_type = BRLEN_OPTIMIZE;
     }
 
+    cerr << "[DIAG] test_PartitionModel before getBestModel: num_threads=" << num_threads
+         << " total_num_model=" << total_num_model << " in_tree->size()=" << in_tree->size() << endl;
     // compute the best model for all partitions
     job_type = 1; // for all partitions
     getBestModel(job_type);
