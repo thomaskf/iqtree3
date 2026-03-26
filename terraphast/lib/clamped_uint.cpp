@@ -63,7 +63,7 @@ bool operator==(checked_uint<except> a, checked_uint<except> b) {
 
 template <bool except>
 bool operator!=(checked_uint<except> a, checked_uint<except> b) {
-	return !(a == b);
+	return a.value() != b.value();
 }
 
 template <bool except>

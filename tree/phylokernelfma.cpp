@@ -43,7 +43,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
     
     computeLikelihoodDervMixlenPointer = NULL;
 
-    if (params->model_name.find("BR{") != string::npos) {
+    if (params->model_name.find("BR{") != string::npos || isBranchModel()) {
         // for branch model
 		// if nonreversible model
 		if (safe_numeric)

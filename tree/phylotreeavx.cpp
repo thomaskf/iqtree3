@@ -57,7 +57,7 @@ void PhyloTree::setLikelihoodKernelAVX() {
     setParsimonyKernelAVX();
     computeLikelihoodDervMixlenPointer = NULL;
 
-    if (params->model_name.find("BR{") != string::npos) {
+    if (params->model_name.find("BR{") != string::npos || isBranchModel()) {
         // For Branch Model
         // non-reversible model
         if (safe_numeric) {

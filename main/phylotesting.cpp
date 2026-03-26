@@ -1886,7 +1886,7 @@ string CandidateModel::evaluate(Params &params,
         }
     } else if (posRateHeterotachy(getName()) != string::npos) {
         iqtree = new PhyloTreeMixlen(in_aln, 0);
-    } else if (params.model_name.find("BR{") != string::npos) {
+    } else if (params.model_name.find("BR{") != string::npos || getName().find("BR{") != string::npos) {
         iqtree = new PhyloTreeBranchModel(in_aln);
     } else {
         iqtree = new IQTree(in_aln);

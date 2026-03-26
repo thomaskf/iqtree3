@@ -6027,7 +6027,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         params.optimize_params_use_hmm = false;
     }
     
-    if (params.model_name.find("BR{") != string::npos || params.model_joint.find("BR{") != string::npos) {
+    if (params.model_name.find("BR{") != string::npos || params.model_joint.find("BR{") != string::npos || params.model_set.find("BR{") != string::npos) {
         // use BFGS for free-rate model if using branch model
         params.optimize_alg_freerate = "2-BFGS";
     }

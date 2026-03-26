@@ -3559,11 +3559,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (posRateHeterotachy(iqtree->aln->model_name) != string::npos && !iqtree->isMixlen()) {
         // rate mixture
-        
+
         if (iqtree->isTreeMix()) {
             outError("Tree-mixture model does not work with rate mixture");
         }
-        
+
         // create a new instance
         IQTree* iqtree_new = new PhyloTreeMixlen(iqtree->aln, 0);
         iqtree_new->setCheckpoint(iqtree->getCheckpoint());
@@ -3575,6 +3575,22 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             /* Initialized all data structure for PLL*/
             iqtree_new->initializePLL(params);
         }
+        iqtree_new->setParams(&params);
+        iqtree_new->copyPhyloTree(iqtree, false);
+
+        // replace iqtree object
+        delete iqtree;
+        iqtree = iqtree_new;
+    }
+
+    if (iqtree->aln->model_name.find("BR{") != string::npos && !iqtree->isBranchModel()) {
+        // branch model: replace IQTree with PhyloTreeBranchModel if not already
+        IQTree* iqtree_new = new PhyloTreeBranchModel(iqtree->aln);
+        iqtree_new->setCheckpoint(iqtree->getCheckpoint());
+        if (!iqtree->constraintTree.empty())
+            iqtree_new->constraintTree.readConstraint(iqtree->constraintTree);
+        iqtree_new->removed_seqs = iqtree->removed_seqs;
+        iqtree_new->twin_seqs = iqtree->twin_seqs;
         iqtree_new->setParams(&params);
         iqtree_new->copyPhyloTree(iqtree, false);
 
@@ -4227,12 +4243,12 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
             } else if (pos != string::npos) {
                 iqtree = new PhyloTreeMixlen(alignment, 0);
-            } else if (params.model_name.find("BR{") != string::npos) {
+            } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos) {
                 iqtree = new PhyloTreeBranchModel(alignment);
             } else
                 iqtree = new IQTree(alignment);
         }
-        
+
         if (!tree->constraintTree.empty()) {
             iqtree->constraintTree.readConstraint(tree->constraintTree);
         }
@@ -4961,7 +4977,7 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, 0);
         } else if (isTreeMix) {
             tree = new IQTreeMixHmm(params, alignment);
-        } else if (params.model_name.find("BR{") != string::npos) {
+        } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos) {
             tree = new PhyloTreeBranchModel(alignment);
         } else
             tree = new IQTree(alignment);
@@ -5547,7 +5563,7 @@ bool runCMaple(Params &params)
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
             std::ostream null_stream(0);
             std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
-            tree.infer(tree_search_type, params.shallow_tree_search, out_stream);
+            tree.infer(params.num_threads, tree_search_type, params.shallow_tree_search, out_stream);
 
             // Compute branch supports (if users want to do so)
             if (params.aLRT_replicates)
