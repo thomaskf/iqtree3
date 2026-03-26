@@ -2773,7 +2773,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
 
-            double max_delta_lh = 1.0;
+            // Increased to 1.5 because in some data sets it may be slightly higher than 1.0
+            double max_delta_lh = 1.5;
             // Increase max delta with PoMo because log likelihood is very much lower.
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
             new_tree_lh = computeLikelihood();
