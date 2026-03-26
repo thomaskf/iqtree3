@@ -729,6 +729,8 @@ Alignment *Alignment::removeGappySeq() {
 	for (size_t i = 0; i < nseq; i++)
 		if (! isGapOnlySeq(i)) {
 			keep_seqs.push_back(i);
+		} else {
+			outWarning("Sequence " + getSeqName(i) + " is all gaps and will be removed");
 		}
 	if (keep_seqs.size() == nseq)
 		return this;
