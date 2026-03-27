@@ -4062,7 +4062,8 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
                     //cur_pair.score_bic = computeInformationScore(lhnew, dfnew, ssize, MTC_BIC);
                     sorted_pairs.insertPair(cur_pair);
                 } else if (params->partition_merge == MERGE_GREEDY) {
-                    better_pairs.insertPair(cur_pair);
+                    if (cur_pair.score < inf_score)
+                        better_pairs.insertPair(cur_pair);
                 }
 
                 to_delete.push_back(1);
