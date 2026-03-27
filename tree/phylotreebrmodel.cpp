@@ -99,15 +99,23 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
         model_name = model_name.substr(p1+3, p2-p1-3);
     }
     
-    // create a set of models
-    size_t fr_pos = 0;
-    size_t p_comma = model_name.find(",", fr_pos);
-    while (p_comma != string::npos) {
-        modelparams.push_back(model_name.substr(fr_pos, p_comma - fr_pos) + shared_rate);
-        fr_pos = p_comma + 1;
-        p_comma = model_name.find(",", fr_pos);
+    // create a set of models by splitting on commas that are NOT inside {...} blocks
+    // (commas inside F{...} frequency specs must not be treated as model separators)
+    {
+        size_t fr_pos = 0;
+        int depth = 0;
+        for (size_t i = 0; i <= model_name.size(); i++) {
+            char c = (i < model_name.size()) ? model_name[i] : '\0';
+            if (c == '{') {
+                ++depth;
+            } else if (c == '}') {
+                if (depth > 0) --depth;
+            } else if ((c == ',' && depth == 0) || c == '\0') {
+                modelparams.push_back(model_name.substr(fr_pos, i - fr_pos) + shared_rate);
+                fr_pos = i + 1;
+            }
+        }
     }
-    modelparams.push_back(model_name.substr(fr_pos) + shared_rate);
     ASSERT(modelparams.size() > 0);
     
     if (modelparams.size() != nBranchModels) {
