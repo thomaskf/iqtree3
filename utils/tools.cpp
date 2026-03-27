@@ -586,21 +586,27 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 }
 
 void convert_string_vec(const char *str, StrVector &vec, char separator) {
-    char *beginptr = (char*)str, *endptr;
     vec.clear();
+    // Split on separator, but skip separators that are inside {...} blocks
+    // so that nested model specs like BR{Q.BACT+F{0.1,0.2,...}} are kept intact.
+    const char *p = str;
+    const char *begin = str;
+    int depth = 0;
     string elem;
-    do {
-    	endptr = strchr(beginptr, separator);
-    	if (!endptr) {
-    		elem.assign(beginptr);
-    		vec.push_back(elem);
-    		return;
-    	}
-    	elem.assign(beginptr, endptr-beginptr);
-    	vec.push_back(elem);
-		beginptr = endptr+1;
-    } while (*endptr != 0);
-
+    for (; *p != '\0'; ++p) {
+        if (*p == '{') {
+            ++depth;
+        } else if (*p == '}') {
+            if (depth > 0) --depth;
+        } else if (*p == separator && depth == 0) {
+            elem.assign(begin, p - begin);
+            vec.push_back(elem);
+            begin = p + 1;
+        }
+    }
+    // push the last token
+    elem.assign(begin);
+    vec.push_back(elem);
 }
 
 bool renameString(string &name) {
