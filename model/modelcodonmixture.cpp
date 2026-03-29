@@ -294,11 +294,11 @@ void ModelCodonMixture::setBounds(double *lower_bound, double *upper_bound, bool
             //Free category weight
             lower_bound[getNDim()-2]=0.001;
             upper_bound[getNDim()-2]=0.999;
-            bound_check[getNDim()-2]=false;
+            bound_check[getNDim()-2]=true;
             //Free category omega
             lower_bound[getNDim()-3]=1.01;
             upper_bound[getNDim()-3]=10.000;
-            bound_check[getNDim()-3]=false;
+            bound_check[getNDim()-3]=true;
         }
     }
 }
