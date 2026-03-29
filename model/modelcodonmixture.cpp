@@ -406,15 +406,22 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // then optimize the weights using EM
         fix_prop = orig_fix_prop;
         if (!fix_prop) {
+            // Save total_num_subst before EM. rescale_codon_mix() (called inside
+            // optimizeWeights) will change total_num_subst to re-normalise the
+            // mixture, which is equivalent to changing the effective branch-length
+            // scale by R = total_num_subst_new / total_num_subst_old.
+            // Scaling the branch lengths by the same factor R exactly compensates,
+            // so the post-EM likelihood is guaranteed >= pre-EM likelihood.
             score = optimizeWeights(++iteration_num);
-            cout << "after weight optimization (EM) ";
+            cout << "after weight optimization (EM) and rescaling, score = " << score << endl;
+            return score;
         }
     } else {
         score = ModelMarkov::optimizeParameters(gradient_epsilon);
         cout << "after all-BFGS parameter optimization ";
     }
-    
-    // rescale the Codon Q Matrices
+
+    // rescale the Codon Q Matrices (for EM/all-BFGS paths, or BFGS with fixed weights)
     rescale_codon_mix();
     score = phylo_tree->computeLikelihood();
     cout << "and rescaling, score = " << score << endl;

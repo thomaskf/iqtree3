@@ -2008,12 +2008,11 @@ double ModelMixture::optimizeWeights(int nsteps) {
         // E-step
 
         if (step > 0) {
-            if (phylo_tree->aln->seq_type == SEQ_CODON) {
-                // for codon mixture
-                rescale_codon_mix();
-                phylo_tree->computePatternLhCat(WSL_MIXTURE);
-            }
-            // convert _pattern_lh_cat taking into account new weights
+            // Update _pattern_lh_cat to reflect new weights without changing Q matrices.
+            // EM requires f(ptn|c) to be fixed during weight updates; rescale_codon_mix()
+            // must NOT be called here because it changes total_num_subst (Q scaling),
+            // which alters f(ptn|c) and breaks the EM monotonicity guarantee.
+            // The single rescale_codon_mix() after the loop handles renormalization.
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
                 for (c = 0; c < nmix; c++) {
@@ -2070,9 +2069,17 @@ double ModelMixture::optimizeWeights(int nsteps) {
     aligned_free(new_prop);
 //    aligned_free(lk_ptn);
     
-    rescale_codon_mix(); // rescaling for codon sequences
-    
-    return phylo_tree->computeLikelihood();
+    // Compute the EM-guaranteed score BEFORE rescaling.
+    // The ratio_prop EM loop kept Q matrices fixed, so by Jensen's inequality
+    // this score is >= the pre-EM score. Reporting it avoids the misleading
+    // apparent decrease that would otherwise be printed when rescale_codon_mix
+    // changes total_num_subst and makes the current branch lengths sub-optimal
+    // for the new Q normalisation.
+    double score = phylo_tree->computeLikelihood();
+
+    rescale_codon_mix(); // silently re-normalise Q matrices for new weights
+
+    return score;
 }
 
 double ModelMixture::optimizeWithEM(double gradient_epsilon) {
