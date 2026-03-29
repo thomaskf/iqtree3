@@ -197,8 +197,8 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     }
     
     // the newton optimization does not work properly for codon mixture model
-    Params::getInstance().optimize_by_newton = false;
-    phylo_tree->optimize_by_newton = false;
+    // Params::getInstance().optimize_by_newton = false;
+    // phylo_tree->optimize_by_newton = false;
 
     // show the initial parameters
     cout << "Initial parameters in the Codon Mixture:" << endl;
