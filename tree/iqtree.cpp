@@ -613,13 +613,44 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
             // turn off the dating flag
             params->dating_method = "";
         }
-        
-        setAlignment(aln);
-        if (isSuperTree())
-            wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
-                                     params->partition_type == BRLEN_OPTIMIZE);
-        else
+
+        // When using -S DIR with -te FILE for a partitioned analysis, the user file
+        // may contain one tree per partition (in alphabetical order matching -S).
+        // Read all trees and assign each to its corresponding partition directly,
+        // bypassing mapTrees() which would otherwise overwrite all partitions with
+        // the first tree read above.
+        bool per_partition_user_trees = false;
+        if (isSuperTree() && params->user_file) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)this;
+            MTreeSet part_trees;
+            bool part_rooted = myrooted;
+            part_trees.readTrees(params->user_file, part_rooted, 0, (int)stree->size());
+            if ((int)part_trees.size() == (int)stree->size()) {
+                per_partition_user_trees = true;
+                cout << "Assigning " << stree->size() << " partition trees from "
+                     << params->user_file << " in alphabetical partition order" << endl;
+                for (int part = 0; part < (int)stree->size(); part++) {
+                    stree->at(part)->copyTree(part_trees[part]);
+                    stree->at(part)->setAlignment(stree->at(part)->aln);
+                }
+            }
+        }
+
+        if (isSuperTree()) {
+            if (!per_partition_user_trees) {
+                // Standard path: main tree was read above; propagate to all partitions
+                setAlignment(aln);
+                wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
+                                         params->partition_type == BRLEN_OPTIMIZE);
+            }
+            // else: per-partition trees already assigned and aligned above;
+            //       skip setAlignment on main supertree (it only has first-partition taxa)
+            //       and skip wrapperFixNegativeBranch which calls mapTrees() and would
+            //       overwrite the correctly-assigned partition trees.
+        } else {
+            setAlignment(aln);
             fixed_number = wrapperFixNegativeBranch(false);
+        }
         params->numInitTrees = 1;
         params->numNNITrees = 1;
         if (params->pll)
