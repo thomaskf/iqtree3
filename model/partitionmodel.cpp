@@ -22,6 +22,7 @@
 #include "alignment/alignmentpairwise.h"
 #include "model/rategamma.h"
 #include "model/modelmarkov.h"
+#include "tree/phylotreebrmodel.h"
 
 PartitionModel::PartitionModel()
         : ModelFactory()
@@ -69,7 +70,18 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         if ((*it)->isTreeMix()) {
             ((IQTreeMixHmm*)(*it))->initializeModel(params, model_name, models_block);
         } else {
-            if ((*it)->isBranchModel()) {
+            if ((*it)->isBranchModel() || model_name.find("BR{") != string::npos) {
+                if (!(*it)->isBranchModel()) {
+                    // Partition was created as PhyloTree but model uses branch-specific
+                    // substitution (BR{...}).  Convert in-place to PhyloTreeBranchModel.
+                    PhyloTreeBranchModel *brm = new PhyloTreeBranchModel((*it)->aln);
+                    brm->copyTree((*it));
+                    brm->setAlignment((*it)->aln);
+                    brm->setParams((*it)->params);
+                    brm->setCheckpoint((*it)->getCheckpoint());
+                    delete *it;
+                    *it = brm;
+                }
                 // branch model
                 ((PhyloTreeBranchModel*)(*it))->initializeModel(params, model_name, models_block);
             } else {
