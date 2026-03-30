@@ -1056,9 +1056,30 @@ void IQTree::initializeModel(Params &params, string model_name, ModelsBlock *mod
                 } else
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
 
-                // mapTrees again in case of different rooting
-                if (root)
-                    ((PhyloSuperTree*)this)->mapTrees();
+                // mapTrees again in case of different rooting, but only when
+                // there is a single shared topology (not one user tree per partition).
+                // When params->user_file has exactly as many trees as partitions,
+                // each partition already holds its own user-supplied tree; calling
+                // mapTrees() would overwrite them all with the first tree.
+                if (root) {
+                    bool per_partition_user_trees = false;
+                    PhyloSuperTree *stree = (PhyloSuperTree*)this;
+                    if (params.user_file) {
+                        MTreeSet part_trees;
+                        bool part_rooted = params.is_rooted;
+                        part_trees.readTrees(params.user_file, part_rooted, 0, (int)stree->size());
+                        if ((int)part_trees.size() == (int)stree->size()) {
+                            per_partition_user_trees = true;
+                            // Restore per-partition user trees (may have been
+                            // overwritten by a previous mapTrees() call)
+                            for (int part = 0; part < (int)stree->size(); part++) {
+                                stree->at(part)->copyTree(part_trees[part]);
+                            }
+                        }
+                    }
+                    if (!per_partition_user_trees)
+                        stree->mapTrees();
+                }
 
             } else {
                 setModelFactory(new ModelFactory(params, model_name, this, models_block));

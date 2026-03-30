@@ -1451,7 +1451,24 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
         testPartitionModel(params, stree, model_info, models_block, params.num_threads);
-        stree->mapTrees();
+        // If the user supplied one tree per partition (via -te), restore those
+        // per-partition topologies instead of propagating the main tree to all
+        // partitions (which mapTrees() would do, overwriting the user trees).
+        bool per_partition_user_trees = false;
+        if (params.user_file) {
+            MTreeSet part_trees;
+            bool part_rooted = params.is_rooted;
+            part_trees.readTrees(params.user_file, part_rooted, 0, (int)stree->size());
+            if ((int)part_trees.size() == (int)stree->size()) {
+                per_partition_user_trees = true;
+                for (int part = 0; part < (int)stree->size(); part++) {
+                    stree->at(part)->copyTree(part_trees[part]);
+                    stree->at(part)->setAlignment(stree->at(part)->aln);
+                }
+            }
+        }
+        if (!per_partition_user_trees)
+            stree->mapTrees();
         string res_models = "";
         for (auto it = stree->begin(); it != stree->end(); it++) {
             if (it != stree->begin()) res_models += ",";
