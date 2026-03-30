@@ -3583,7 +3583,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree = iqtree_new;
     }
 
-    if (iqtree->aln->model_name.find("BR{") != string::npos && !iqtree->isBranchModel()) {
+    if (iqtree->aln->model_name.find("BR{") != string::npos && !iqtree->isBranchModel() && !iqtree->isSuperTree()) {
         // branch model: replace IQTree with PhyloTreeBranchModel if not already
         IQTree* iqtree_new = new PhyloTreeBranchModel(iqtree->aln);
         iqtree_new->setCheckpoint(iqtree->getCheckpoint());

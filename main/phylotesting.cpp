@@ -760,7 +760,10 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     double start_time = getRealTime();
 
-    cout << "Perform fast likelihood tree search using " << subst_names[0]+rate_names[0] << " model..." << endl;
+    if (params.start_tree == STT_USER_TREE)
+        cout << "Optimizing branch lengths on user-defined tree using " << subst_names[0]+rate_names[0] << " model..." << endl;
+    else
+        cout << "Perform fast likelihood tree search using " << subst_names[0]+rate_names[0] << " model..." << endl;
 
     if (iqtree->getCheckpoint()->getBool("finishedFastMLTree")) {
         // model optimization already done: ignore this step
