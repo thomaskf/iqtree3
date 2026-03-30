@@ -74,12 +74,16 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                 if (!(*it)->isBranchModel()) {
                     // Partition was created as PhyloTree but model uses branch-specific
                     // substitution (BR{...}).  Convert in-place to PhyloTreeBranchModel.
-                    PhyloTreeBranchModel *brm = new PhyloTreeBranchModel((*it)->aln);
-                    brm->copyTree((*it));
-                    brm->setAlignment((*it)->aln);
-                    brm->setParams((*it)->params);
-                    brm->setCheckpoint((*it)->getCheckpoint());
-                    delete *it;
+                    PhyloTree *old_part = *it;
+                    PhyloTreeBranchModel *brm = new PhyloTreeBranchModel(old_part->aln);
+                    brm->copyTree(old_part);
+                    brm->setAlignment(old_part->aln);
+                    brm->setParams(old_part->params);
+                    brm->setCheckpoint(old_part->getCheckpoint());
+                    brm->setLikelihoodKernel(old_part->sse);
+                    brm->setNumThreads(old_part->num_threads > 0 ? old_part->num_threads : 1);
+                    brm->optimize_by_newton = old_part->optimize_by_newton;
+                    delete old_part;
                     *it = brm;
                 }
                 // branch model
