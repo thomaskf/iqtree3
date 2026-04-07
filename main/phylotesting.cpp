@@ -6842,7 +6842,7 @@ CandidateModel findMixtureComponent(Params &params, IQTree &iqtree, ModelCheckpo
  @param[out] model_str name of the best-fit Q mixture model
  @return the likelihood from the optimal mixture model
  */
-double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
+double runMixtureFinderMain(Params &params, IQTree* iqtree, ModelCheckpoint &model_info, string& model_str) {
 
     bool do_init_tree;
     string best_subst_name;
@@ -7013,7 +7013,7 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
 }
 
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
+void runMixtureFinder(Params &params, IQTree* iqtree, ModelCheckpoint &model_info) {
 
     IQTree* new_iqtree;
     string model_str;
@@ -7087,9 +7087,10 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
     params.model_name = "";
 
     best_loglike = runMixtureFinderMain(params, new_iqtree, model_info, model_str);
-    
+
     // transfer models parameters
-    Checkpoint *iqtree_chkpt = iqtree->getCheckpoint();
+    Checkpoint *iqtree_chkpt;
+    iqtree_chkpt = iqtree->getCheckpoint();
     if (iqtree->isSuperTree()) {
         string partmodel_name;
         if (params.partition_type == BRLEN_SCALE || params.partition_type == BRLEN_FIX)

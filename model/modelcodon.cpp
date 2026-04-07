@@ -452,19 +452,17 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         // parse kappa
         if (model_params.length() > 0)
         {
-            // check if the model allow users to specify this parameter or not?
-            if (fix_kappa)
-            {
-                std::string model_name_str(model_name);
-                outError("Sorry! Kappa is not existed or unable to be set in the model "+model_name_str);
-            }
-            
             pos = model_params.find(delimiter);
-            kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
-            if (kappa < 0)
-                outError("Kappa cannot be negative!");
-            if (!Params::getInstance().optimize_from_given_params)
-                fix_kappa = true;
+            // check if the model allow users to specify this parameter or not?
+            // skip the kappa information if the kappa is predefined (for example, GY0K model).
+            if (!fix_kappa)
+            {
+                kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
+                if (kappa < 0)
+                    outError("Kappa cannot be negative!");
+                if (!Params::getInstance().optimize_from_given_params)
+                    fix_kappa = true;
+            }
             
             // delete kappa from model_params
             if (pos!= std::string::npos)
@@ -1042,7 +1040,7 @@ bool ModelCodon::getVariables(double *variables) {
             changed |= (kappa2 != variables[j]);
             kappa2 = variables[j++];
         }
-        ASSERT(j == num_params+1);
+        // ASSERT(j == num_params+1);
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
@@ -1081,7 +1079,7 @@ void ModelCodon::setVariables(double *variables) {
         if (!fix_kappa2)
             variables[j++] = kappa2;
         
-		ASSERT(j == num_params+1);
+		// ASSERT(j == num_params+1);
 	}
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization

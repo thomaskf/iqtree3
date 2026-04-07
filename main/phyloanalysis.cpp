@@ -57,6 +57,7 @@
 #include "whtest/whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
+#include "model/modelcodonmixture.h"
 #include "model/modelfactorymixlen.h"
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
@@ -531,6 +532,15 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m);
 
 void reportMixModel(ostream &out, Alignment *aln, ModelSubst *mmodel) {
     // report a mixture model
+
+    // for codon mixture model M7 and M8
+    if (aln->seq_type == SEQ_CODON) {
+        ModelCodonMixture *codonMix = dynamic_cast<ModelCodonMixture*> (mmodel);
+        if (codonMix != NULL && (codonMix->name == "M7" || codonMix->name == "M8")) {
+            out << "Beta distribution, alpha: " << codonMix->alpha << ", beta: " << codonMix->beta << endl;
+        }
+    }
+
     out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
     int i = 0;
     int nmix = mmodel->getNMixtures();

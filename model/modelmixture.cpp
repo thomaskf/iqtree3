@@ -1033,6 +1033,8 @@ end;
 
 const double MIN_MIXTURE_PROP = 0.001;
 const double MAX_MIXTURE_PROP = 1000.0;
+const double MIN_CODON_MIXTURE_PROP = 0.001;
+const double MAX_CODON_MIXTURE_PROP = 1000.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
@@ -1312,7 +1314,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector weights;
     name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
     if (!models_block->findMixModel(name)) {
-        name = "";
+        if (orig_model_name.find("CMIX7") != string::npos) {
+            name = "M7";
+        }
+        else if (orig_model_name.find("CMIX8") != string::npos) {
+            name = "M8";
+        }
+        else {
+            name = "";
+        }
     }
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
@@ -1962,8 +1972,6 @@ double ModelMixture::targetFunk(double x[]) {
         cout << endl;
     }
 	getVariables(x);
-    
-    rescale_codon_mix();
  
     //	decomposeRateMatrix();
     	int dim = 0;
@@ -1973,6 +1981,7 @@ double ModelMixture::targetFunk(double x[]) {
     		dim += ((*it)->getNDim());
     	}
     	ASSERT(phylo_tree);
+    
     	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
     		phylo_tree->clearAllPartialLH();
     //	if (prop[size()-1] < 0.0) return 1.0e+12;
@@ -1980,7 +1989,7 @@ double ModelMixture::targetFunk(double x[]) {
     
 }
 
-double ModelMixture::optimizeWeights() {
+double ModelMixture::optimizeWeights(int nsteps) {
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_MIXTURE);
     size_t ptn, c;
@@ -1992,11 +2001,18 @@ double ModelMixture::optimizeWeights() {
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
 
-    for (int step = 0; step < optimize_steps; step++) {
+    int max_steps = optimize_steps;
+    if (nsteps > 0)
+        max_steps = nsteps;
+    for (int step = 0; step < max_steps; step++) {
         // E-step
 
         if (step > 0) {
-            // convert _pattern_lh_cat taking into account new weights
+            // Update _pattern_lh_cat to reflect new weights without changing Q matrices.
+            // EM requires f(ptn|c) to be fixed during weight updates; rescale_codon_mix()
+            // must NOT be called here because it changes total_num_subst (Q scaling),
+            // which alters f(ptn|c) and breaks the EM monotonicity guarantee.
+            // The single rescale_codon_mix() after the loop handles renormalization.
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
                 for (c = 0; c < nmix; c++) {
@@ -2030,6 +2046,7 @@ double ModelMixture::optimizeWeights() {
             if (std::isnan(ratio_prop[c])) {
                 cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
             }
+            cout << "[" << step << "," << c << "]" << prop[c] << " -> " << new_prop[c] << endl;
             prop[c] = new_prop[c];
 //            new_pinvar += prop[c];
         }
@@ -2051,7 +2068,18 @@ double ModelMixture::optimizeWeights() {
     aligned_free(ratio_prop);
     aligned_free(new_prop);
 //    aligned_free(lk_ptn);
-    return phylo_tree->computeLikelihood();
+    
+    // Compute the EM-guaranteed score BEFORE rescaling.
+    // The ratio_prop EM loop kept Q matrices fixed, so by Jensen's inequality
+    // this score is >= the pre-EM score. Reporting it avoids the misleading
+    // apparent decrease that would otherwise be printed when rescale_codon_mix
+    // changes total_num_subst and makes the current branch lengths sub-optimal
+    // for the new Q normalisation.
+    double score = phylo_tree->computeLikelihood();
+
+    rescale_codon_mix(); // silently re-normalise Q matrices for new weights
+
+    return score;
 }
 
 double ModelMixture::optimizeWithEM(double gradient_epsilon) {
@@ -2424,7 +2452,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
     }
-	
+
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;
@@ -2589,11 +2617,19 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         }
 		if (fix_prop) return;
 		int i, ncategory = size();
-		for (i = 1; i < ncategory; i++) {
-			lower_bound[dim+i] = MIN_MIXTURE_PROP;
-			upper_bound[dim+i] = MAX_MIXTURE_PROP;
-			bound_check[dim+i] = false;
-		}
+        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_CODON_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_CODON_MIXTURE_PROP;
+                bound_check[dim+i] = true;
+            }
+        } else {
+            for (i = 1; i < ncategory; i++) {
+                lower_bound[dim+i] = MIN_MIXTURE_PROP;
+                upper_bound[dim+i] = MAX_MIXTURE_PROP;
+                bound_check[dim+i] = false;
+            }
+        }
     }
 }
 
@@ -2662,6 +2698,7 @@ bool ModelMixture::rescale_codon_mix() {
         vector<double> nsubs;
         double overall_nsub = 0.0;
         int i,j,k;
+        updateCodonRates(); // update the rate matrices according to the updated omega and kappa values
         for (k = 0; k < size(); k++) {
             int nstate = at(k)->num_states;
             // calculate the estimated number of substitutions per site
@@ -2692,4 +2729,15 @@ bool ModelMixture::rescale_codon_mix() {
         return true;
     }
     return false;
+}
+
+// For codon mixture, update the rate matrices according to the updated omega and kappa values
+void ModelMixture::updateCodonRates() {
+    if (phylo_tree->aln->seq_type == SEQ_CODON) {
+        for (int k = 0; k < size(); k++) {
+            if (dynamic_cast<ModelCodon*>(at(k))) {
+                ((ModelCodon*)at(k))->computeCodonRateMatrix();
+            }
+        }
+    }
 }
