@@ -398,7 +398,33 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         first_model->fix_kappa = orig_fix_kappa;
         cout << "after EM optimization ";
     } else if (Params::getInstance().optimize_alg_qmix == "BFGS") {
+        // BFGS-then-EM-weights coordinate descent can get stuck in local
+        // optima where the mixture weights stay near 1/K. The mechanism:
+        // when we enter the round with the initial uniform weights (or
+        // weights very close to uniform), BFGS — running with the weights
+        // fixed — tunes the per-class omegas so the data is best explained
+        // *given* uniform weights. After BFGS the omegas have been pushed
+        // into a configuration in which every class accounts for ~1/K of
+        // the sites by construction, so the subsequent EM weight update
+        // has no posterior signal to move the weights anywhere else. Once
+        // we are in that basin we stay there for the rest of the run.
+        //
+        // We break the symmetry by running ONE EM iteration *before* BFGS,
+        // on the very first call. With the original (well-spread) initial
+        // omegas, the posterior of each pattern under each class differs
+        // and the EM update produces non-uniform weights. BFGS then tunes
+        // the omegas in that non-uniform-weight regime, which leads to a
+        // strictly better optimum on data sets where the true mixture is
+        // far from uniform (e.g. dataset3 / GY+M3.3 where the true weights
+        // are 0.657, 0.113, 0.230). The change is monotone-safe because
+        // it only affects which initial point BFGS sees, not the BFGS
+        // itself.
         bool orig_fix_prop = fix_prop;
+        if (iteration_num == 0 && !fix_prop) {
+            double pre_score = optimizeWeights(1);
+            cout << "before parameter optimization, after EM weight init, score = "
+                 << pre_score << endl;
+        }
         // first optimize the other parameters using BFGS
         fix_prop = true;
         score = ModelMarkov::optimizeParameters(gradient_epsilon);
