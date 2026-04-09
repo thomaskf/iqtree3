@@ -462,32 +462,30 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // The (alpha=1, beta=1) default drops some datasets (e.g. 191, with
         // true alpha=0.12, beta=5.75) into a U-shape local optimum
         // hundreds of log-likelihood units worse than the truth. Trying a
-        // small grid of seed shape parameters and keeping the best BFGS
+        // small grid of starting shape parameters and keeping the best BFGS
         // result reliably escapes that basin while never making good cases
         // worse (we always keep the best score). We also re-optimise branch
-        // lengths between seeds so that each seed is compared on its own
-        // best tree, not on a tree fitted to the previous seed's model.
+        // lengths between starts so that each one is compared on its own
+        // best tree, not on a tree fitted to the previous start's model.
         if (!multistart_done && (name == "M7" || name == "M8")) {
             multistart_done = true;
-            // (alpha, beta) seeds chosen to span the qualitative shapes of
-            // Beta(alpha, beta) over [0,1]: uniform/bell, sharp decay,
-            // mass-near-1, U-shape, broad. Cheap because the BFGS
-            // dimension here is tiny (3 for M7, 5 for M8).
-            // A compact set of seeds that covers the qualitative shapes
-            // of Beta(alpha, beta) on [0,1]. Kept small because each seed
-            // runs a full model+BL alternation and we pay 5x this cost.
-            const std::vector<std::pair<double,double>> seeds = {
+            // A compact set of starting points that covers the qualitative
+            // shapes of Beta(alpha, beta) on [0,1]: uniform, sharp decay,
+            // moderate decay, broad bell, U-shape. Kept small because each
+            // start runs a full model+BL alternation and we pay 5x this
+            // cost.  The BFGS dimension here is tiny (3 for M7, 5 for M8).
+            const std::vector<std::pair<double,double>> start_points = {
                 {1.0, 1.0},   // uniform (historical default)
                 {0.1, 7.0},   // very sharp decay toward 0
                 {2.0, 5.0},   // moderate decay
                 {4.0, 2.0},   // broad bell peaked > 0.5
                 {0.5, 0.5},   // U-shape
             };
-            // Snapshot the initial state so every seed starts BFGS from
+            // Snapshot the initial state so every start runs BFGS from
             // identical kappa / prop / free-omega / branch-lengths and only
-            // differs in (alpha, beta). This ensures the seeds are independent
-            // samples of the landscape rather than a chained sequence whose
-            // later seeds inherit drift from earlier ones.
+            // differs in (alpha, beta). This ensures the starts are
+            // independent samples of the landscape rather than a chained
+            // sequence whose later starts inherit drift from earlier ones.
             double init_kappa = ((ModelCodon*)at(0))->kappa;
             double init_free_omega = (name == "M8")
                 ? ((ModelCodon*)at(size()-1))->omega : 0.0;
@@ -502,11 +500,11 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             double best_free_weight = init_prop[size()-1];
             DoubleVector best_prop = init_prop;
             DoubleVector best_bl = init_bl;
-            for (size_t s = 0; s < seeds.size(); s++) {
-                alpha = seeds[s].first;
-                beta  = seeds[s].second;
+            for (size_t s = 0; s < start_points.size(); s++) {
+                alpha = start_points[s].first;
+                beta  = start_points[s].second;
                 // restore kappa / prop / free-omega / BL from the snapshot
-                // so every seed starts from the same baseline
+                // so every start begins from the same baseline
                 for (int k = 0; k < size(); k++) {
                     ((ModelCodon*)at(k))->kappa = init_kappa;
                     prop[k] = init_prop[k];
@@ -517,8 +515,8 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                 phylo_tree->restoreBranchLengths(init_bl);
                 phylo_tree->clearAllPartialLH();
                 // Alternate model + BL optimisation a couple of times so
-                // each seed converges fairly. Without the BL refit, the
-                // first seed's BL bleeds into all subsequent seeds and
+                // each start converges fairly. Without the BL refit, the
+                // first start's BL bleeds into all subsequent starts and
                 // BFGS sees a stale tree, "moving" the model away from a
                 // perfectly good (alpha, beta) basin.
                 double s_score = 0.0;
@@ -527,8 +525,8 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                     s_score = phylo_tree->optimizeAllBranches(1,
                                                               gradient_epsilon);
                 }
-                cout << "  multistart seed (alpha=" << seeds[s].first
-                     << ", beta=" << seeds[s].second << ") -> score = "
+                cout << "  multistart point (alpha=" << start_points[s].first
+                     << ", beta=" << start_points[s].second << ") -> score = "
                      << s_score << " (final alpha=" << alpha
                      << ", beta=" << beta << ")" << endl;
                 if (s_score > best_score) {
@@ -544,7 +542,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                     phylo_tree->saveBranchLengths(best_bl);
                 }
             }
-            // Restore the best seed's converged state (model + branch
+            // Restore the best start's converged state (model + branch
             // lengths) so the outer iteration loop continues from it.
             alpha = best_alpha;
             beta  = best_beta;
@@ -559,7 +557,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             // Recompute the per-class omegas from (alpha, beta) and refresh
             // the Q matrices so the model state is consistent with the
             // restored (alpha, beta, kappa). Without this, computeLikelihood
-            // would use whichever per-class omegas the LAST seed left in
+            // would use whichever per-class omegas the LAST start left in
             // the components, not the ones implied by best_alpha/beta.
             {
                 double* omega_arr = (name == "M7")
