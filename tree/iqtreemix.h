@@ -151,9 +151,9 @@ public:
     
     void restoreCheckpoint() override;
     
-    void saveModelCheckpoint() override;
+    void saveModelCheckpoint();
 
-    void restoreModelCheckpoint() override;
+    void restoreModelCheckpoint();
 
     void setMinBranchLen(Params& params);
 

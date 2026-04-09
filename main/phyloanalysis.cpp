@@ -1011,12 +1011,6 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     } else {
         if (treemix == nullptr) {
             out << "Total tree length (sum of branch lengths): " << totalLen << endl;
-        } else {
-            out << "Total tree lengths (sum of branch lengths):";
-            for (i = 0; i < treemix->size(); i++) {
-                out << " " << totalLens[i];
-            }
-            out << endl;
         } else if (phyloSuperHmm != NULL) {
             out << "Total tree lengths (sum of branch lengths):";
             for (i = 0; i < phyloSuperHmm->getNumTrees(); i++) {
@@ -1024,7 +1018,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             }
             out << endl;
         } else {
-            out << "Total tree length (sum of branch lengths): " << totalLen << endl;
+            out << "Total tree lengths (sum of branch lengths):";
+            for (i = 0; i < treemix->size(); i++) {
+                out << " " << totalLens[i];
+            }
+            out << endl;
         }
     }
 

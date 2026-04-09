@@ -51,8 +51,6 @@ public:
     
     void setRootNode(const char *my_root, bool multi_taxa) override;
     
-    virtual void setRootNode(const char *my_root, bool multi_taxa);
-
     virtual void setParams(Params* params);
 
     // show the assignment of the categories along sites with max likelihood

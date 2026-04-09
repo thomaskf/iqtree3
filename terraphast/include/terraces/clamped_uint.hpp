@@ -4,6 +4,7 @@
 #include "definitions.hpp"
 
 #include <iosfwd>
+#include <ostream>
 
 namespace terraces {
 
@@ -21,19 +22,33 @@ public:
 };
 
 template <bool except>
-bool operator==(checked_uint<except> a, checked_uint<except> b);
+inline bool operator==(checked_uint<except> a, checked_uint<except> b) {
+	return a.value() == b.value();
+}
 
 template <bool except>
-bool operator!=(checked_uint<except> a, checked_uint<except> b);
+inline bool operator!=(checked_uint<except> a, checked_uint<except> b) {
+	return !(a == b);
+}
 
 template <bool except>
-checked_uint<except> operator+(checked_uint<except> a, checked_uint<except> b);
+inline checked_uint<except> operator+(checked_uint<except> a, checked_uint<except> b) {
+	return a += b;
+}
 
 template <bool except>
-checked_uint<except> operator*(checked_uint<except> a, checked_uint<except> b);
+inline checked_uint<except> operator*(checked_uint<except> a, checked_uint<except> b) {
+	return a *= b;
+}
 
 template <bool except>
-std::ostream& operator<<(std::ostream& stream, checked_uint<except> val);
+inline std::ostream& operator<<(std::ostream& stream, checked_uint<except> val) {
+	if (val.is_clamped()) {
+		stream << ">= ";
+	}
+	stream << val.value();
+	return stream;
+}
 
 using clamped_uint = checked_uint<false>;
 using overflow_except_uint = checked_uint<true>;
