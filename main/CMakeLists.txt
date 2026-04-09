@@ -1,24 +1,4 @@
-if (BUILD_LIB)
-    add_library(main
-    phyloanalysis.cpp
-    phyloanalysis.h
-    phylotesting.cpp
-    phylotesting.h
-    treetesting.cpp
-    treetesting.h
-    timetree.cpp
-    timetree.h
-    alisim.cpp
-    alisim.h
-    terraceanalysis.cpp
-    terraceanalysis.h
-    suppFunc.cpp
-    suppFunc.h
-    libiqtree_fun.cpp
-    libiqtree_fun.h
-    )
-else()
-    add_library(main
+add_library(main
     main.cpp
     phyloanalysis.cpp
     phyloanalysis.h
@@ -32,8 +12,7 @@ else()
     alisim.h
     terraceanalysis.cpp
     terraceanalysis.h
-    )
-endif()
+)
 
 if (USE_BOOSTER)
     target_link_libraries(main booster)

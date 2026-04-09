@@ -42,6 +42,8 @@
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
 #include "utils/MPIHelper.h"
+#include <thread>
+#include <atomic>
 //#include "vectorclass/vectorclass.h"
 
 #if defined(_NN) || defined(_OLD_NN)
@@ -78,6 +80,10 @@ const char* dna_model_names_nonrev[] = {"3.3b","4.5a","4.5b","5.6a","5.6b",
                                        "6.8b","6.17a","6.17b","8.8","8.10a","8.10b",
                                        "8.16","8.17","8.18","9.20a","9.20b","10.12",
                                        "10.34","12.12"};
+
+/* Additional names/alias for DNA models (provided by Robert McArthur)*/
+const char* dna_model_names_alias[] = {"JC69", "K2P", "HKY85", "TN93", "K3P", "STRSYM"};
+const char* dna_model_additional_lie_markov[] = {"2.2b", "3.3c", "3.4", "4.4b"};
 
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe", "TN",
@@ -182,6 +188,9 @@ const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet"
 const char *aa_model_names_chloroplast[] = {"cpREV"};
 
 const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV", "FLAVI"};
+
+/* Additional names/alias for Protein models (provided by Robert McArthur)*/
+const char *aa_model_names_additional[] = {"EAL", "ELM", "Poisson"};
 
 /* Protein frequency set */
 const char* aa_freq_names[] = {"", "+F"}; // default
@@ -561,6 +570,33 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             if (std_genetic_code[i]) empirical_model = true;
             break;
         }
+    
+    // Consider other model alias
+    // Currently only apply when running AliSim to avoid causing bugs to other features
+    if (Params::getInstance().alisim_active)
+    {
+        copyCString(dna_model_names_alias, sizeof(dna_model_names_alias)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size(); i++)
+            if (model_str == model_list[i]) {
+                seq_type = SEQ_DNA;
+                break;
+            }
+        
+        copyCString(dna_model_additional_lie_markov, sizeof(dna_model_additional_lie_markov)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size(); i++)
+            if (model_str == model_list[i]) {
+                seq_type = SEQ_DNA;
+                break;
+            }
+        
+        copyCString(aa_model_names_additional, sizeof(aa_model_names_additional)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size(); i++)
+            if (model_str == model_list[i]) {
+                seq_type = SEQ_PROTEIN;
+                break;
+            }
+        
+    }
 
     return (empirical_model) ? 2 : 1;
 }
@@ -1858,6 +1894,19 @@ void fixPartitions(PhyloSuperTree* super_tree) {
     super_tree->deleteAllPartialLh();
 }
 
+/**
+ * Compute the maximum number of CPU threads appropriate for evaluating a model
+ * on the given alignment, based on alignment size (patterns x states).
+ * Using more threads than this on a short alignment incurs overhead that
+ * outweighs the parallelism benefit.
+ * @param aln     the alignment being evaluated
+ * @param factor  denominator j in max(1, nptn*nstate/j); default 4000
+ * @return maximum recommended thread count (at least 1)
+ */
+int maxThreadsForAlignment(Alignment *aln, int factor = 4000) {
+    return max(1, (int)(aln->getNPattern() * aln->num_states / factor));
+}
+
 string CandidateModel::evaluate(Params &params,
     ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
     ModelsBlock *models_block,
@@ -1886,7 +1935,16 @@ string CandidateModel::evaluate(Params &params,
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->setNumThreads(num_threads);
+    // cap threads per model based on alignment size to avoid overhead on short alignments
+    int effective_threads = num_threads;
+    if (!params.model_test_and_tree && !in_aln->isSuperAlignment()) {
+        effective_threads = min(num_threads, maxThreadsForAlignment(in_aln, params.mf_thread_factor));
+        if (effective_threads < num_threads)
+            cout << "ModelFinder: capping threads " << num_threads << " -> "
+                 << effective_threads << " (nptn=" << in_aln->getNPattern()
+                 << ", nstate=" << in_aln->num_states << ")" << endl;
+    }
+    iqtree->setNumThreads(effective_threads);
 
     iqtree->setCheckpoint(&in_model_info);
 #ifdef _OPENMP
@@ -1993,9 +2051,11 @@ string CandidateModel::evaluate(Params &params,
                 // obtain the likelihood value from the (k-1)-class mixture model
                 string criteria_str = criterionName(params.model_test_criterion);
                 string best_model;
-                ASSERT(in_model_info.getString("best_model_" + criteria_str, best_model));
+                bool check = in_model_info.getString("best_model_" + criteria_str, best_model);
+                ASSERT(check);
                 string best_model_logl_df;
-                ASSERT(in_model_info.getString(best_model, best_model_logl_df));
+                check = in_model_info.getString(best_model, best_model_logl_df);
+                ASSERT(check);
                 stringstream ss (best_model_logl_df);
                 double pre_logl;
                 ss >> pre_logl;
@@ -3391,11 +3451,57 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                 break;
     }
 
+    // Cap the outer OMP thread count to match the per-model effective thread cap.
+    // Without this, num_threads models run in parallel (each capped to 1 thread
+    // internally), causing cache/memory contention that is slower than sequential.
+    //
+    // Also reduce the global OMP thread pool when the cap fires, so idle threads
+    // don't spin-wait and compete with the single working thread.
+    //
+    // IMPORTANT: omp_set_num_threads is a global operation and is NOT safe to call
+    // from concurrent std::thread workers (as used in getBestModelforPartitionsNoMPI).
+    // We guard it with "omp_threads_reduced" and only call it when num_threads was
+    // actually reduced.  Partition workers already receive m_p (the pre-capped value)
+    // so no reduction occurs in those calls and omp_set_num_threads is never touched.
+#ifdef _OPENMP
+    int omp_threads_saved = -1;
+#endif
+    if (!params.model_test_and_tree && !in_tree->isSuperTree()) {
+        int capped = min(num_threads, maxThreadsForAlignment(in_tree->aln, params.mf_thread_factor));
+        if (capped < num_threads) {
+            num_threads = capped;
+#ifdef _OPENMP
+            omp_threads_saved = omp_get_max_threads();
+            omp_set_num_threads(num_threads);
+#endif
+        }
+    }
+
     int64_t num_models = size();
 #ifdef _OPENMP
-#pragma omp parallel num_threads(num_threads)
+    // When called from a partition std::thread worker (getBestModelforPartitionsNoMPI),
+    // max_active_levels has been raised to 2 so the inner likelihood OMP (level 2) is
+    // active.  In that case run the outer model loop with a single OMP thread (models
+    // evaluated serially) so the full num_threads budget flows to the inner likelihood
+    // OMP — avoiding num_threads^2 oversubscription.
+    // For the single-partition path (max_active_levels == 1) keep existing model-
+    // parallelism behaviour.
+    int outer_model_threads = (omp_get_max_active_levels() >= 2) ? 1 : num_threads;
+#pragma omp parallel num_threads(outer_model_threads)
 #endif
     {
+#ifdef _OPENMP
+#pragma omp single
+    {
+        cerr << "[DIAG] test() OMP team: omp_get_num_threads()=" << omp_get_num_threads()
+             << " omp_get_max_threads()=" << omp_get_max_threads()
+             << " num_threads(requested)=" << num_threads
+             << " outer_model_threads=" << outer_model_threads
+             << " omp_get_max_active_levels()=" << omp_get_max_active_levels()
+             << " omp_get_level()=" << omp_get_level()
+             << " aln=" << (in_tree ? in_tree->aln->name : "?") << endl;
+    }
+#endif
     int64_t model;
     do {
         model = getNextModel();
@@ -3507,6 +3613,10 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     if (prot_aln)
         delete prot_aln;
 
+#ifdef _OPENMP
+    if (omp_threads_saved != -1)
+        omp_set_num_threads(omp_threads_saved);
+#endif
     return at(best_model);
 }
 
@@ -3519,6 +3629,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads)
 {
+    cerr << "[DIAG] testPartitionModel entry: num_threads=" << num_threads
+         << " params.num_threads=" << params.num_threads << endl;
     PartitionFinder partitionFinder(&params, in_tree, &model_info, models_block, num_threads);
     partitionFinder.test_PartitionModel();
 }
@@ -4171,64 +4283,106 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (jobs.empty())
         return;
 
-    bool parallel_job = false;
+    cerr << "[DIAG] getBestModelforPartitionsNoMPI: nthreads=" << nthreads
+         << " n_jobs=" << jobs.size()
+         << " omp_get_max_threads()=" << omp_get_max_threads() << endl;
 
-#ifdef _OPENMP
-    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
-    // show the message
-    if (parallel_job)
-        cout << "In ModelFinder: parallelization over partitions" << endl;
-    else if (nthreads > 1)
-        cout << "In ModelFinder: parallelization over sites" << endl;
-
-#pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
-#endif
-    for (size_t j = 0; j < jobs.size(); j++) {
-        int tree_id = jobs[j].first;
-        PhyloTree *this_tree = in_tree->at(tree_id);
-        // scan through models for this partition, assuming the information occurs consecutively
-        ModelCheckpoint part_model_info;
-
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-        {
-            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+    // Precompute per-partition thread budget m_p using a two-case rule.
+    // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
+    //
+    // Case A — n_jobs <= nthreads (all partitions can run concurrently):
+    //   Assign 1 thread to every partition first, then greedily give the
+    //   remaining threads to the heaviest partitions that can absorb them.
+    //   This ensures all partitions start immediately while large ones get
+    //   the maximum useful parallelism from any leftover capacity.
+    //   Example: 2 partitions (10K sites, 100 sites), 4 threads →
+    //     remaining = 4 - 2 = 2
+    //     large: extra = min(size_cap-1, 2) → mp = 3
+    //     small: extra = min(0, 0)          → mp = 1   (total = 4)
+    //
+    // Case B — n_jobs > nthreads (cannot run all partitions at once):
+    //   Use the size-based cap directly so the heavy-first dispatcher gives
+    //   large partitions as many threads as they can use.
+    //   m_p = min(nthreads, maxThreadsForAlignment)
+    //
+    // In both cases m_p <= nthreads, so "available >= m_p" is always satisfiable.
+    int n_jobs = (int)jobs.size();
+    vector<int> mp(n_jobs);
+    if (n_jobs <= nthreads && !params->parallel_per_partition) {
+        // Case A: all partitions can run concurrently.
+        // Start with 1 thread each, then distribute the remaining threads
+        // round-robin (heavy-to-light within each round) until no thread can
+        // be usefully added.  Round-robin avoids the greedy pitfall of giving
+        // all surplus threads to the first partition, which would finish early
+        // and leave idle threads while the other partitions struggle with 1.
+        // Example: 4 equal 20K partitions, 7 threads →
+        //   remaining = 3; round 1 adds 1 to each of the first 3 → [2,2,2,1]
+        //   instead of greedy [4,1,1,1] where 4 threads go idle prematurely.
+        vector<int> size_cap(n_jobs);
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            size_cap[j] = maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor);
+            mp[j] = 1;
         }
-
-        // do the computation
-        string part_model_name;
-        if (params->model_name.empty())
-            part_model_name = this_tree->aln->model_name;
-        CandidateModel best_model;
-
-        best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                                              (parallel_job ? 1 : nthreads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
-        bool check = (best_model.restoreCheckpoint(&part_model_info));
-        ASSERT(check);
-
-        double score = best_model.computeICScore(this_tree->getAlnNSite());
-        this_tree->aln->model_name = best_model.getName();
-        lhsum += (lhvec[tree_id] = best_model.logl);
-        dfsum += (dfvec[tree_id] = best_model.df);
-        lenvec[tree_id] = best_model.tree_len;
+        int remaining = nthreads - n_jobs;
+        while (remaining > 0) {
+            bool any_added = false;
+            for (int j = 0; j < n_jobs && remaining > 0; j++) {
+                if (mp[j] < size_cap[j]) {
+                    mp[j]++;
+                    remaining--;
+                    any_added = true;
+                }
+            }
+            if (!any_added) break;  // all partitions saturated
+        }
+    } else {
+        // Case B: more jobs than threads — size-based cap
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor));
+        }
+    }
 
 #ifdef _OPENMP
-#pragma omp critical
+    if (!params->model_test_and_tree) {
+        if (params->parallel_over_sites)
+            cout << "In ModelFinder: parallelization over sites" << endl;
+        else if (params->parallel_per_partition)
+            cout << "In ModelFinder: assigning threads per partition (Case-B always, heavy to light)" << endl;
+        else
+            cout << "In ModelFinder: assigning threads to partitions from heavy to light" << endl;
+    }
 #endif
-        {
+
+    if (params->model_test_and_tree || nthreads <= 1) {
+        // Sequential fallback: one thread, process partitions one by one
+        for (int j = 0; j < (int)jobs.size(); j++) {
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                nthreads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
+
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+            lhsum += (lhvec[tree_id] = best_model.logl);
+            dfsum += (dfvec[tree_id] = best_model.df);
+            lenvec[tree_id] = best_model.tree_len;
             num_model++;
-            cout.width(4);
-            cout << right << num_model << " ";
-            cout.width(12);
-            cout << left << best_model.getName() << " ";
-            cout.width(11);
-            cout << score << " ";
-            cout.width(11);
-            cout << best_model.tree_len << " ";
-            cout << this_tree->aln->name;
+            cout.width(4);  cout << right << num_model << " ";
+            cout.width(12); cout << left << best_model.getName() << " ";
+            cout.width(11); cout << score << " ";
+            cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " ("
@@ -4238,7 +4392,143 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
             model_info->dump();
         }
+        return;
     }
+
+#ifdef _OPENMP
+    if (params->parallel_over_sites) {
+        // All threads concentrated on one partition at a time (original --parallel-over-sites mode)
+        for (int j = 0; j < (int)jobs.size(); j++) {
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                nthreads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
+
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+            lhsum += (lhvec[tree_id] = best_model.logl);
+            dfsum += (dfvec[tree_id] = best_model.df);
+            lenvec[tree_id] = best_model.tree_len;
+            num_model++;
+            cout.width(4);  cout << right << num_model << " ";
+            cout.width(12); cout << left << best_model.getName() << " ";
+            cout.width(11); cout << score << " ";
+            cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
+            if (num_model >= 10) {
+                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
+            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            model_info->dump();
+        }
+        return;
+    }
+
+    // -----------------------------------------------------------------------
+    // New scheduling strategy:
+    // Dispatch partitions from heavy to light. Each partition p is held until
+    // available_threads >= m_p, then launched in a background std::thread with
+    // m_p threads for its internal likelihood computation.
+    // Because m_p = min(nthreads, formula), this condition is always satisfiable.
+    // -----------------------------------------------------------------------
+
+    // available tracks how many of the nthreads threads are currently free
+    std::atomic<int> available(nthreads);
+
+    // omp_lock_t protects all shared result state (lhsum, dfsum, model_info, cout)
+    omp_lock_t result_lock;
+    omp_init_lock(&result_lock);
+
+    vector<std::thread> workers;
+    workers.reserve(jobs.size());
+
+    for (int j = 0; j < (int)jobs.size(); j++) {
+        int m_p = mp[j];
+
+        // Hold until enough threads are free.
+        // m_p <= nthreads, so this always terminates once running partitions complete.
+        while (available.load(std::memory_order_acquire) < m_p)
+            std::this_thread::yield();
+
+        available.fetch_sub(m_p, std::memory_order_acq_rel);
+
+        {
+            int tree_id = jobs[j].first;
+            PhyloTree *diag_tree = in_tree->at(tree_id);
+            cerr << "[DIAG] Launching partition " << j << " (tree_id=" << tree_id
+                 << " name=" << diag_tree->aln->name
+                 << " nptn=" << diag_tree->aln->getNPattern()
+                 << " nstate=" << diag_tree->aln->num_states
+                 << ") with m_p=" << m_p
+                 << " available_after=" << (available.load() ) << endl;
+        }
+
+        workers.emplace_back([this, j, m_p, &available, &result_lock, &jobs]() {
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            ModelCheckpoint part_model_info;
+
+            omp_set_lock(&result_lock);
+            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            omp_unset_lock(&result_lock);
+
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                m_p, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
+
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+
+            // Release threads back to the pool before acquiring result_lock,
+            // so the dispatcher can start the next partition without waiting
+            // for the result I/O below to complete.
+            available.fetch_add(m_p, std::memory_order_release);
+
+            omp_set_lock(&result_lock);
+            lhsum += (lhvec[tree_id] = best_model.logl);
+            dfsum += (dfvec[tree_id] = best_model.df);
+            lenvec[tree_id] = best_model.tree_len;
+            num_model++;
+            cout.width(4);  cout << right << num_model << " ";
+            cout.width(12); cout << left << best_model.getName() << " ";
+            cout.width(11); cout << score << " ";
+            cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
+            if (num_model >= 10) {
+                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
+            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            model_info->dump();
+            jobdone++;
+            omp_unset_lock(&result_lock);
+        });
+    }
+
+    for (auto& w : workers)
+        w.join();
+
+    omp_destroy_lock(&result_lock);
+#endif
 }
 
 /**
@@ -4567,8 +4857,10 @@ void PartitionFinder::consolidPartitionResults() {
             string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterion_name;
             double bestScore;
 
-            ASSERT(model_info->getString(bestModel_key, bestModel));
-            ASSERT(model_info->get(bestScore_key, bestScore));
+            bool check = model_info->getString(bestModel_key, bestModel);
+            ASSERT(check);
+            check = model_info->get(bestScore_key, bestScore);
+            ASSERT(check);
 
             string info_key = this_tree->aln->name + CKP_SEP + bestModel;
             string info;
@@ -4576,7 +4868,8 @@ void PartitionFinder::consolidPartitionResults() {
             int df;
             double treeLen;
 
-            ASSERT(model_info->getString(info_key, info));
+            check = model_info->getString(info_key, info);
+            ASSERT(check);
             stringstream ss(info);
             ss >> logL >> df >> treeLen;
             
@@ -4623,7 +4916,8 @@ void PartitionFinder::consolidPartitionResults() {
             PhyloTree *this_tree = in_tree->at(i);
             string bestTree_key = this_tree->aln->name + CKP_SEP + "best_tree_" + criterion_name;
             string bestTree;
-            ASSERT(model_info->getString(bestTree_key, bestTree));
+            bool check = model_info->getString(bestTree_key, bestTree);
+            ASSERT(check);
             this_tree->readTreeString(bestTree);
         }
     }
@@ -4653,7 +4947,8 @@ void PartitionFinder::consolidMergeResults() {
         CandidateModel best_model;
 
         model_info->startStruct(cur_pair.set_name);
-        ASSERT(model_info->getBestModel(best_model.subst_name));
+        bool check = model_info->getBestModel(best_model.subst_name);
+        ASSERT(check);
         best_model.restoreCheckpoint(model_info);
         model_info->endStruct();
 
@@ -4764,6 +5059,8 @@ void PartitionFinder::test_PartitionModel() {
         brlen_type = BRLEN_OPTIMIZE;
     }
 
+    cerr << "[DIAG] test_PartitionModel before getBestModel: num_threads=" << num_threads
+         << " total_num_model=" << total_num_model << " in_tree->size()=" << in_tree->size() << endl;
     // compute the best model for all partitions
     job_type = 1; // for all partitions
     getBestModel(job_type);
@@ -4806,7 +5103,8 @@ void PartitionFinder::test_PartitionModel() {
             	PhyloTree *this_tree = in_tree->at(i);
             	string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             	string bestModel;
-            	ASSERT(model_info->getString(bestModel_key, bestModel));
+            	bool check = model_info->getString(bestModel_key, bestModel);
+                ASSERT(check);
             	this_tree->aln->model_name = bestModel;
         	}
     	}
@@ -5063,7 +5361,8 @@ void PartitionFinder::test_PartitionModel() {
             PhyloTree *this_tree = in_tree->at(i);
             string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             string bestModel;
-            ASSERT(model_info->getString(bestModel_key, bestModel));
+            bool check = model_info->getString(bestModel_key, bestModel);
+            ASSERT(check);
             this_tree->aln->model_name = bestModel;
         }
     }
@@ -5512,11 +5811,14 @@ SyncChkPoint::SyncChkPoint(PartitionFinder* pf, int thres_id) {
 void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
     string key, data_num;
     int job_type;
+    bool check;
 
     key = "pf_data_num";
-    ASSERT(part_model_info.get(key, data_num));
+    check = part_model_info.get(key, data_num);
+    ASSERT(check);
     key = "pf_job_type";
-    ASSERT(part_model_info.get(key, job_type));
+    check = part_model_info.get(key, job_type);
+    ASSERT(check);
 
     if (data_num == "single") {
         double tree_len,score;
@@ -5525,23 +5827,29 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
         bool done_before;
 
         key = "pf_tree_len";
-        ASSERT(part_model_info.get(key, tree_len));
+        check = part_model_info.get(key, tree_len);
+        ASSERT(check);
         key = "pf_model_name";
-        ASSERT(part_model_info.get(key, model_name));
+        check = part_model_info.get(key, model_name);
+        ASSERT(check);
 
         if (job_type == 1) {
             // partition
             key = "pf_tree_id";
-            ASSERT(part_model_info.get(key, tree_id));
+            check = part_model_info.get(key, tree_id);
+            ASSERT(check);
             key = "pf_score";
-            ASSERT(part_model_info.get(key, score));
+            check = part_model_info.get(key, score);
+            ASSERT(check);
             pfinder->showPartitionResult(part_model_info, tree_id, tree_len, model_name, score, work_tag);
         } else {
             // merge
             key = "pf_set_name";
-            ASSERT(part_model_info.get(key, set_name));
+            check = part_model_info.get(key, set_name);
+            ASSERT(check);
             key = "pf_done_before";
-            ASSERT(part_model_info.getBool(key, done_before));
+            check = part_model_info.getBool(key, done_before);
+            ASSERT(check);
             pfinder->showMergeResult(part_model_info, tree_len, model_name, set_name, done_before, work_tag);
         }
 
@@ -5554,25 +5862,32 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
         vector<string> set_name_vec;
         int tot_jobsdone;
         key = "pf_tree_len";
-        ASSERT(part_model_info.getVector(key, tree_len_vec));
+        check = part_model_info.getVector(key, tree_len_vec);
+        ASSERT(check);
         key = "pf_model_name";
-        ASSERT(part_model_info.getVector(key, model_name_vec));
+        check = part_model_info.getVector(key, model_name_vec);
+        ASSERT(check);
         key = "pf_tag";
-        ASSERT(part_model_info.getVector(key, tag_vec));
+        check = part_model_info.getVector(key, tag_vec);
+        ASSERT(check);
 
         if (job_type == 1) {
             // partition
             key = "pf_tree_id";
-            ASSERT(part_model_info.getVector(key, tree_id_vec));
+            check = part_model_info.getVector(key, tree_id_vec);
+            ASSERT(check);
             key = "pf_score";
-            ASSERT(part_model_info.getVector(key, score_vec));
+            check = part_model_info.getVector(key, score_vec);
+            ASSERT(check);
             pfinder->showPartitionResults(part_model_info, tree_id_vec, tree_len_vec, model_name_vec, score_vec, tag_vec);
         } else {
             // merge
             key = "pf_set_name";
-            ASSERT(part_model_info.getVector(key, set_name_vec));
+            check = part_model_info.getVector(key, set_name_vec);
+            ASSERT(check);
             key = "pf_tot_jobs_done";
-            ASSERT(part_model_info.get(key, tot_jobsdone));
+            check = part_model_info.get(key, tot_jobsdone);
+            ASSERT(check);
             pfinder->showMergeResults(part_model_info, tree_len_vec, model_name_vec, set_name_vec, tag_vec, tot_jobsdone);
         }
     }
@@ -5607,7 +5922,8 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
             recvAnyCheckpoint(&proc_model_info, worker, work_tag);
 
             key = "pf_job_type";
-            ASSERT(proc_model_info.get(key, job_type));
+            bool check = proc_model_info.get(key, job_type);
+            ASSERT(check);
             if (job_type == 1) {
                 // for partition job
 #ifdef SYN_COMM
@@ -5643,7 +5959,8 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
         recvAnyCheckpoint(&proc_model_info, worker, work_tag);
 
         key = "pf_job_type";
-        ASSERT(proc_model_info.get(key, job_type));
+        bool check = proc_model_info.get(key, job_type);
+        ASSERT(check);
         if (job_type == 1) {
             // for partition job
 #ifdef SYN_COMM
@@ -6221,6 +6538,16 @@ void addModel(string model_str, string& new_model_str, string new_subst) {
     }
 }
 
+// initialise model frequency set in MixtureFinder for different sequence types
+char* initFreqSet(SeqType seq_type) {
+    switch (seq_type) {
+        case SEQ_CODON:   return ",F1X4,F3X4";
+        case SEQ_MORPH:   return "FQ";
+        case SEQ_PROTEIN: return ",FO";
+        default:          return "FO";
+    }
+}
+
 /**
  @brief Find the best component of a Q-mixture model while fixing other components
  @note This function is similar to runModelFinder, but it is adapted for optimisation of Q-Mixture model
@@ -6369,8 +6696,8 @@ CandidateModel findMixtureComponent(Params &params, IQTree &iqtree, ModelCheckpo
             }
         }
         skip_all_when_drop = true;
-    } else if (mixture_action == MA_FIND_CLASS) {
-        char init_state_freq_set[] = "FO";
+      } else if (mixture_action == MA_FIND_CLASS) {
+        char* init_state_freq_set = initFreqSet(iqtree.aln->seq_type);
         if (!params.state_freq_set) {
             params.state_freq_set = init_state_freq_set;
         }
@@ -6513,8 +6840,9 @@ CandidateModel findMixtureComponent(Params &params, IQTree &iqtree, ModelCheckpo
  @param[in] iqtree phylogenetic tree
  @param[in,out] model_info (IN/OUT) information for all models considered
  @param[out] model_str name of the best-fit Q mixture model
+ @return the likelihood from the optimal mixture model
  */
-void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
+double runMixtureFinderMain(Params &params, IQTree* iqtree, ModelCheckpoint &model_info, string& model_str) {
 
     bool do_init_tree;
     string best_subst_name;
@@ -6537,7 +6865,7 @@ void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mode
     double LR, df_diff, pvalue;
     string criteria_str;
 
-    char init_state_freq_set[] = "FO";
+    char* init_state_freq_set = initFreqSet(iqtree->aln->seq_type);
     if (!params.state_freq_set) {
         params.state_freq_set = init_state_freq_set;
     }
@@ -6548,21 +6876,34 @@ void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mode
 
     // Step 0: (reorder candidate DNA models when -mset is used) build the nest-relationship network
     map<string, vector<string> > nest_network;
-    if (iqtree->aln->seq_type == SEQ_DNA) {
-        StrVector model_names, freq_names;
-        getModelSubst(iqtree->aln->seq_type, iqtree->aln->isStandardGeneticCode(), params.model_name,
-                      params.model_set, params.model_subset, model_names);
-        getStateFreqs(iqtree->aln->seq_type, params.state_freq_set, freq_names);
-
-        nest_network = generateNestNetwork(model_names, freq_names);
+    StrVector model_names, freq_names;
+    getModelSubst(iqtree->aln->seq_type, iqtree->aln->isStandardGeneticCode(), params.model_name,
+                  params.model_set, params.model_subset, model_names);
+    getStateFreqs(iqtree->aln->seq_type, params.state_freq_set, freq_names);
+    
+    auto isOnlyMKAndFQ = [&]() -> bool {
+        bool onlyMK = std::all_of(model_names.begin(), model_names.end(),
+            [](const std::string& s) { return s == "MK"; });
+        bool onlyFQ = std::all_of(freq_names.begin(), freq_names.end(),
+            [](const std::string& s) { return s == "+FQ"; });
+        return onlyMK && onlyFQ;
+    };
+    if (isOnlyMKAndFQ()) {
+        outError("Error! Running MixtureFinder only with the MK model and the FQ frequency is completely meaningless.\nPlease provide additional models and/or frequencies, such as GTRX, +F, and +FO, using -mset and/or -mfreq, if you really want to use MixtureFinder for your multistate data.");
     }
 
+    if (iqtree->aln->seq_type == SEQ_DNA) {
+        nest_network = generateNestNetwork(model_names, freq_names);
+    }
+    
     // Step 1: run ModelFinder
     params.model_name = "";
     bool under_mix_finder = true;
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network, under_mix_finder);
     string best_orig_rate_name;
-    ASSERT(model_info.getString("best_orig_rate_name", best_orig_rate_name));
+    bool check;
+    check = model_info.getString("best_orig_rate_name", best_orig_rate_name);
+    ASSERT(check);
 
     // (cancel) Step 2: do tree search for this single-class model
     // runTreeReconstruction(params, iqtree);
@@ -6570,11 +6911,13 @@ void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mode
     // curr_loglike = iqtree->getCurScore();
     // curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
     string best_model_logl_df;
-    ASSERT(model_info.getString(best_subst_name+best_rate_name, best_model_logl_df));
+    check = model_info.getString(best_subst_name+best_rate_name, best_model_logl_df);
+    ASSERT(check);
     stringstream ss (best_model_logl_df);
     ss >> curr_loglike >> curr_df;
     string best_score;
-    ASSERT(model_info.getString("best_score_" + criteria_str, best_score));
+    check = model_info.getString("best_score_" + criteria_str, best_score);
+    ASSERT(check);
     curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
@@ -6664,14 +7007,18 @@ void runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mode
     
     // force to dump all checkpointing information
     model_info.dump(true);
+    
+    cout << "BEST log-likelihood value: " << curr_loglike << endl;
+    return curr_loglike;
 }
 
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
+void runMixtureFinder(Params &params, IQTree* iqtree, ModelCheckpoint &model_info) {
 
     IQTree* new_iqtree;
     string model_str;
     Alignment* aln;
+    double best_loglike;
 
     bool mix_finder_mode = (params.model_name == "MIX+MF" || params.model_name == "MIX+MFP" || params.model_name == "MF+MIX" || params.model_name == "MFP+MIX");
     
@@ -6695,8 +7042,15 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
         aln = iqtree->aln;
     }
     
-    if (aln->seq_type != SEQ_DNA)
-        outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
+    if (iqtree->aln->seq_type != SEQ_DNA)
+        outWarning("MixtureFinder has not been tested for non-DNA data types. Be cautious about interpreting the results");
+    
+    if (iqtree->aln->getMaxNumStates() > 6)
+        outWarning("Running MixtureFinder for the given data type can take much time. Please consider restricting the set of the models to test as much as possible");
+    
+    if (iqtree->aln->seq_type == SEQ_PROTEIN && !params.force_aa_mix_finder)
+        outError("Error! We already have the mixture frequency vectors C10–C60 which are effective for modeling amino acid data.\nPlease make sure running MixtureFinder for your amino acid data makes sense.\nIf you are determined to do that, please add an option --force-aa-mix-finder to the command line.");
+    
 
     // create a new IQTree object for this mixture model
     // allocate heterotachy tree if neccessary
@@ -6732,10 +7086,11 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.model_name = "";
 
-    runMixtureFinderMain(params, new_iqtree, model_info, model_str);
-    
+    best_loglike = runMixtureFinderMain(params, new_iqtree, model_info, model_str);
+
     // transfer models parameters
-    Checkpoint *iqtree_chkpt = iqtree->getCheckpoint();
+    Checkpoint *iqtree_chkpt;
+    iqtree_chkpt = iqtree->getCheckpoint();
     if (iqtree->isSuperTree()) {
         string partmodel_name;
         if (params.partition_type == BRLEN_SCALE || params.partition_type == BRLEN_FIX)
@@ -6753,6 +7108,9 @@ void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_in
     if (iqtree->isSuperTree()) {
         iqtree_chkpt->endStruct();
     }
+    
+    // store the best loglikelihood
+    iqtree_chkpt->put("MixFinderLogL", best_loglike);
 
     // restore the original values
     params.gbo_replicates = orig_gbo_replicates;

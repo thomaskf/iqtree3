@@ -26,6 +26,8 @@
 #include "utils/tools.h"
 #include "utils/checkpoint.h"
 
+// using namespace std;
+
 class PhyloTree;
 
 const double MIN_SITE_RATE = 1e-6;

@@ -1160,7 +1160,7 @@ void ModelLieMarkov::setBasis() {
       for (size_t tauIndex=0; tauIndex<3; tauIndex++) {
         const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
 	    if (tau[tauIndex]!=0 && transformationMatrix != nullptr) {
-          for (size_t rate=0; rate<NUM_RATES; rate++) {
+          for (int rate=0; rate<NUM_RATES; rate++) {
 	        unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
 	      } // for rate
 	    } // if tau && !=nullptr

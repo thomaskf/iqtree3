@@ -34,7 +34,7 @@ class NCBITree : public MTree
 public:
     NCBITree();
 	
-    ~NCBITree();
+    ~NCBITree() override;
 
 
 /********************************************************

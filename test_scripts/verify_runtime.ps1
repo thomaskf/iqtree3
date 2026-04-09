@@ -1,62 +1,77 @@
 param (
-    [string]$input_file = "test_scripts/test_data/expected_runtimes.txt"
+    [string] $ExpectedColumnName = "windows-x86"
 )
 
-$fail_count = 0
-$line_num = 0
+$WD = "test_scripts/test_data"
+$expectedFile = Join-Path $WD "expected_runtime.tsv"
+$reportedFile = "time_log.tsv"
+$selectedColumnsFile = Join-Path $WD "selected_columns.tsv"
+$reportedColumnFile = "$env:TEMP\reported_column.tsv"
+$finalFile = Join-Path $WD "combined_with_reported.tsv"
 
-Get-Content $input_file | ForEach-Object {
-    $line = $_.Trim()
-    $line_num++
+# Get the header and find the index of the expected column name
+$header = Get-Content $expectedFile -TotalCount 1
+$columns = $header -split "`t"
+$columnIndex = $columns.IndexOf($ExpectedColumnName)
 
-    if ($line_num -eq 1 -or $line -eq "") {
-        return  # skip header or empty line
-    }
+if ($columnIndex -lt 0) {
+    Write-Error "Column '$ExpectedColumnName' not found in $expectedFile"
+    exit 1
+}
 
-    $columns = $line -split "`t"
-    if ($columns.Count -lt 4) {
-        Write-Host "Skipping malformed line: $line"
-        return
-    }
+# Adjust to 0-based indexing for arrays
+$expectedLines = Get-Content $expectedFile | Select-Object -Skip 1
+$selectedColumns = foreach ($line in $expectedLines) {
+    $parts = $line -split "`t"
+    "$($parts[0])`t$($parts[1])`t$($parts[$columnIndex])"
+}
+$selectedColumns | Set-Content $selectedColumnsFile
 
-    $iqtree_file = Join-Path "test_scripts/test_data" $columns[0]
-    $field_name = $columns[1]
-    $expected_value = [double]$columns[2]
-    $threshold = [double]$columns[3]
+# Read reported column from time_log.tsv (column 3 = RealTime, 4 = Memory)
+$reportedLines = Get-Content $reportedFile | Select-Object -Skip 1
+$reportedColumn = foreach ($line in $reportedLines) {
+    $parts = $line -split "`t"
+    $parts[1]  # column 2 = runtime (0-based index)
+}
+$reportedColumn | Set-Content $reportedColumnFile
 
-    if (-not (Test-Path $iqtree_file)) {
-        Write-Host "File not found: ${iqtree_file}"
-        return
-    }
+# Combine both files
+$combinedLines = @()
+for ($i = 0; $i -lt $selectedColumns.Count; $i++) {
+    $combinedLines += "$($selectedColumns[$i])`t$($reportedColumn[$i])"
+}
+$combinedLines | Set-Content $finalFile
 
-    $actual_line = Select-String -Path $iqtree_file -Pattern ([regex]::Escape($field_name))
-    if (-not $actual_line) {
-        Write-Host "Field not found in ${iqtree_file}: ${field_name}"
-        return
-    }
+# Now compare
+$failCount = 0
+$finalLines = Get-Content $finalFile
 
-    $match = [regex]::Match($actual_line.Line, '[-+]?\d+(\.\d+)?([eE][-+]?\d+)?')
+foreach ($line in $finalLines) {
+    $parts = $line -split "`t"
+    $command = $parts[0]
+    $threshold = [double]$parts[1]
+    $expected = [double]$parts[2]
+    $reported = [double]$parts[3]
 
-    if (-not $match.Success) {
-        Write-Host "No numeric value found in line: $($actual_line.Line)"
-        return
-    }
+    $allowed = $expected + $threshold
+    $exceededBy = $reported - $expected
 
-    $actual_value = [double]$match.Value
-    $highest_value = $expected_value + $threshold
-
-    if ($actual_value -le $highest_value) {
-        Write-Host "PASS: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Threshold: ${threshold}"
+    if ($reported -gt $allowed) {
+        Write-Host "❌ $command exceeded the allowed usage."
+        Write-Host "Expected: $expected S, Threshold: $threshold S, Reported: $reported S"
+        $failCount++
     } else {
-        Write-Host "FAIL: ${iqtree_file} -- Expected: ${expected_value}, Reported: ${actual_value}, Threshold: ${threshold}"
-        $fail_count++
+        Write-Host "✅ $command passed the check."
+        Write-Host "Expected: $expected S, Threshold: $threshold S, Reported: $reported S"
     }
 }
 
 Write-Host ""
-if ($fail_count -eq 0) {
+
+if ($failCount -eq 0) {
     Write-Host "✅ All runtime checks passed."
+    exit 0
 } else {
-    Write-Host "❌ ${fail_count} checks failed."
+    Write-Host "❌ $failCount checks failed."
     exit 1
 }

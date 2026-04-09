@@ -200,7 +200,8 @@ void IQTree::restoreCheckpoint() {
         for (id = 0; id < static_cast<size_t>(params->gbo_replicates); id++) {
             checkpoint->addListElement();
             string str;
-            ASSERT(checkpoint->getString("", str));
+            checkpoint->getString("", str);
+            ASSERT(!str.empty());
             stringstream ss(str);
             ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
         }
@@ -986,7 +987,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 }
 
-string IQTree::generateParsimonyTree(int randomSeed) {
+/* string IQTree::generateParsimonyTree(int randomSeed) {
     string parsimonyTreeString;
     if (params->start_tree == STT_PLL_PARSIMONY) {
         pllInst->randomNumberSeed = randomSeed;
@@ -1013,7 +1014,7 @@ string IQTree::generateParsimonyTree(int randomSeed) {
     }
     return parsimonyTreeString;
 
-}
+}*/
 
 void IQTree::initializePLL(Params &params) {
     pllAttr.rateHetModel = PLL_GAMMA;
@@ -1125,12 +1126,12 @@ double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
 }
 
-void IQTree::resetKDelete() {
+/* void IQTree::resetKDelete() {
     k_delete = k_delete_min;
     k_delete_stay = ceil(leafNum / k_delete);
-}
+}*/
 
-void IQTree::increaseKDelete() {
+/* void IQTree::increaseKDelete() {
     if (k_delete >= k_delete_max) {
         return;
     }
@@ -1143,7 +1144,7 @@ void IQTree::increaseKDelete() {
     if (verbose_mode >= VB_MED) {
         cout << "Increase k_delete to " << k_delete << endl;
     }
-}
+}*/
 
 //void IQTree::setIQPIterations(STOP_CONDITION stop_condition, double stop_confidence, int min_iterations,
 //        int max_iterations) {
@@ -1153,8 +1154,8 @@ void IQTree::increaseKDelete() {
 //}
 
 RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec, int nei_id, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) (dad->neighbors[static_cast<size_t>(nei_id)]->node);
-    int set_id = dad->id * 3 + nei_id;
+    PhyloNode *node = (PhyloNode*) (dad->neighbors[nei_id]->node);
+    int set_id = (dad->id * 3) + nei_id;
     if (leaves_vec[set_id]) {
         return leaves_vec[set_id];
     }
@@ -1235,7 +1236,7 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
  }
  }*/
 
-void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
+/* void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     NodeVector cherry_taxa;
     NodeVector noncherry_taxa;
     // get the vector of non cherry taxa
@@ -1283,7 +1284,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         }
     }
     root = cherry_taxa[j];
-}
+}*/
 
 void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     NodeVector taxa;
@@ -1301,7 +1302,7 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
     }
     // now try to randomly delete some taxa of the probability of p_delete
     for (i = 0; i < num_delete;) {
-        size_t id = static_cast<size_t>(random_int(taxa.size()));
+        int id = random_int(taxa.size());
         if (!taxa[id]) {
             continue;
         } else {
@@ -1325,9 +1326,9 @@ int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf)
     ASSERT(dist_matrix);
     int nseq = aln->getNSeq();
     //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
-    double dist0 = dist_matrix[static_cast<size_t>(leaf0->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf1->id * nseq + leaf2->id)];
-    double dist1 = dist_matrix[static_cast<size_t>(leaf1->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf0->id * nseq + leaf2->id)];
-    double dist2 = dist_matrix[static_cast<size_t>(leaf2->id * nseq + del_leaf->id)] + dist_matrix[static_cast<size_t>(leaf0->id * nseq + leaf1->id)];
+    double dist0 = dist_matrix[(leaf0->id * nseq) + del_leaf->id] + dist_matrix[(leaf1->id * nseq) + leaf2->id];
+    double dist1 = dist_matrix[(leaf1->id * nseq) + del_leaf->id] + dist_matrix[(leaf0->id * nseq) + leaf2->id];
+    double dist2 = dist_matrix[(leaf2->id * nseq) + del_leaf->id] + dist_matrix[(leaf0->id * nseq) + leaf1->id];
     if (dist0 < dist1 && dist0 < dist2) {
         return 0;
     }
@@ -1340,10 +1341,10 @@ int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf)
 int IQTree::assessQuartetParsimony(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf) {
     int score[3] = { 0, 0, 0 };
     for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
-        char ch0 = (*it)[static_cast<size_t>(leaf0->id)];
-        char ch1 = (*it)[static_cast<size_t>(leaf1->id)];
-        char ch2 = (*it)[static_cast<size_t>(leaf2->id)];
-        char chd = (*it)[static_cast<size_t>(del_leaf->id)];
+        char ch0 = (*it)[leaf0->id];
+        char ch1 = (*it)[leaf1->id];
+        char ch2 = (*it)[leaf2->id];
+        char chd = (*it)[del_leaf->id];
         if (ch0 >= aln->num_states || ch1 >= aln->num_states || ch2 >= aln->num_states || chd >= aln->num_states) {
             continue;
         }
@@ -1458,7 +1459,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
                 } else {
                     best_id = assessQuartetParsimony((*i0)->leaf, (*i1)->leaf, (*i2)->leaf, del_leaf);
                 }
-                bonus[static_cast<size_t>(best_id)] += 1.0;
+                bonus[best_id] += 1.0;
             }
         }
     }
@@ -1562,16 +1563,16 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         drawTree(cout, WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 }
 
-void IQTree::doParsimonyReinsertion() {
+/* void IQTree::doParsimonyReinsertion() {
     PhyloNodeVector del_leaves;
 
     deleteLeaves(del_leaves);
 
     reinsertLeavesByParsimony(del_leaves);
     fixNegativeBranch(false);
-}
+}*/
 
-void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches) {
+/* void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches) {
     if (tabuSplits.size() == 0) {
         return;
     }
@@ -1592,7 +1593,7 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
         }
 
     }
-}
+}*/
 
 void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *node, Node *dad) {
     if (!node) {
@@ -1759,6 +1760,65 @@ string IQTree::perturbStableSplits(double suppValue) {
     return getTreeString();
 }
 
+static double branchLengthSafe(const Branch& b) {
+    Node* u = b.first;
+    Node* v = b.second;
+    double L = 0.0;
+
+    if (Neighbor* n = u->findNeighbor(v)) {
+        L = n->length;
+    } else if (Neighbor* m = v->findNeighbor(u)) {
+        L = m->length;
+    }
+
+    if (!(L >= 0.0) || std::isnan(L)) {
+        L = 0.0;
+    }
+
+    return L;
+}
+
+static std::vector<double> computeRankOverE(const std::vector<Branch>& branches,
+                                            const std::vector<double>& lengths) {
+    const size_t E = branches.size();
+
+    std::vector<size_t> idx(E);
+    std::iota(idx.begin(), idx.end(), 0);
+
+    std::sort(idx.begin(), idx.end(),
+              [&](size_t i, size_t j) {
+                  return lengths[i] < lengths[j];
+              });
+
+    std::vector<double> rOverE(E, 0.0);
+
+    for (size_t r = 0; r < E; ++r) {
+        rOverE[idx[r]] = static_cast<double>(r + 1) / static_cast<double>(E); // 1..E → (0,1]
+    }
+
+    return rOverE;
+}
+
+static int sampleIndexByWeights(const std::vector<double>& w) {
+    double sumW = 0.0;
+    for (double x : w) {
+        sumW += x;
+    }
+    if (!(sumW > 0.0)) {
+        return random_int((int)w.size()); // uniform fallback
+    }
+    const double u = random_double() * sumW;
+    double acc = 0.0;
+
+    for (size_t i = 0; i < w.size(); ++i) {
+        acc += w[i];
+        if (u <= acc) {
+            return (int)i;
+        }
+    }
+    return (int)w.size() - 1;
+}
+
 string IQTree::doRandomNNIs(bool storeTabu) {
     int cntNNI = 0;
     int numRandomNNI;
@@ -1789,8 +1849,52 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); ++it) {
             vectorNNIBranches.push_back(it->second);
         }
-        int randInt = random_int((int) vectorNNIBranches.size());
-        NNIMove randNNI = getRandomNNI(vectorNNIBranches[randInt]);
+        
+        int pickedIndex = -1;
+        if (!Params::getInstance().weightedPerturbation || vectorNNIBranches.size() == 1) {
+            // default: uniform
+            pickedIndex = random_int(static_cast<int>(vectorNNIBranches.size()));
+        } else {
+            // weighted: w_i = (beta*Lmed + rank_i/E)^(-alpha)
+            const double alpha = 64.0;
+            const double beta  = 0.5;
+            constexpr double eps = 1e-12;
+
+            std::vector<double> lengths;
+            lengths.reserve(vectorNNIBranches.size());
+
+            for (const auto& br : vectorNNIBranches) {
+                lengths.push_back(branchLengthSafe(br));
+            }
+
+            double Lmed = 0.0;
+            if (!lengths.empty()) {
+                std::vector<double> sorted = lengths;
+                std::sort(sorted.begin(), sorted.end());
+
+                const size_t E = sorted.size();
+                if (E % 2 == 0) {
+                    Lmed = 0.5 * (sorted[E / 2 - 1] + sorted[E / 2]);
+                } else {
+                    Lmed = sorted[E / 2];
+                }
+            }
+
+            std::vector<double> rOverE = computeRankOverE(vectorNNIBranches, lengths);
+
+            const double shift = std::max(beta * Lmed, eps);
+            std::vector<double> w(rOverE.size());
+
+            for (size_t i = 0; i < rOverE.size(); ++i) {
+                const double base = shift + rOverE[i];
+                w[i] = std::pow(base, -alpha);
+            }
+
+            pickedIndex = sampleIndexByWeights(w);
+        }
+
+        NNIMove randNNI = getRandomNNI(vectorNNIBranches[pickedIndex]);
+        
         if (constraintTree.isCompatible(randNNI)) {
             // only if random NNI satisfies constraintTree
             doNNI(randNNI);
@@ -1985,7 +2089,7 @@ void IQTree::pllBuildIQTreePatternIndex(){
 
     char * pll_site = new char[pllAlignment->sequenceCount + 1];
     char * site = new char[pllAlignment->sequenceCount + 1];
-    for(size_t i = 0; i < pllAlignment->sequenceLength; i++){
+    for(int i = 0; i < pllAlignment->sequenceLength; i++){
         for(int j = 0; j < pllAlignment->sequenceCount; j++) {
             pll_site[j]= pll_aln[j][i];
         }
@@ -1993,7 +2097,7 @@ void IQTree::pllBuildIQTreePatternIndex(){
 
         site[pllAlignment->sequenceCount] = '\0';
         for(int k = 0; k < aln->size(); k++){
-            for(size_t p = 0; p < pllAlignment->sequenceCount; p++) {
+            for(int p = 0; p < pllAlignment->sequenceCount; p++) {
                 site[p] = aln->convertStateBack(aln->at(k)[p]);
             }
             pllBaseSubstitute(site, pllPartitions->partitionData[0]->dataType);
@@ -2170,7 +2274,7 @@ double IQTree::perturb(int times) {
         PhyloNode *taxon2;
         int *dists = new int[taxa.size()];
         int minDist = 1000000;
-        for (size_t i = 0; i < taxa.size(); i++) {
+        for (int i = 0; i < taxa.size(); i++) {
             if (i == taxonid1) {
                 continue;
             }
@@ -2183,7 +2287,7 @@ double IQTree::perturb(int times) {
         }
 
         int taxonid2 = -1;
-        for (size_t i = 0; i < taxa.size(); i++) {
+        for (int i = 0; i < taxa.size(); i++) {
             if (dists[i] == minDist) {
                 taxonid2 = i;
             }
@@ -2277,6 +2381,15 @@ string IQTree::ensureModelParametersAreSet(double initEpsilon) {
         initTree = getTreeString();
         cout << "CHECKPOINT: Model parameters restored, LogL: " << getCurScore() << endl;
     } else {
+        // for mixtureFinder, verify whether the likelihood is the same as the best likelihood obtained in mixtureFinder
+        double mixFinderLogL;
+        if (getCheckpoint()->get("MixFinderLogL", mixFinderLogL)) {
+            double allowableDiff = 0.01;
+            double currLogL = computeLikelihood();
+            ASSERT(fabs(currLogL - mixFinderLogL) < allowableDiff);
+            getCheckpoint()->eraseKeyPrefix("MixFinderLogL");
+        }
+        
         initTree = optimizeModelParameters(true, initEpsilon);
         if (isMixlen()) {
             initTree = ((ModelFactoryMixlen*)getModelFactory())->sortClassesByTreeLength();
@@ -3325,7 +3438,11 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         }
         trackProgress(1);
     }
-    doneProgress();
+    bool showMsg = false;
+    if (verbose_mode >= VB_MED) {
+        showMsg = true;
+    }
+    doneProgress(showMsg);
 
     if (totalNNIApplied == 0 && verbose_mode >= VB_MED) {
         cout << "NOTE: Input tree is already NNI-optimal" << endl;
@@ -3391,7 +3508,7 @@ double IQTree::pllOptimizeNNI(int &totalNNICount, int &nniSteps, SearchInfo &sea
     return searchinfo.curLogl;
 }
 
-void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
+/* void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatterns){
     ofstream bfile("boot_samples.log");
     bfile << "Original freq:" << endl;
     int sum = 0;
@@ -3413,7 +3530,7 @@ void IQTree::pllLogBootSamples(int** pll_boot_samples, int nsamples, int npatter
     }
     bfile.close();
 
-}
+}*/
 
 void IQTree::pllInitUFBootData(){
     if(pllUFBootDataPtr == nullptr){
@@ -3446,13 +3563,13 @@ void IQTree::pllInitUFBootData(){
             if(!pllUFBootDataPtr->boot_samples) {
                 outError("Not enough dynamic memory!");
             }
-            for(size_t i = 0; i < params->gbo_replicates; i++){
+            for(int i = 0; i < params->gbo_replicates; i++){
                 pllUFBootDataPtr->boot_samples[i] =
                     (int *) malloc(pllAlignment->sequenceLength * sizeof(int));
                 if(!pllUFBootDataPtr->boot_samples[i]) {
                     outError("Not enough dynamic memory!");
                 }
-                for(size_t j = 0; j < pllAlignment->sequenceLength; j++){
+                for(int j = 0; j < pllAlignment->sequenceLength; j++){
                     pllUFBootDataPtr->boot_samples[i][j] =
                         boot_samples[i][pll2iqtree_pattern_index[j]];
                 }
@@ -3497,7 +3614,7 @@ void IQTree::pllDestroyUFBootData(){
         free(pllUFBootDataPtr->treels_logl);
 
 
-        for(size_t i = 0; i < pllUFBootDataPtr->treels_size; i++) {
+        for(int i = 0; i < pllUFBootDataPtr->treels_size; i++) {
             if(pllUFBootDataPtr->treels_ptnlh[i]) {
                 free(pllUFBootDataPtr->treels_ptnlh[i]);
             }
@@ -3562,7 +3679,7 @@ void IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compa
 //    }
 //}
 
-double IQTree::getAvgNumNNI() {
+/* double IQTree::getAvgNumNNI() {
     if (vecNumNNI.size() == 0) {
         return 0;
     } else {
@@ -3576,9 +3693,9 @@ double IQTree::getAvgNumNNI() {
         }
         return median;
     }
-}
+}*/
 
-double IQTree::estDeltaMedian() {
+/* double IQTree::estDeltaMedian() {
     if (vecImpProNNI.size() == 0) {
         return 0;
     } else {
@@ -3592,7 +3709,7 @@ double IQTree::estDeltaMedian() {
         }
         return median;
     }
-}
+}*/
 
 //inline double IQTree::estDelta95() {
 //    if (vecImpProNNI.size() == 0) {
@@ -3608,9 +3725,9 @@ int IQTree::getDelete() const {
     return k_delete;
 }
 
-void IQTree::setDelete(int _delete) {
+/* void IQTree::setDelete(int _delete) {
     k_delete = _delete;
-}
+}*/
 
 void IQTree::evaluateNNIs(Branches &nniBranches, vector<NNIMove>  &positiveNNIs) {
     for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {
@@ -3635,13 +3752,13 @@ void IQTree::evaluateNNIs(Branches &nniBranches, vector<NNIMove>  &positiveNNIs)
 //    }
 //}
 
-double IQTree::optimizeNNIBranches(Branches &nniBranches) {
+/* double IQTree::optimizeNNIBranches(Branches &nniBranches) {
     for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {
         optimizeOneBranch((PhyloNode*) it->second.first, (PhyloNode*) it->second.second, true, PLL_NEWZPERCYCLE);
     }
     curScore = computeLikelihoodFromBuffer();
     return curScore;
-}
+}*/
 
 /**
  *  Currently not used, commented out to simplify the interface of getBestNNIForBran
@@ -3758,7 +3875,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     memset(pattern_lh, 0, maxnptn*sizeof(BootValType));
     double *pattern_lh_orig = aligned_alloc<double>(nptn);
     computePatternLikelihood(pattern_lh_orig, &cur_logl);
-    for (size_t i = 0; i < nptn; i++) {
+    for (int i = 0; i < nptn; i++) {
         pattern_lh[i] = (float)pattern_lh_orig[i];
     }
 #else
@@ -4186,7 +4303,8 @@ void IQTree::computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, boo
     
     Split outgroup_split(leafNum);
     getTaxa(outgroup_split, outgroup_branch.first, outgroup_branch.second->node);
-    int first_outgroup_id = outgroup_split.firstTaxon();
+    // first_outgroup_id is never used
+    // int first_outgroup_id = outgroup_split.firstTaxon();
     
     // sanity check
     if (outgroup_split.countTaxa() != outgroup_vec.size()) {
@@ -4413,7 +4531,7 @@ double IQTree::computeBootstrapCorrelation() {
     for (i = 0; i < sg->size(); i++) {
         if ((*sg)[i]->trivial() == -1) {
             int index;
-            Split *sp = split_map.findSplit((*sg)[i], index);
+            const Split *sp = split_map.findSplit((*sg)[i], index);
             if (sp) {
                 // split found
                 split_supports_new[index] = (int) ((*sg)[i]->getWeight());
@@ -4485,7 +4603,7 @@ void IQTree::printBestCandidateTree() {
 }
 
 
-void IQTree::printPhylolibTree(const char* suffix) {
+/* void IQTree::printPhylolibTree(const char* suffix) {
     pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_TRUE, 1, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
     char phylolibTree[1024];
@@ -4494,7 +4612,7 @@ void IQTree::printPhylolibTree(const char* suffix) {
     FILE *phylolib_tree = fopen(phylolibTree, "w");
     fprintf(phylolib_tree, "%s", pllInst->tree_string);
     cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
-}
+}*/
 
 void IQTree::printIntermediateTree(int brtype) {
     setRootNode(params->root);
@@ -4541,15 +4659,15 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 
-void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs) {
-    for (size_t i = 0; i < numNNIs; i++) {
+/* void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs) {
+    for (int i = 0; i < numNNIs; i++) {
         Split *sp = new Split(*getSplit(compatibleNNIs[i].node1, compatibleNNIs[i].node2));
         if (sp->shouldInvert()) {
             sp->invert();
         }
         nniSplits.insertSplit(sp, 1);
     }
-}
+}*/
 
 double IQTree::getBestScore() {
     return candidateTrees.getBestScore();

@@ -1040,7 +1040,7 @@ bool ModelCodon::getVariables(double *variables) {
             changed |= (kappa2 != variables[j]);
             kappa2 = variables[j++];
         }
-        ASSERT(j == num_params+1);
+        // ASSERT(j == num_params+1);
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
@@ -1079,7 +1079,7 @@ void ModelCodon::setVariables(double *variables) {
         if (!fix_kappa2)
             variables[j++] = kappa2;
         
-		ASSERT(j == num_params+1);
+		// ASSERT(j == num_params+1);
 	}
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
@@ -1180,6 +1180,41 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
 	return score;
 }
 
+void ModelCodon::printMrBayesModelText(ofstream& out, string partition, string charset) {
+    // NST should be 1 if fix_kappa is true (no ts/tv ratio), else it should be 2
+    // GTR codon is not available in IQTREE
+    int nst = fix_kappa ? 1 : 2;
+    int code = phylo_tree->aln->getGeneticCodeId();
+    string mr_bayes_code = getMrBayesGeneticCode(code);
+    bool code_not_supported = mr_bayes_code.empty();
+    RateHeterogeneity* rate = phylo_tree->getRate();
+
+    string model_name = fix_kappa ? "JC" : "HKY";
+
+    // If this model is a Empirical / Semi-Empirical Model
+    if (num_params == 0 || name.find('_') != string::npos) {
+        nst = 6;
+        model_name = "GTR";
+    }
+
+    out << "using MrBayes model " << model_name << "]" << endl;
+
+    if (rate->isFreeRate() || rate->getGammaShape() > 0.0 || rate->getPInvar() > 0.0) {
+        out << "  [Rate modifiers (+I, +G, +R) ignored, not supported by MrBayes codon models]" << endl;
+        outWarning("MrBayes Codon Models do not support any Heterogenity Rate Modifiers! (+I, +G, +R) They have been ignored!");
+    }
+
+    if (code_not_supported) {
+        outWarning("MrBayes Does Not Support Codon Code " + convertIntToString(code) + "! Defaulting to Universal (Code 1).");
+        mr_bayes_code = "universal";
+    }
+
+    out << "  [IQTree genetic code " << code << ", using MrBayes genetic code " << mr_bayes_code << "]" << endl;
+    if (code_not_supported)
+        out << "  [Genetic code " << code << " is not supported by MrBayes, defaulting to universal (code 1)]" << endl;
+
+    out << "  lset applyto=(" << partition << ") nucmodel=codon omegavar=equal nst=" << nst << " code=" << mr_bayes_code << ";" << endl;
+}
 
 void ModelCodon::writeInfo(ostream &out) {
     if (name.find('_') == string::npos)

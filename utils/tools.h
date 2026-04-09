@@ -125,6 +125,8 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 	#include <set>
 #endif
 
+// using namespace std;
+
 
 #if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER) && !defined(__clang__)
 /*
@@ -763,6 +765,11 @@ public:
 	 */
 	double initPS;
 
+    /**
+     * a switch to apply bias towards shorter branches during radom perturbation
+     */
+    bool weightedPerturbation;
+    
 	/**
 	 *  logl epsilon for model parameter optimization
 	 */
@@ -995,6 +1002,13 @@ public:
 
     /** true to do the approximately unbiased (AU) test */
     bool do_au_test;
+
+    /**
+     * log-likelihood epsilon for AU test: if |deltaL| between two trees is
+     * smaller than this value, the tree is kept in the confidence set regardless
+     * of the AU p-value (default: 0.0 = disabled)
+     */
+    double au_epsilon;
 
     /**
             file specifying partition model
@@ -1645,6 +1659,11 @@ public:
 
     /** force to parallelisation over sites */
     bool parallel_over_sites;
+
+    /** each partition gets min(nthreads, size_cap) threads,
+     *  partitions dispatched heavy-first; no round-robin distribution of surplus threads
+     *  across partitions */
+    bool parallel_per_partition;
 
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
     bool order_by_threads;
@@ -2362,6 +2381,10 @@ public:
     /** sample size for AICc and BIC */
     int model_test_sample_size;
 
+    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
+     *  Default 4000. Set via --mf-thread-factor. */
+    int mf_thread_factor;
+
     /** root state, for Tina's zoombie domain */
     char *root_state;
 
@@ -2458,6 +2481,9 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+    
+    /** true if forcing IQ-TREE to run MixtureFinder for amino acid data */
+    bool force_aa_mix_finder;
     
     /** TRUE to print checkpoints to 1.ckp.gz, 2.ckp.gz,... */
     bool print_all_checkpoints;
@@ -2562,6 +2588,11 @@ public:
     *  TRUE to disable copying gaps from input sequences
     */
     bool alisim_no_copy_gaps;
+    
+    /**
+    *  TRUE if users have specified the random seed
+    */
+    bool seed_specified;
     
     /**
     *  original parameters
@@ -2727,6 +2758,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to skip branch length checking
+    */
+    bool alisim_skip_bl_check;
+    
+    /**
     *  TRUE to output all replicate alignments into a single file
     */
     bool alisim_single_output;
@@ -2858,6 +2894,11 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+
+    /**
+    * Whether to output a MrBayes Block File
+    */
+    bool mr_bayes_output;
     
     /**
      *  input tree string (instead of a file)
@@ -3823,5 +3864,22 @@ double frob_norm (double m[], int n, double scale=1.0);
 */
 string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
+/**
+ * ensures a number, to be inputted into MrBayes, is larger than the minimum value for MrBayes (0.01)
+ */
+double minValueCheckMrBayes(double orig_value);
+
+
+/**
+ * get a map of iqtree amino acid/protein substitution models to MrBayes amino acid/protein substitution models.<br>
+ * models which are not supported by mrbayes are not included. GTR20 is assumed as default.
+ */
+unordered_map<string, string> getIqTreeToMrBayesAAModels();
+
+/**
+ * get the MrBayes equivalent of a genetic code, given the id of the code. Returns and empty string if that code
+ * is not supported in MrBayes.
+ */
+string getMrBayesGeneticCode(int geneticCodeId);
 
 #endif

@@ -167,7 +167,7 @@ bool CandidateSet::replaceTree(string tree, double score) {
 */
 
 
-void CandidateSet::addCandidateSplits(string treeString) {
+/* void CandidateSet::addCandidateSplits(string treeString) {
     vector<string> taxaNames = aln->getSeqNames();
     MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
     SplitGraph allSplits;
@@ -185,9 +185,9 @@ void CandidateSet::addCandidateSplits(string treeString) {
         }
     }
     candSplits.setNumTree(candSplits.getNumTree() + 1);
-}
+}*/
 
-void CandidateSet::removeCandidateSplits(string treeString) {
+/* void CandidateSet::removeCandidateSplits(string treeString) {
     vector<string> taxaNames = aln->getSeqNames();
     MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
     SplitGraph allSplits;
@@ -210,7 +210,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
         }
     }
     candSplits.setNumTree(candSplits.getNumTree() - 1);
-}
+}*/
 
 string CandidateSet::getNextCandTree() {
     string tree;
@@ -331,10 +331,10 @@ string CandidateSet::getTopology(string tree) {
     return ostr.str();
 }
 
-double CandidateSet::getTopologyScore(string topology) {
+/* double CandidateSet::getTopologyScore(string topology) {
     ASSERT(topologies.find(topology) != topologies.end());
     return topologies[topology];
-}
+}*/
 
 void CandidateSet::clear() {
     multimap<double, CandidateTree>::clear();
@@ -358,7 +358,7 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
     return res;
 }
 
-void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, int format) {
+/* void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, int format) {
     trees.clear();
     scores.clear();
 
@@ -370,24 +370,24 @@ void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, in
         }
         scores.push_back(rit->first);
     }
-}
+}*/
 
 bool CandidateSet::treeTopologyExist(string topo) {
     return (topologies.find(topo) != topologies.end());
 }
 
-bool CandidateSet::treeExist(string tree) {
+/* bool CandidateSet::treeExist(string tree) {
     return treeTopologyExist(convertTreeString(tree));
-}
+}*/
 
-CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
+/* CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
     for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
         if (rit->second.topology == topology) {
             return --(rit.base());
         }
     }
     return end();
-}
+}*/
 
 void CandidateSet::removeCandidateTree(string topology) {
     bool removed = false;
@@ -473,7 +473,7 @@ int CandidateSet::countStableSplits(double thresHold) {
     return numMaxSupport;
 }
 
-void CandidateSet::reportStableSplits() {
+/* void CandidateSet::reportStableSplits() {
     if (candSplits.empty()) {
         cout << "The set of stable splits is empty! " << endl;
         return;
@@ -487,13 +487,13 @@ void CandidateSet::reportStableSplits() {
             it->first->report(cout);
         }
     }
-}
+}*/
 
 void CandidateSet::setAln(Alignment *aln) {
     this->aln = aln;
 }
 
-CandidateSet CandidateSet::getCandidateTrees(double score) {
+/* CandidateSet CandidateSet::getCandidateTrees(double score) {
     CandidateSet res;
     for (CandidateSet::iterator it = begin(); it != end(); it++) {
         if (abs(it->first - score) < 0.1) {
@@ -501,7 +501,7 @@ CandidateSet CandidateSet::getCandidateTrees(double score) {
         }
     }
     return res;
-}
+} */
 
 void CandidateSet::printTrees(string suffix) {
     ofstream outTrees, outLHs;

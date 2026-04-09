@@ -218,7 +218,7 @@ void MExtTree::generateUniform(Params &params, bool binary)
 	for (i = 2; i < size; i++)
 	{
 		int index;
-		index = random_int(2*i-3);
+		index = random_int((2*i)-3);
 		//cout << "step " << i << " left = " << leftend[index]->id << " right = " << rightend[index]->id << endl;
 
 		// add an internal node

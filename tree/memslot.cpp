@@ -237,7 +237,7 @@ void MemSlotVector::replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     cout << "slot " << distance(begin(), it) << " replaced" << endl;
 }
 
-void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
+/* void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator it = findNei(new_nei);
@@ -251,4 +251,4 @@ void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     nei_id_map.erase(new_nei);
 //    nei_id_map[old_nei] = it;
     cout << "slot " << distance(begin(), it) << " restored" << endl;
-}
+}*/

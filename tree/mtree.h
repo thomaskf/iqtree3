@@ -290,7 +290,7 @@ public:
      * @param tree the other tree to compare with
      * @return TRUE if this tree is topologically equal to tree
      */
-    bool equalTopology(MTree *tree);
+    // bool equalTopology(MTree *tree);
 
     /********************************************************
             READ TREE FROM FILE
@@ -741,7 +741,7 @@ public:
      *  @param splits list of splits to check
      *  @return true or false
      */
-    bool containsSplits(SplitGraph& splits);
+    // bool containsSplits(SplitGraph& splits);
 
     /********************************************************
             CONVERT SPLIT SYSTEM INTO TREE
@@ -840,7 +840,7 @@ public:
     Node *findFarthestLeaf(Node *node = nullptr, Node *dad = nullptr);
         
     /** 
-        @get pre-order branches going into swallow subtrees first
+        get pre-order branches going into swallow subtrees first
         @param nodes one endpoint of branch
         @params nodes2 other endpoint of branch
         @param node the starting node, nullptr to start from the root
@@ -911,7 +911,7 @@ public:
      */
     int freeNode(Node *node = nullptr, Node *dad = nullptr);
 
-    void setExtendedFigChar();
+    // void setExtendedFigChar();
 
     /** set pointer of params variable */
     virtual void setParams(Params* params) {
@@ -1024,6 +1024,7 @@ protected:
      */
     inline string getBranchID(Node* node1, Node* node2) {
         string key("");
+        ASSERT(node1 && node2);
         if (node1->id < node2->id) {
             key += convertIntToString(node1->id) + "-"
                     + convertIntToString(node2->id);

@@ -434,8 +434,9 @@ public:
      */
     inline size_t getNSite() {
         // if expected_num_sites is specified -> resizing site_pattern
-        if (expected_num_sites > -1)
-            site_pattern.resize(static_cast<size_t>(expected_num_sites));
+        if (expected_num_sites > -1) {
+            site_pattern.resize(expected_num_sites);
+        }
         
         return site_pattern.size();
     }
@@ -501,11 +502,10 @@ public:
     int getMaxSeqNameLength();
 
     /*
-        check if some state is absent, which may cause numerical issues
+        check if some states are absent, which may cause numerical issues
         @param msg additional message into the warning
-        @return number of absent states in the alignment
     */
-    virtual int checkAbsentStates(string msg);
+    virtual void checkAbsentStates(string msg);
 
     /**
             check proper and undupplicated sequence names
@@ -1058,6 +1058,12 @@ public:
         Extract Maple file from an alignment file
      */
     void extractMapleFile(const std::string& aln_name, const InputType& format);
+
+    /**
+     * Get the numerical id of the genetic code
+     * @return id the genetic code id, or 0 if not a codon type
+     */
+    int getGeneticCodeId();
 
 protected:
 

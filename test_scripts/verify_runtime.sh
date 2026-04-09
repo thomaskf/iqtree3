@@ -1,53 +1,48 @@
 #!/bin/bash
+# expect the first argument to be the column name : contain what platform(OS) is running the script
+expected_column="$1"
 
 WD="test_scripts/test_data"
-input_file="${WD}/expected_runtimes.txt"
+input_file="${WD}/expected_runtime.tsv"
+reported_file="time_log.tsv"
+selected_columns_file="${WD}/selected_columns.tsv"
+
+# Get the column index (1-based) of the expected column name
+col_index=$(head -1 "$input_file" | tr '\t' '\n' | awk -v col="$expected_column" '{if ($0 == col) print NR}')
+
+# Check if column was found
+if [[ -z "$col_index" ]]; then
+  echo "Column '$expected_column' not found in $input_file"
+  exit 1
+fi
+
+cut -f1,2,"$col_index" "$input_file" > "${selected_columns_file}"
+final_file="${WD}/combined_with_reported.tsv"
+
+# assuming the reported file and expected file have the same order of commands
+cut -f2 "$reported_file" > /tmp/reported_column.tsv
+paste "$selected_columns_file" /tmp/reported_column.tsv > "$final_file"
+
+
 fail_count=0
-line_num=0
 
-while IFS=$'\t' read -r iqtree_file field_name expected_value threshold || [ -n "$iqtree_file" ]; do
-    ((line_num++))
+# Skip header
+while IFS=$'\t' read -r command threshold expected reported; do
+    allowed=$(echo "$expected + $threshold" | bc -l)
+    is_exceed=$(echo "$reported > $allowed" | bc -l)
 
-    # Skip header (first line)
-    if [ "$line_num" -eq 1 ]; then
-        continue
-    fi
-
-    iqtree_file="${WD}/${iqtree_file}"
-
-    if [ ! -f "$iqtree_file" ]; then
-        echo "File not found: $iqtree_file"
-        continue
-    fi
-
-    # Look for the line containing the field name
-    report_line=$(grep -F "$field_name" "$iqtree_file")
-    if [ -z "$report_line" ]; then
-        echo "Field not found in $iqtree_file: $field_name"
-        continue
-    fi
-
-    # Extract the first numeric value from the matched line
-    report_value=$(echo "$report_line" | grep -Eo '[-+]?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?' | head -n1)
-    if [ -z "$report_value" ]; then
-        echo "No numeric value found in line: $report_line"
-        continue
-    fi
-
-    # Compute report value less than the highest value
-    higest_value=$(echo "$expected_value + $threshold"  | bc -l)
-    result=$(echo "$report_value <= $higest_value" | bc -l)
-
-    if [ "$result" -eq 1 ]; then
-        echo "PASS: $iqtree_file -- Expected: ${expected_value}, Reported: ${report_value}, Threshold: $threshold"
-    else
-        echo "FAIL: $iqtree_file ($field_name)"
-        echo "  Expected: ${expected_value}, Reported: ${report_value}, Threshold: $threshold"
+    if [ "$is_exceed" = "1" ]; then
+        diff=$(echo "$reported - $expected" | bc -l)
+        echo "❌ $command exceeded the allowed runtime usage."
+        echo "Expected: $expected S, Threshold: $threshold S, Reported: $reported S, Difference: $diff S"
         ((fail_count++))
+    else
+        echo "✅ $command passed the runtime check."
+        diff=$(echo "$reported - $expected" | bc -l)
+        echo "Expected: $expected S, Threshold: $threshold S, Reported: $reported S, Difference: $diff S"
     fi
-done < "$input_file"
+done < <(tail -n +2 "$final_file")
 
-echo
 if [ "$fail_count" -eq 0 ]; then
     echo "✅ All runtime checks passed."
 else

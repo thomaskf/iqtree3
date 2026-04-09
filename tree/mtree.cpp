@@ -25,7 +25,7 @@
 #include "pda/splitgraph.h"
 #include "utils/tools.h"
 #include "mtreeset.h"
-using namespace std;
+// using namespace std;
 
 /*********************************************
 	class MTree
@@ -601,7 +601,7 @@ void MTree::printSubTree(ostream &out, NodeVector &subtree, Node *node, Node *da
     do {
         degree = 0;
         FOR_NEIGHBOR(node, dad, it) {
-            if (subtree[static_cast<size_t>((*it)->node->id)] != nullptr) {
+            if (subtree[(*it)->node->id] != nullptr) {
                 degree++;
                 child = (*it)->node;
             }
@@ -623,7 +623,7 @@ void MTree::printSubTree(ostream &out, NodeVector &subtree, Node *node, Node *da
         bool first = true;
 
         FOR_NEIGHBOR(node, dad, it)	{
-            if (subtree[static_cast<size_t>((*it)->node->id)] != nullptr) {
+            if (subtree[(*it)->node->id] != nullptr) {
                 if ((*it)->node->name != ROOT_NAME) {
                     if (!first)
                         out << ",";
@@ -678,7 +678,7 @@ void MTree::printTaxa(ostream &out, Node *node, Node *dad)
 }
 
 void MTree::printTaxa(ostream &out, NodeVector &subtree) {
-    for (size_t i = 0; i < leafNum; i++)
+    for (int i = 0; i < leafNum; i++)
         if (subtree[i] != nullptr) {
             out << subtree[i]->name << endl;
         }
@@ -696,7 +696,7 @@ void MTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
             
             // make sure the current line is not empty
             if (in.peek() == EOF )
-                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index) + " at line " + convertIntToString(tree_line_index+1)+" in the input tree file. To use Edge-unlinked partition model, please specify a super tree (combining all taxa in all partitions) in the first line. Following that, each tree for each partition should be specified in a single line one by one in the input (multiple)-tree file.");
+                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index + 1) + " at line " + convertIntToString(tree_line_index + 1) + " in the input tree file. To use Edge-unlinked partition model, each tree for each partition should be specified in a single line one by one in the input (multiple)-tree file.");
         }
         readTree(in, is_rooted);
         in.close();
@@ -1527,7 +1527,7 @@ void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     }
 }
 
-bool MTree::containsSplits(SplitGraph& splits) {
+/* bool MTree::containsSplits(SplitGraph& splits) {
 	SplitGraph treeSplits;
 	convertSplits(treeSplits);
 	//check if treeSplits contains all splits in splits
@@ -1538,10 +1538,10 @@ bool MTree::containsSplits(SplitGraph& splits) {
 	//treeSplits.report(cout);
 	//splits.report(cout);
 	return true;
-}
+}*/
 
 Split* MTree::getSplit(Node* node1, Node* node2) {
-    Neighbor* node12 = node1->findNeighbor(node2);
+    const Neighbor* node12 = node1->findNeighbor(node2);
     return node12->split;
 }
 
@@ -1976,6 +1976,7 @@ void MTree::convertToUnrooted() {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
         }
+        ASSERT(node1 && node2);
         node1->updateNeighbor(node, node2, len);
         node2->updateNeighbor(node, node1, len);
         delete node;
@@ -2019,13 +2020,13 @@ int MTree::sortTaxa(Node *node, Node *dad) {
     return taxid_nei_map.begin()->first;
 }
 
-void MTree::setExtendedFigChar() {
+/* void MTree::setExtendedFigChar() {
 	//fig_char[0] = 179;
 	//fig_char[1] = 196;
 	fig_char[2] = '/';
 	//fig_char[3] = 195;
 	fig_char[4] = '\\';
-}
+}*/
 
 void MTree::drawTree(ostream &out, int brtype, double zero_epsilon) {
     IntVector sub_tree_br;
@@ -2200,7 +2201,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
     }
 }
 
-bool MTree::equalTopology(MTree *tree) {
+/* bool MTree::equalTopology(MTree *tree) {
 	ASSERT(root->isLeaf());
 	Node *root2 = tree->findLeafName(root->name);
 	if (!root2) return false;
@@ -2208,7 +2209,7 @@ bool MTree::equalTopology(MTree *tree) {
 	printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	tree->printTree(ostr2, WT_TAXON_ID | WT_SORT_TAXA, root2);
 	return ostr.str() == ostr2.str();
-}
+}*/
 
 void MTree::calcDist(char *filename) {
     vector<string> taxname;
@@ -2233,7 +2234,7 @@ void MTree::calcDist(char *filename) {
         for (i = 0; i < leafNum; i++) {
             out << taxname[i] << "   ";
             for (j = 0; j < leafNum; j++) {
-                out << dist[i*leafNum + j] << "  ";
+                out << dist[(i*leafNum) + j] << "  ";
             }
             out << endl;
         }
@@ -2260,8 +2261,8 @@ void MTree::calcDist(Node *aroot, double cur_len, double* &dist, Node *node, Nod
     double branch_length;
 	if (!node) node = root;
     if (node->isLeaf()) {
-        dist[static_cast<size_t>(aroot->id * leafNum + node->id)] = cur_len;
-        dist[static_cast<size_t>(node->id * leafNum + aroot->id)] = cur_len;
+        dist[(aroot->id * leafNum) + node->id] = cur_len;
+        dist[(node->id * leafNum) + aroot->id] = cur_len;
     }
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
@@ -2694,7 +2695,7 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 
 		//cout << "common_splits = " << common_splits << endl;
         double max_dist = branchNum-leafNum + tree.branchNum-tree.leafNum;
-        double rf_val = max_dist - 2*common_splits;
+        double rf_val = max_dist - (2*common_splits);
         if (Params::getInstance().normalize_tree_dist) {
             rf_val = rf_val / max_dist;
         }

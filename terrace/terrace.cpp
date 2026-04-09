@@ -266,8 +266,8 @@ void Terrace::linkTree(size_t part, NodeVector &part_taxa, bool back_branch_map,
     if (dad) {
         nei = (TerraceNeighbor*)node->findNeighbor(dad);
         dad_nei = (TerraceNeighbor*)dad->findNeighbor(node);
-        if (nei->link_neighbors.empty()) nei->link_neighbors.resize(static_cast<size_t>(part_num));
-        if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(static_cast<size_t>(part_num));
+        if (nei->link_neighbors.empty()) nei->link_neighbors.resize(part_num);
+        if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(part_num);
         nei->link_neighbors[part] = nullptr;
         dad_nei->link_neighbors[part] = nullptr;
     }

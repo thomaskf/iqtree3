@@ -324,9 +324,9 @@ public:
     double *echildren;
     double *partial_lh_leaves;
 
-    TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-        this->dad = dad;
-        this->dad_branch = dad_branch;
+    TraversalInfo(PhyloNeighbor *new_dad_branch, PhyloNode *new_dad) {
+        this->dad = new_dad;
+        this->dad_branch = new_dad_branch;
     }
 };
 
@@ -386,22 +386,22 @@ public:
     /**
             destructor
      */
-    virtual ~PhyloTree();
+    virtual ~PhyloTree() override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
             read the tree from the input file in newick format
@@ -409,27 +409,27 @@ public:
             @param is_rooted (IN/OUT) true if tree is rooted
             @param tree_line_index the line_index to read the tree (in case with multiple trees *.parttrees)
      */
-    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0);
+    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0) override;
 
     /**
             read the tree from the ifstream in newick format
             @param in the input stream.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    virtual void readTree(istream &in, bool &is_rooted);
+    virtual void readTree(istream &in, bool &is_rooted) override;
 
     /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy
      */
-    virtual void copyTree(MTree *tree);
+    virtual void copyTree(MTree *tree) override;
     /**
             copy the sub-tree structure into this tree
             @param tree the tree to copy
             @param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
      */
-    virtual void copyTree(MTree *tree, string &taxa_set);
+    virtual void copyTree(MTree *tree, string &taxa_set) override;
 
     /**
      copy the constraint tree structure into this tree and reindex node IDs accordingly
@@ -566,7 +566,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr);
+    virtual Node* newNode(int node_id = -1, const char* node_name = nullptr) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -574,7 +574,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual Node* newNode(int node_id, int node_name);
+    virtual Node* newNode(int node_id, int node_name) override;
 
     /**
      *		@return number of alignment patterns
@@ -809,7 +809,7 @@ public:
     /**
             allocate memory for a scale num vector
      */
-    UBYTE *newScaleNum();
+    // UBYTE *newScaleNum();
 
     /** get the number of bytes occupied by scale_num */
     size_t getScaleNumBytes();
@@ -1031,7 +1031,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    // virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
         compute likelihood of rooted tree with virtual root (FOR TINA)
@@ -1107,7 +1107,7 @@ public:
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
      */
-    void computeJointAncestralSequences(int *ancestral_seqs);
+    // void computeJointAncestralSequences(int *ancestral_seqs);
 
     /**
      * compute max ancestral likelihood according to
@@ -1207,7 +1207,7 @@ public:
 
     double correctBranchLengthF81(double observedBran, double alpha);
 
-    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    // double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             Compute the variance in log-likelihood difference
@@ -1485,7 +1485,7 @@ public:
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFunction(double value);
+    virtual double computeFunction(double value) override;
 
     /**
             Inherited from Optimization class.
@@ -1496,7 +1496,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
     /**
         optimize the scaling factor for tree length, given all branch lengths fixed
@@ -1684,7 +1684,7 @@ public:
             grow the tree by step-wise addition
             @param alignment input alignment
      */
-    void growTreeML(Alignment *alignment);
+    // void growTreeML(Alignment *alignment);
 
     /**
             used internally by growTreeML() to find the best target branch to add into the tree
@@ -1775,7 +1775,7 @@ public:
             @param dist_mat (IN/OUT) the shortest path between all pairs of taxa
     @return the longest distance
      */
-    double correctDist(double *dist_mat);
+    // double correctDist(double *dist_mat);
 
     /**
     compute the distance between two nodes on a tree.
@@ -1878,7 +1878,7 @@ public:
             no tree improvement found.
             @return the likelihood of the tree
      */
-    double optimizeSPRBranches();
+    // double optimizeSPRBranches();
 
     /**
             search by Subtree pruning and regrafting at a current subtree
@@ -1910,10 +1910,10 @@ public:
 
     double assessSPRMove(double cur_score, const SPRMove &spr);
 
-    void pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info);
+    // void pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info);
 
-    void regraftSubtree(PruningInfo &info,
-            PhyloNode *in_node, PhyloNode *in_dad);
+    /*void regraftSubtree(PruningInfo &info,
+            PhyloNode *in_node, PhyloNode *in_dad);*/
 
     /****************************************************************************
             Approximate Likelihood Ratio Test with SH-like interpretation
@@ -2459,7 +2459,7 @@ protected:
     /**
         return the number of dimensions
     */
-    virtual int getNDim();
+    virtual int getNDim() override;
 
 
     /**
@@ -2467,7 +2467,7 @@ protected:
         @param x the input vector x
         @return the function value at x
     */
-    virtual double targetFunk(double x[]);
+    virtual double targetFunk(double x[]) override;
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
@@ -2506,7 +2506,7 @@ protected:
             allocate new memory for a bit block vector
             @return the allocated memory
      */
-    UINT *newBitsBlock();
+    // UINT *newBitsBlock();
 
     virtual void saveCurrentTree(double logl) {
     } // save current tree
@@ -2545,7 +2545,7 @@ protected:
     void trackProgress(double amount);
     void hideProgress();
     void showProgress();
-    void doneProgress();
+    void doneProgress(bool showMsg = true);
 };
 
 #endif

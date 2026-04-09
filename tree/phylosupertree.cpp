@@ -96,7 +96,7 @@ void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
             at(part)->setModelFactory(tree->at(part)->getModelFactory());
         }
     } else {
-        for (size_t part = 0; part != size(); part++) {
+        for (int part = 0; part != size(); part++) {
             at(part)->setModelFactory(nullptr);
         }
     }
@@ -129,13 +129,13 @@ void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
 }
 
 
-void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
+/* void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
     PhyloTree::setAlignment(alignment);
 
     SuperAlignment *saln = (SuperAlignment*)aln;
     for (size_t i = 0; i < size(); i++)
         at(i)->setAlignment(saln->partitions.at(i));
-}
+}*/
 
 void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
 	IQTree::setCheckpoint(checkpoint);
@@ -403,7 +403,7 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, doub
 
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
 	SuperNode *node = (SuperNode*)dad_nei->node;
-	SuperNode *dad = (SuperNode*)nei->node;
+	const SuperNode *dad = (SuperNode*)nei->node;
 	nei->link_neighbors[part] = nullptr;
 	dad_nei->link_neighbors[part] = nullptr;
 	vector<PhyloNeighbor*> part_vec;
@@ -444,6 +444,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 		}
 	}
 	nei->link_neighbors[part] = (PhyloNeighbor*)node_part->findNeighbor(dad_part);
+    ASSERT(dad_part);
 	dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 }
 
@@ -636,7 +637,7 @@ void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     }
 }
 
-int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+/* int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor *dad_nei = (SuperNeighbor*)dad_branch;
     SuperNeighbor *node_nei = (SuperNeighbor*)(dad_branch->node->findNeighbor(dad));
@@ -656,7 +657,7 @@ int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, Ph
             branch_subst += this_subst;
     }
     return score;
-}
+}*/
 
 void PhyloSuperTree::computePartitionOrder() {
     if (!part_order.empty())
@@ -1346,7 +1347,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
 
     size_t total_size = 0, total_ptn = 0;
 
-    bool mixed_data = false;
+    // bool mixed_data = false;
 
     for (auto it = begin(); it != end(); it++) {
         size_t nptn = (*it)->aln->size();
@@ -1355,8 +1356,9 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
         (*it)->_pattern_lh_cat_state = (*it)->newPartialLh();
         total_size += nptn*nstates;
         total_ptn += nptn;
-        if (nstates != front()->model->num_states)
-            mixed_data = true;
+        // NHANLT: mixed_data is never used
+        /* if (nstates != front()->model->num_states)
+            mixed_data = true; */
     }
 
     ptn_ancestral_prob = aligned_alloc<double>(total_size);
@@ -1388,7 +1390,7 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
             double eqprob = 1.0/nstates;
             for (size_t ptn = 0; ptn < nptn; ptn++) {
                 for (size_t i = 0; i < nstates; i++)
-                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                    ptn_ancestral_prob[(ptn*nstates)+i] = eqprob;
                 ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
             }
         }
@@ -1415,7 +1417,7 @@ void PhyloSuperTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, Phy
             double eqprob = 1.0/nstates;
             for (size_t ptn = 0; ptn < nptn; ptn++) {
                 for (size_t i = 0; i < nstates; i++)
-                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                    ptn_ancestral_prob[(ptn*nstates)+i] = eqprob;
                 ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
             }
         }
@@ -1435,7 +1437,7 @@ void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
             int ptn = (*it)->aln->getPatternID(static_cast<int>(site));
             out << node->name << "\t" << part << "\t" << site+1 << "\t";
             out << (*it)->aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
-            double *state_prob = ptn_ancestral_prob + ptn*nstates;
+            const double *state_prob = ptn_ancestral_prob + (ptn*nstates);
             for (int j = 0; j < nstates; ++j) {
                 out << "\t" << state_prob[j];
             }
@@ -1500,12 +1502,12 @@ void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
     for (size_t part = 0; part != size(); part++) {
         bool present = true;
         FOR_NEIGHBOR_DECLARE(node1, nullptr, it) {
-            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            const SuperNeighbor *nei = (SuperNeighbor*)(*it);
             if (!nei->link_neighbors[part])
                 present = false;
         }
         FOR_NEIGHBOR(node2, nullptr, it) {
-            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            const SuperNeighbor *nei = (SuperNeighbor*)(*it);
             if (!nei->link_neighbors[part])
                 present = false;
         }

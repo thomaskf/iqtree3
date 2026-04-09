@@ -82,7 +82,7 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 
 # Require position independent code for IQ-TREE to be used as a library 
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
@@ -120,8 +120,8 @@ find_package(Backtrace)
 
 # The version number.
 set (iqtree_VERSION_MAJOR 3)
-set (iqtree_VERSION_MINOR 0)
-set (iqtree_VERSION_PATCH ".1")
+set (iqtree_VERSION_MINOR 1)
+set (iqtree_VERSION_PATCH ".0")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -139,7 +139,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Build mode   : Release")
 endif()
 
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     message("Build lib    : ON")
 else()
     message("Build lib    : OFF")
@@ -154,7 +154,7 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/yaml-cpp/include")
-include_directories(after system "/usr/local/include")
+include_directories(AFTER SYSTEM "/usr/local/include")
 
 ##################################################################
 # onnxruntime
@@ -227,6 +227,13 @@ if (APPLE)
         set (__ARM_NEON "TRUE")
         set (NEON 1)
     endif()
+    execute_process(
+      COMMAND sw_vers -productVersion
+      OUTPUT_VARIABLE MACOS_VERSION
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    string(REGEX MATCH "^([0-9]+)" MACOS_MAJOR_VERSION "${MACOS_VERSION}")
+    message("macOS version: ${MACOS_VERSION} (major: ${MACOS_MAJOR_VERSION})")
 elseif (UNIX AND NOT APPLE)  # Unix and Linux
     execute_process(
       COMMAND uname -m
@@ -252,7 +259,7 @@ endif()
 
 option(USE_CMAPLE_AA "Integrate CMAPLE-AA" OFF)
 
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     set(USE_CMAPLE "OFF")
     set(USE_CMAPLE_AA "OFF")
 endif()
@@ -282,7 +289,7 @@ endif()
 ##################################################################
 option(BUILD_LIB "Build IQTREE library" OFF)
 
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     message("Build IQTREE library: ON")
     add_definitions(-DBUILD_LIB)
 else()
@@ -529,8 +536,14 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 
     if(CLANG AND APPLE)
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-    		link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
-            LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/libmac_m1/libomp.a" "${PROJECT_SOURCE_DIR}/libmac_m1/libz.a")
+            if(MACOS_MAJOR_VERSION GREATER_EQUAL 26)
+                message("Using libmac26_m1 for macOS ${MACOS_VERSION}")
+                link_directories(${PROJECT_SOURCE_DIR}/libmac26_m1)
+                LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/libmac26_m1/libomp.a" "${PROJECT_SOURCE_DIR}/libmac_m1/libz.a")
+            else()
+                link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
+                LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/libmac_m1/libomp.a" "${PROJECT_SOURCE_DIR}/libmac_m1/libz.a")
+            endif()
     	else()
             link_directories(${PROJECT_SOURCE_DIR}/libmac)
             LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/libmac/libomp.a" "${PROJECT_SOURCE_DIR}/libmac/libz.a")
@@ -539,7 +552,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
       if (__ARM_NEON)
         link_directories(${PROJECT_SOURCE_DIR}/liblinux_arm)
         LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/liblinux_arm/libomp.a" "${PROJECT_SOURCE_DIR}/liblinux_arm/libz.a")
-      elseif(BUILD_LIB STREQUAL "ON")
+      elseif(BUILD_LIB)
         find_package(OpenMP)
       else()
         link_directories(${PROJECT_SOURCE_DIR}/lib)
@@ -864,7 +877,7 @@ add_subdirectory(main)
 ##################################################################
 # build lib file or main executable
 ##################################################################
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     add_library(iqtree3
         obsolete/parsmultistate.cpp
         obsolete/parsmultistate.h
@@ -1071,7 +1084,7 @@ else()
     set (BINARY_DIR "${PROJECT_BINARY_DIR}")
 endif()
 
-if (NOT BUILD_LIB STREQUAL "ON" AND WIN32)
+if (NOT BUILD_LIB AND WIN32)
     if (MSVC)
         if (CLANG_UNDER_VS)
             ADD_CUSTOM_COMMAND(TARGET iqtree3 POST_BUILD COMMAND copy "iqtree3${EXE_SUFFIX}.exe" "iqtree3${EXE_SUFFIX}-click.exe")
@@ -1096,7 +1109,7 @@ endif()
 # CREATE A STATIC LIBRARY
 ##############################################################
 
-if (BUILD_LIB STREQUAL "ON")
+if (BUILD_LIB)
     if(APPLE)
         add_custom_command(
             TARGET iqtree3 POST_BUILD

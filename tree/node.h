@@ -40,7 +40,7 @@
 #include "model/modelsubst.h"
 #include "alignment/sequence.h"
 
-using namespace std;
+// using namespace std;
 
 /*--------------------------------------------------------------*/
 

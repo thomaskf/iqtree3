@@ -233,7 +233,7 @@ int NCBITree::pruneBridgeNodes(Node *node, Node *dad) {
         double len = node->neighbors[0]->length + node->neighbors[1]->length;
         dad->updateNeighbor(node, child, len);
         child->updateNeighbor(node, dad, len);
-        nodes[static_cast<size_t>(node->id)] = nullptr;
+        nodes[node->id] = nullptr;
         delete node;
         num_nodes++;
     }
@@ -249,7 +249,7 @@ int NCBITree::freeNode(Node *node, Node *dad)
         if ((*it)->node != dad) {
             num_nodes += freeNode((*it)->node, node);
         }
-    nodes[static_cast<size_t>(node->id)] = nullptr;
+    nodes[node->id] = nullptr;
     delete node;
     return num_nodes;
 }

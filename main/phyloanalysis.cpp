@@ -57,6 +57,7 @@
 #include "whtest/whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
+#include "model/modelcodonmixture.h"
 #include "model/modelfactorymixlen.h"
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
@@ -531,6 +532,15 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m);
 
 void reportMixModel(ostream &out, Alignment *aln, ModelSubst *mmodel) {
     // report a mixture model
+
+    // for codon mixture model M7 and M8
+    if (aln->seq_type == SEQ_CODON) {
+        ModelCodonMixture *codonMix = dynamic_cast<ModelCodonMixture*> (mmodel);
+        if (codonMix != NULL && (codonMix->name == "M7" || codonMix->name == "M8")) {
+            out << "Beta distribution, alpha: " << codonMix->alpha << ", beta: " << codonMix->beta << endl;
+        }
+    }
+
     out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
     int i = 0;
     int nmix = mmodel->getNMixtures();
@@ -1344,6 +1354,10 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.optimize_linked_gtr) {
         cout << "  GTRPMIX nex file:              " << params.out_prefix << ".GTRPMIX.nex" << endl;
     }
+
+    if (params.mr_bayes_output) {
+        cout << "  MrBayes block written to:      " <<  params.out_prefix << ".mr_bayes.nex" << endl;
+    }
     cout << endl;
 
 }
@@ -1378,7 +1392,6 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
 
         PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
         PhyloSuperTree::iterator it;
-        it = stree->begin();
 
         int part;
 
@@ -1493,6 +1506,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 
         out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl
                 << endl;
+        
+        if (tree.aln->sequence_type.empty()) {
+            out << "NOTE: Alignment sequence type is auto-detected. If in doubt, specify it via -st option." << endl;
+        }
+        
         if (tree.isSuperTree()) {
       // TODO DS: Changes may be needed here for PoMo.
             out << "Input data: " << tree.aln->getNSeq()+tree.removed_seqs.size() << " taxa with "
@@ -1978,9 +1996,12 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 					out << " - ";
 
                 if (params.do_au_test) {
+                    double deltaL = maxL - info[tid].logl;
+                    double au_pvalue = (params.au_epsilon > 0.0 && deltaL < params.au_epsilon)
+                                      ? 1.0 : info[tid].au_pvalue;
                     out.width(8);
-                    out << right << info[tid].au_pvalue;
-                    if (info[tid].au_pvalue < 0.05)
+                    out << right << au_pvalue;
+                    if (au_pvalue < 0.05)
                         out << " - ";
                     else
                         out << " + ";
@@ -3323,6 +3344,91 @@ SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id) {
     return nullptr;
 }
 
+void printMrBayesBlockFile(Params &params, IQTree* &iqtree) {
+    ofstream out;
+    string filename = string(params.out_prefix) + ".mr_bayes.nex";
+    try {
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+
+        // Write Warning
+        out << "#nexus" << endl << endl
+            <<"[This MrBayes Block Declaration provides the basic "
+            << (iqtree->isSuperTree() ? "partition structure and models" : "models")
+            << " from the IQTree Run.]" << endl
+            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'gtr' for Protein will be used if a model that does not exist in MrBayes is used.]" << endl
+            << "[Furthermore, the Model Parameter '+R' will be replaced by '+G+I'.]" << endl
+            << "[This should be used as a Template Only.]" << endl << endl;
+
+        // Begin File, Print Charsets
+        out << "begin mrbayes;" << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+
+    if (!iqtree->isSuperTree()) {
+        out << "  [IQTree inferred model " << iqtree->getModelName() << ", ";
+        iqtree->getModel()->printMrBayesModelText(out, "all", "");
+
+        out << endl << "end;" << endl;
+        out.close();
+        return;
+    }
+
+    auto stree = (PhyloSuperTree*) iqtree;
+    auto saln = (SuperAlignment*) stree->aln;
+    auto size = stree->size();
+
+    for (int part = 0; part < size; part++) {
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << "  charset " << name << " = ";
+
+        string pos = saln->partitions[part]->position_spec;
+        replace(pos.begin(), pos.end(), ',' , ' ');
+        out << pos << ";" << endl;
+    }
+
+    // Create Partition
+    out << endl << "  partition iqtree = " << size << ": ";
+    for (int part = 0; part < size; part++) {
+        if (part != 0) out << ", ";
+
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << name;
+    }
+    out << ";" << endl;
+
+    // Set Partition for Use
+    out << "  set partition = iqtree;" << endl << endl;
+
+    // Partition-Specific Model Information
+    for (int part = 0; part < size; part++) {
+        PhyloTree* curr_tree = stree->at(part);
+
+        out << "  [Subset #" << part + 1 << ": IQTree inferred model " << curr_tree->getModelName() << ", ";
+        curr_tree->getModel()->printMrBayesModelText(out,
+                                                     convertIntToString(part + 1),
+                                                     saln->partitions[part]->name);
+        out << endl;
+    }
+
+    // Partition Type Settings
+    if (params.partition_type != TOPO_UNLINKED) {
+        out << "  unlink statefreq=(all) revmat=(all) shape=(all) pinvar=(all) tratio=(all);" << endl;
+        if (params.partition_type != BRLEN_FIX) {
+            out << "  prset applyto=(all) ratepr=variable;" << endl;
+            if (params.partition_type != BRLEN_SCALE) {
+                out << "  unlink brlens=(all);" << endl;
+            }
+        }
+    }
+
+    out << "end;" << endl;
+    out.close();
+}
+
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
@@ -3436,22 +3542,8 @@ bool isTreeMixture(Params& params) {
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
-    //    string dist_file;
-    // params.startCPUTime = getCPUTime();
-    // params.start_real_time = getRealTime();
-    
-    int absent_states = 0;
-    if (iqtree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-        for (auto i = stree->begin(); i != stree->end(); i++)
-            absent_states += (*i)->aln->checkAbsentStates("partition " + (*i)->aln->name);
-    } else {
-        absent_states = iqtree->aln->checkAbsentStates("alignment");
-    }
-    if (absent_states > 0) {
-        cout << "NOTE: " << absent_states << " states (see above) are not present and thus removed from Markov process to prevent numerical problems" << endl;
-    }
-    
+    iqtree->aln->checkAbsentStates("alignment");
+
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
         iqtree->deleteAllPartialLh();
@@ -3840,8 +3932,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     }
     if (iqtree->isSuperTree()) {
-        ((PhyloSuperTree*) iqtree)->computeBranchLengths();
-        ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+        auto stree = (PhyloSuperTree*) iqtree;
+        stree->computeBranchLengths();
+        stree->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+    }
+    if (params.mr_bayes_output) {
+        cout << endl << "Writing MrBayes Block Files..." << endl;
+        printMrBayesBlockFile(params, iqtree);
+        cout << endl;
     }
 
     cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
@@ -3981,6 +4079,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << endl;
         cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
+    }
+    //check for dating with LSD2
+    if (params.dating_method == "LSD") {
+        doTimeTree(iqtree);
     }
     //check for dating with MCMCTree
     if (params.dating_method == "mcmctree")
@@ -5452,7 +5554,7 @@ bool runCMaple(Params &params)
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
             std::ostream null_stream(0);
             std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
-            tree.infer(tree_search_type, params.shallow_tree_search, out_stream);
+            tree.infer(params.num_threads, tree_search_type, params.shallow_tree_search, out_stream);
 
             // Compute branch supports (if users want to do so)
             if (params.aLRT_replicates)

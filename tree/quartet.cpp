@@ -491,7 +491,7 @@ void initeps(FILE *ofp, QuartetGroups &LMGroups)
 /* plot one point of likelihood mapping analysis (EPS) */
 void plotlmpointeps(FILE *epsofp, double w1, double w2)
 {
-	fprintf(epsofp,"%.10f tl %.10f tl dot\n", 0.5*w1 + w2, w1*0.8660254038);
+	fprintf(epsofp,"%.10f tl %.10f tl dot\n", (0.5*w1) + w2, w1*0.8660254038);
 } /* plotlmpointeps */
 
 
@@ -955,8 +955,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             // loop over 3 quartets to compute likelihood
             for (size_t k = 0; k < 3; k++) {
                 string quartet_tree_str;
-                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
-                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
+                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[(k*4)+1]) + ",(" +
+                    quartet_aln->getSeqName(qc[(k*4)+2]) + "," + quartet_aln->getSeqName(qc[(k*4)+3]) + "));";
                 quartet_tree->readTreeStringSeqName(quartet_tree_str);
                 quartet_tree->initializeAllPartialLh();
                 quartet_tree->wrapperFixNegativeBranch(true);
@@ -970,7 +970,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
             if (isSuperTree()) {
                 PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-                for (size_t i = 0; i < quartet_super_tree->size(); i++) {
+                for (int i = 0; i < quartet_super_tree->size(); i++) {
                     quartet_super_tree->at(i)->setModelFactory(nullptr);
                     quartet_super_tree->at(i)->setModel(nullptr);
                     quartet_super_tree->at(i)->setRate(nullptr);
@@ -1066,7 +1066,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	/* 110 distribution */
 	temp1 = 0.5 - lmap_quartet_info[qid].qweight[qworder[0]];
 	temp2 = 0.5 - lmap_quartet_info[qid].qweight[qworder[1]];
-	sqdiff[1] = temp1*temp1 + temp2*temp2 +
+	sqdiff[1] = (temp1*temp1) + (temp2*temp2) +
 		lmap_quartet_info[qid].qweight[qworder[2]]*lmap_quartet_info[qid].qweight[qworder[2]];
 	discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
 

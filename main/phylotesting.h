@@ -785,7 +785,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
  @param iqtree phylogenetic tree
  @param model_info (IN/OUT) information for all models considered
  */
-void runMixtureFinder(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
+void runMixtureFinder(Params &params, IQTree* iqtree, ModelCheckpoint &model_info);
 
 /**
  perform ModelFinderNN to find the best-fit model (uses neural network for model inference)
@@ -810,6 +810,13 @@ int detectSeqType(const char *model_name, SeqType &seq_type);
 string convertSeqTypeToSeqTypeName(SeqType seq_type);
 
 string detectSeqTypeName(string model_name);
+
+/**
+ * get string name from a SeqType object
+ * @param seq_type input sequence type
+ * @return name
+ */
+string getSeqTypeName(SeqType seq_type);
 
 /****************************************************/
 /*    Q MATRICES NESTING CHECK                      */

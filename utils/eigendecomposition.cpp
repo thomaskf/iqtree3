@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include "tools.h"
 
-using namespace std;
+// using namespace std;
 
 EigenDecomposition::EigenDecomposition()
 {
