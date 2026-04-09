@@ -41,6 +41,10 @@ private:
     // iteration #
     int iteration_num;
 
+    // set once the multistart over (alpha, beta) has been performed, so
+    // we don't pay its cost on every subsequent call to optimizeParameters
+    bool multistart_done = false;
+
 protected:
     /**
         this function is served for the multi-dimension optimization. It should pack the model parameters

@@ -175,7 +175,14 @@ public:
     
     /** TRUE to fix kappa2, default: FALSE */
     bool fix_kappa2;
-    
+
+    /** Recompute num_params from the current fix_* flags. Public so that
+        wrapper models (e.g. ModelCodonMixture) can refresh num_params after
+        toggling fix_omega/fix_kappa post-construction. */
+    void updateNumParams() {
+        num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
+    }
+
     /** GY- or MG-style codon frequencies */
     CodonFreqStyle codon_freq_style;
     
