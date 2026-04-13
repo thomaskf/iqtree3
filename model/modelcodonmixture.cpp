@@ -385,41 +385,90 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
     if (cmix_type == "1a" || cmix_type == "2a" || cmix_type == "3") {
         vector<double> init_props((size_t)ncat, 1.0 / ncat);
         bool any_weight_optimised = !user_input_param;
+        bool any_weight_fixed = false;
+        // Track which individual weights are fixed (bare number, no ?)
+        vector<bool> per_weight_fixed(ncat, false);
 
         if (user_input_param) {
             if (cmix_type == "1a") {
                 init_props[0] = resolveValue(specs[0], 0.5);
                 init_props[1] = 1.0 - init_props[0];
+                per_weight_fixed[0] = !specs[0].optimize;
+                // class 1 weight is always derived from class 0
+                per_weight_fixed[1] = per_weight_fixed[0];
                 if (specs[0].optimize) any_weight_optimised = true;
+                else any_weight_fixed = true;
             }
             else if (cmix_type == "2a") {
                 init_props[0] = resolveValue(specs[0], 0.4);
                 init_props[2] = resolveValue(specs[2], 0.2);
                 init_props[1] = 1.0 - init_props[0] - init_props[2];
+                per_weight_fixed[0] = !specs[0].optimize;
+                per_weight_fixed[2] = !specs[2].optimize;
+                // class 1 weight is derived; fix it if both p0 and p2 are fixed
+                per_weight_fixed[1] = per_weight_fixed[0] && per_weight_fixed[2];
                 if (specs[0].optimize || specs[2].optimize)
                     any_weight_optimised = true;
+                if (!specs[0].optimize || !specs[2].optimize)
+                    any_weight_fixed = true;
             }
             else { // M3
                 for (int i = 0; i < ncat; i++) {
                     init_props[i] = resolveValue(specs[2*i], 1.0 / ncat);
+                    per_weight_fixed[i] = !specs[2*i].optimize;
                     if (specs[2*i].optimize) any_weight_optimised = true;
+                    else any_weight_fixed = true;
                 }
             }
         }
 
-        // Sanity-check and normalise
-        double wsum = 0.0;
+        // Sanity-check
         for (double p : init_props) {
             if (p < 0.0)
                 outError("Mixture weight cannot be negative in " + orig_model_name);
-            wsum += p;
         }
-        if (wsum <= 0.0)
-            outError("Sum of mixture weights must be > 0 in " + orig_model_name);
-        for (auto &p : init_props) p /= wsum;
+
+        // Normalise: fixed weights keep their exact user values; free
+        // weights are scaled to fill the remaining probability mass.
+        if (any_weight_fixed && any_weight_optimised) {
+            double sum_fixed = 0.0;
+            for (int i = 0; i < ncat; i++)
+                if (per_weight_fixed[i]) sum_fixed += init_props[i];
+            if (sum_fixed >= 1.0)
+                outError("Fixed mixture weights sum to >= 1, leaving no room for free weights in " + orig_model_name);
+            double sum_free = 0.0;
+            for (int i = 0; i < ncat; i++)
+                if (!per_weight_fixed[i]) sum_free += init_props[i];
+            double target_free = 1.0 - sum_fixed;
+            if (sum_free > 0.0) {
+                double scale = target_free / sum_free;
+                for (int i = 0; i < ncat; i++)
+                    if (!per_weight_fixed[i]) init_props[i] *= scale;
+            }
+        } else {
+            // All fixed or all free: simple normalisation
+            double wsum = 0.0;
+            for (double p : init_props) wsum += p;
+            if (wsum <= 0.0)
+                outError("Sum of mixture weights must be > 0 in " + orig_model_name);
+            for (auto &p : init_props) p /= wsum;
+        }
         for (int i = 0; i < ncat; i++) prop[i] = init_props[i];
 
         fix_prop = !any_weight_optimised;
+
+        // When there is a MIX of fixed and free weights, we need
+        // per-class weight fixing.  Set fix_prop = false (so EM runs)
+        // and populate the per-class arrays that optimizeWeights checks.
+        if (any_weight_optimised && any_weight_fixed) {
+            fix_prop = false;
+            fix_per_prop   = new bool[ncat];
+            fixed_prop_val = new double[ncat];
+            for (int i = 0; i < ncat; i++) {
+                fix_per_prop[i]   = per_weight_fixed[i];
+                fixed_prop_val[i] = prop[i];
+            }
+        }
     }
     else if (cmix_type == "7") {
         // Equal weights, not user-controllable for M7
