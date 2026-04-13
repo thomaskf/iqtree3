@@ -21,4 +21,3 @@ double* RateBeta::SampleOmegas(int n,double alpha, double beta) {
     return omega;
 }
 
-
