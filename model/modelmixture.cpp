@@ -1608,6 +1608,8 @@ void ModelMixture::initMem() {
 
 ModelMixture::~ModelMixture() {
     aligned_free(prop);
+    delete[] fix_per_prop;
+    delete[] fixed_prop_val;
     for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
         (*rit)->eigenvalues = nullptr;
         (*rit)->eigenvectors = nullptr;
@@ -2036,10 +2038,53 @@ double ModelMixture::optimizeWeights(int nsteps) {
         }
         bool converged = true;
 //        double new_pinvar = 0.0;
+
+        // M-step for weights.
+        //
+        // At this point new_prop[c] = sum over all patterns of the
+        // posterior responsibility  r(c|pattern) * pattern_freq.
+        // In standard (unconstrained) EM the update is:
+        //     w_c = new_prop[c] / N
+        //
+        // When some weights are fixed (fix_per_prop != nullptr), the
+        // correct constrained M-step maximises the expected complete-data
+        // log-likelihood only over the free weights, subject to
+        //     sum(free w_c) = 1 - sum(fixed w_c).
+        //
+        // The Lagrangian gives the closed-form solution:
+        //     w_c = R_c / sum(R_j, j free) * (1 - S_fixed)
+        // where R_c = new_prop[c] (the total responsibility for class c)
+        // and S_fixed = sum of fixed weights.  This is the true
+        // constrained-EM M-step, not a post-hoc clamp-and-renormalize.
+        if (fix_per_prop) {
+            double sum_fixed = 0.0;
+            double sum_free_resp = 0.0;
+            for (c = 0; c < nmix; c++) {
+                if (fix_per_prop[c])
+                    sum_fixed += fixed_prop_val[c];
+                else
+                    sum_free_resp += new_prop[c];
+            }
+            double target_free = 1.0 - sum_fixed;
+            if (target_free < 0.0) target_free = 0.0;
+            for (c = 0; c < nmix; c++) {
+                if (fix_per_prop[c]) {
+                    new_prop[c] = fixed_prop_val[c];
+                } else {
+                    new_prop[c] = (sum_free_resp > 0.0)
+                        ? new_prop[c] / sum_free_resp * target_free
+                        : target_free;  // fallback: should not happen
+                    if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
+                }
+            }
+        } else {
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] /= phylo_tree->getAlnNSite();
+                if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
+            }
+        }
+
         for (c = 0; c < nmix; c++) {
-            new_prop[c] /= phylo_tree->getAlnNSite();
-            // Make sure that probabilities do not get zero
-            if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
             // check for convergence
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             ratio_prop[c] = new_prop[c] / prop[c];

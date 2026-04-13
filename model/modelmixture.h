@@ -337,6 +337,15 @@ public:
 	 */
 	bool fix_prop;
 
+	/**
+	 * Optional per-class weight fix flags (nullptr = all governed by fix_prop).
+	 * When non-null, fix_per_prop[c] == true means prop[c] is fixed at
+	 * fixed_prop_val[c] and should not be updated by the EM weight optimizer.
+	 * Owned by this object; freed in the destructor.
+	 */
+	bool *fix_per_prop = nullptr;
+	double *fixed_prop_val = nullptr;
+
 protected:
 
 	bool optimizing_gtr;
