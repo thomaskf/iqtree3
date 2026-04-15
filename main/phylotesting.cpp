@@ -44,6 +44,8 @@
 #include "utils/MPIHelper.h"
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 //#include "vectorclass/vectorclass.h"
 
 #if defined(_NN) || defined(_OLD_NN)
@@ -4308,7 +4310,16 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     // In both cases m_p <= nthreads, so "available >= m_p" is always satisfiable.
     int n_jobs = (int)jobs.size();
     vector<int> mp(n_jobs);
-    if (n_jobs <= nthreads && !params->parallel_per_partition) {
+    if (params->parallel_per_partition) {
+        // Per-partition mode: each partition is assigned its full cap threads.
+        // Partitions are dispatched heavy-to-light; a partition starts as soon
+        // as available_threads >= its cap, so multiple partitions may run
+        // concurrently if their caps sum to <= nthreads.
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor));
+        }
+    } else if (n_jobs <= nthreads) {
         // Case A: all partitions can run concurrently.
         // Start with 1 thread each, then distribute the remaining threads
         // round-robin (heavy-to-light within each round) until no thread can
@@ -4337,10 +4348,12 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             if (!any_added) break;  // all partitions saturated
         }
     } else {
-        // Case B: more jobs than threads — size-based cap
+        // Case B: more jobs than threads — maximize concurrency.
+        // When n_jobs > nthreads, running nthreads partitions concurrently
+        // with 1 thread each is at least as fast as running fewer partitions
+        // with more threads (since per-partition scaling is sub-linear).
         for (int j = 0; j < n_jobs; j++) {
-            int tree_id = jobs[j].first;
-            mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor));
+            mp[j] = 1;
         }
     }
 
@@ -4354,6 +4367,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             cout << "In ModelFinder: assigning threads to partitions from heavy to light" << endl;
     }
 #endif
+
 
     if (params->model_test_and_tree || nthreads <= 1) {
         // Sequential fallback: one thread, process partitions one by one
@@ -4437,7 +4451,73 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     }
 
     // -----------------------------------------------------------------------
-    // New scheduling strategy:
+    // Fast path: when every partition needs only 1 thread, use a simple
+    // OMP parallel-for with dynamic scheduling.  This avoids the overhead
+    // of creating std::thread workers and atomic spin-waits, which can
+    // dominate wall time for lightweight partitions.
+    // -----------------------------------------------------------------------
+    bool all_single = true;
+    for (int j = 0; j < n_jobs; j++) {
+        if (mp[j] > 1) { all_single = false; break; }
+    }
+    if (all_single) {
+        int j;
+        int omp_threads = min(nthreads, n_jobs);
+        // Temporarily reduce the global OMP thread count so that inner code
+        // (likelihood kernels, model evaluation) does not spin up excess threads.
+        int omp_saved = omp_get_max_threads();
+        omp_set_num_threads(omp_threads);
+        #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
+        for (j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            ModelCheckpoint part_model_info;
+
+            #pragma omp critical
+            {
+                extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            }
+
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                1, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
+
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+
+            #pragma omp critical
+            {
+                lhsum += (lhvec[tree_id] = best_model.logl);
+                dfsum += (dfvec[tree_id] = best_model.df);
+                lenvec[tree_id] = best_model.tree_len;
+                num_model++;
+                cout.width(4);  cout << right << num_model << " ";
+                cout.width(12); cout << left << best_model.getName() << " ";
+                cout.width(11); cout << score << " ";
+                cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
+                if (num_model >= 10) {
+                    double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                         << convert_time(remain_time) << " left)";
+                }
+                cout << endl;
+                replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+                model_info->dump();
+                jobdone++;
+            }
+        }
+        omp_set_num_threads(omp_saved);
+        return;
+    }
+
+    // -----------------------------------------------------------------------
+    // Multi-thread dispatch strategy:
     // Dispatch partitions from heavy to light. Each partition p is held until
     // available_threads >= m_p, then launched in a background std::thread with
     // m_p threads for its internal likelihood computation.
@@ -4446,10 +4526,19 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
     // available tracks how many of the nthreads threads are currently free
     std::atomic<int> available(nthreads);
+    std::mutex avail_mutex;
+    std::condition_variable avail_cv;
 
     // omp_lock_t protects all shared result state (lhsum, dfsum, model_info, cout)
     omp_lock_t result_lock;
     omp_init_lock(&result_lock);
+
+    // Reduce the main thread's OMP pool before spawning workers.
+    // Each std::thread worker sets its own omp_set_num_threads(m_p).
+    // Without this, the main thread's pool (nthreads) persists and
+    // workers may inherit or create additional threads on top of it.
+    int omp_saved_main = omp_get_max_threads();
+    omp_set_num_threads(1);
 
     vector<std::thread> workers;
     workers.reserve(jobs.size());
@@ -4457,12 +4546,15 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     for (int j = 0; j < (int)jobs.size(); j++) {
         int m_p = mp[j];
 
-        // Hold until enough threads are free.
-        // m_p <= nthreads, so this always terminates once running partitions complete.
-        while (available.load(std::memory_order_acquire) < m_p)
-            std::this_thread::yield();
-
-        available.fetch_sub(m_p, std::memory_order_acq_rel);
+        // Wait until enough threads are free, using a condition variable
+        // instead of spin-wait to avoid burning a CPU core.
+        {
+            std::unique_lock<std::mutex> lk(avail_mutex);
+            avail_cv.wait(lk, [&available, m_p]() {
+                return available.load(std::memory_order_acquire) >= m_p;
+            });
+            available.fetch_sub(m_p, std::memory_order_acq_rel);
+        }
 
         {
             int tree_id = jobs[j].first;
@@ -4475,7 +4567,11 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                  << " available_after=" << (available.load() ) << endl;
         }
 
-        workers.emplace_back([this, j, m_p, &available, &result_lock, &jobs]() {
+        workers.emplace_back([this, j, m_p, &available, &avail_cv, &result_lock, &jobs]() {
+            // Set per-worker OMP thread limit so that likelihood kernels
+            // that lack an explicit num_threads() clause don't exceed m_p.
+            omp_set_num_threads(m_p);
+
             int tree_id = jobs[j].first;
             PhyloTree *this_tree = in_tree->at(tree_id);
             ModelCheckpoint part_model_info;
@@ -4497,10 +4593,11 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             double score = best_model.computeICScore(this_tree->getAlnNSite());
             this_tree->aln->model_name = best_model.getName();
 
-            // Release threads back to the pool before acquiring result_lock,
-            // so the dispatcher can start the next partition without waiting
+            // Release threads back to the pool and notify the dispatcher,
+            // so it can start the next partition without waiting
             // for the result I/O below to complete.
             available.fetch_add(m_p, std::memory_order_release);
+            avail_cv.notify_one();
 
             omp_set_lock(&result_lock);
             lhsum += (lhvec[tree_id] = best_model.logl);
@@ -4527,6 +4624,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     for (auto& w : workers)
         w.join();
 
+    omp_set_num_threads(omp_saved_main);
     omp_destroy_lock(&result_lock);
 #endif
 }
