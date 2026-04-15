@@ -2773,11 +2773,20 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
 
-            // Increased to 1.5 because in some data sets it may be slightly higher than 1.0
+            if (model && !model->isReversible()) {
+                // For non-stationary models, recompute likelihood using the SAME
+                // branch as the initial computation (line 2732) to ensure numerical
+                // consistency. Using computeLikelihood() would pick a different
+                // branch via findFarthestLeaf(), which can give numerically
+                // different results for non-stationary models.
+                new_tree_lh = computeLikelihoodBranch((PhyloNeighbor*)nodes[0]->findNeighbor(nodes2[0]), (PhyloNode*)nodes[0]);
+            } else {
+                // For reversible models, use the original computeLikelihood()
+                new_tree_lh = computeLikelihood();
+            }
+
             double max_delta_lh = 1.5;
-            // Increase max delta with PoMo because log likelihood is very much lower.
             if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
-            new_tree_lh = computeLikelihood();
             // ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
             ASSERT(tree_lh-new_tree_lh < max_delta_lh);
             return new_tree_lh;
