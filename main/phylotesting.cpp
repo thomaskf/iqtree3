@@ -4444,60 +4444,50 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     }
 
     // -----------------------------------------------------------------------
-    // Multi-thread dispatch strategy:
-    // Dispatch partitions from heavy to light. Each partition p is held until
-    // available_threads >= m_p, then launched in a background std::thread with
-    // m_p threads for its internal likelihood computation.
-    // Because m_p = min(nthreads, formula), this condition is always satisfiable.
+    // Multi-thread dispatch strategy (OMP nested parallelism):
+    // Group partitions into batches where sum(mp) <= nthreads.
+    // Within each batch, partitions run concurrently using OMP nested
+    // parallel regions — all threads stay in a single OMP pool.
+    // This follows the same pattern used by iqtreemix.cpp.
     // -----------------------------------------------------------------------
 
-    // available tracks how many of the nthreads threads are currently free
-    std::atomic<int> available(nthreads);
-    std::mutex avail_mutex;
-    std::condition_variable avail_cv;
-
-    // omp_lock_t protects all shared result state (lhsum, dfsum, model_info, cout)
-    omp_lock_t result_lock;
-    omp_init_lock(&result_lock);
-
-    // Reduce the main thread's OMP pool before spawning workers.
-    // Each std::thread worker sets its own omp_set_num_threads(m_p).
-    // Without this, the main thread's pool (nthreads) persists and
-    // workers may inherit or create additional threads on top of it.
-    int omp_saved_main = omp_get_max_threads();
-    omp_set_num_threads(1);
-
-    vector<std::thread> workers;
-    workers.reserve(jobs.size());
-
-    for (int j = 0; j < (int)jobs.size(); j++) {
-        int m_p = mp[j];
-
-        // Wait until enough threads are free, using a condition variable
-        // instead of spin-wait to avoid burning a CPU core.
-        {
-            std::unique_lock<std::mutex> lk(avail_mutex);
-            avail_cv.wait(lk, [&available, m_p]() {
-                return available.load(std::memory_order_acquire) >= m_p;
-            });
-            available.fetch_sub(m_p, std::memory_order_acq_rel);
+    int j = 0;
+    while (j < n_jobs) {
+        // Build a batch of partitions whose total thread budget <= nthreads
+        int batch_start = j;
+        int batch_threads = 0;
+        int batch_size = 0;
+        while (j < n_jobs && batch_threads + mp[j] <= nthreads) {
+            batch_threads += mp[j];
+            batch_size++;
+            j++;
+        }
+        if (batch_size == 0) {
+            // Single partition needs >= nthreads (mp[j] was capped to nthreads,
+            // so this means mp[j] == nthreads)
+            batch_size = 1;
+            batch_threads = mp[j];
+            j++;
         }
 
-        {
-            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-        }
+        // Run this batch: partitions execute concurrently with nested OMP
+        omp_set_max_active_levels(2);
 
-        workers.emplace_back([this, j, m_p, &available, &avail_cv, &result_lock, &jobs]() {
-            // Set per-worker OMP thread limit so that likelihood kernels
-            // that lack an explicit num_threads() clause don't exceed m_p.
-            omp_set_num_threads(m_p);
-
-            int tree_id = jobs[j].first;
+        #pragma omp parallel for schedule(static,1) num_threads(batch_size)
+        for (int k = 0; k < batch_size; k++) {
+            int idx = batch_start + k;
+            int m_p = mp[idx];
+            int tree_id = jobs[idx].first;
             PhyloTree *this_tree = in_tree->at(tree_id);
             ModelCheckpoint part_model_info;
 
-        best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                                              (parallel_job ? 1 : nthreads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
+            // Set inner thread budget for this partition's OMP regions
+            omp_set_num_threads(m_p);
+
+            #pragma omp critical
+            {
+                extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            }
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -4511,42 +4501,33 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             double score = best_model.computeICScore(this_tree->getAlnNSite());
             this_tree->aln->model_name = best_model.getName();
 
-            // Release threads back to the pool and notify the dispatcher,
-            // so it can start the next partition without waiting
-            // for the result I/O below to complete.
-            available.fetch_add(m_p, std::memory_order_release);
-            avail_cv.notify_one();
-
-            omp_set_lock(&result_lock);
-            lhsum += (lhvec[tree_id] = best_model.logl);
-            dfsum += (dfvec[tree_id] = best_model.df);
-            lenvec[tree_id] = best_model.tree_len;
-            num_model++;
-            cout.width(4);
-            cout << right << num_model << " ";
-            cout.width(12);
-            cout << left << best_model.getName() << " ";
-            cout.width(11);
-            cout << score << " ";
-            cout.width(11);
-            cout << best_model.tree_len << " ";
-            cout << this_tree->aln->name;
-            if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)";
+            #pragma omp critical
+            {
+                lhsum += (lhvec[tree_id] = best_model.logl);
+                dfsum += (dfvec[tree_id] = best_model.df);
+                lenvec[tree_id] = best_model.tree_len;
+                num_model++;
+                cout.width(4);  cout << right << num_model << " ";
+                cout.width(12); cout << left << best_model.getName() << " ";
+                cout.width(11); cout << score << " ";
+                cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
+                if (num_model >= 10) {
+                    double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                         << convert_time(remain_time) << " left)";
+                }
+                cout << endl;
+                replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+                model_info->dump();
+                jobdone++;
             }
-            cout << endl;
-            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            model_info->dump();
         }
+
+        omp_set_max_active_levels(1);
     }
 
-    for (auto& w : workers)
-        w.join();
-
-    omp_set_num_threads(omp_saved_main);
-    omp_destroy_lock(&result_lock);
+    // Restore original OMP thread count
+    omp_set_num_threads(nthreads);
 #endif
 }
 
