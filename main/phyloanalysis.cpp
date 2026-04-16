@@ -24,6 +24,7 @@
 #include <config.h>
 #endif
 #include <iqtree_config.h>
+#include <iomanip>
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
 #include "tree/phylosupertreeplen.h"
@@ -2631,6 +2632,137 @@ void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
     cout << "Site rates printed to " << rate_file << endl;
 }
 
+/**
+ * Write a CODEML-style "rst" file for codon mixture models. The file lists
+ * site-class proportions and omega values, the Naive Empirical Bayes (NEB)
+ * posterior probability that each site belongs to each site class
+ * (along with the posterior mean omega and P(omega>1)), and finally a list
+ * of positively selected sites.
+ */
+void printCodonMixtureRst(const char *filename, IQTree &iqtree,
+                          ModelCodonMixture *codonMix) {
+    Alignment *aln = iqtree.aln;
+    if (aln->seq_type != SEQ_CODON || codonMix == NULL)
+        return;
+
+    int ncat = codonMix->getNMixtures();
+    if (ncat <= 0)
+        return;
+
+    // Collect proportions and omegas from each site-class
+    vector<double> props(ncat, 0.0);
+    vector<double> omegas(ncat, 0.0);
+    for (int c = 0; c < ncat; c++) {
+        props[c] = codonMix->getMixtureWeight(c);
+        ModelCodon *m = (ModelCodon*)codonMix->getMixtureClass(c);
+        omegas[c] = m->omega;
+    }
+
+    // Compute per-pattern posterior probabilities of each mixture component
+    size_t nptn = aln->getNPattern();
+    double *ptn_post = new double[nptn * (size_t)ncat];
+    iqtree.computePatternProbabilityCategory(ptn_post, WSL_MIXTURE);
+
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "Supplemental results for IQ-TREE codon mixture model "
+            << codonMix->name << endl << endl << endl;
+
+        out << "MLEs of dN/dS (w) for site classes (K=" << ncat << ")" << endl << endl;
+        out << "p:  ";
+        out << fixed << setprecision(5);
+        for (int c = 0; c < ncat; c++)
+            out << "  " << setw(7) << props[c];
+        out << endl;
+        out << "w:  ";
+        for (int c = 0; c < ncat; c++)
+            out << "  " << setw(7) << omegas[c];
+        out << endl << endl;
+
+        // NEB section
+        out << "Naive Empirical Bayes (NEB) probabilities for "
+            << ncat << " classes & postmean_w & P(w>1)" << endl;
+        string ref_name = (aln->getNSeq() > 0) ? aln->getSeqName(0) : string("seq1");
+        out << "(amino acids refer to 1st sequence: " << ref_name << ")" << endl << endl;
+
+        size_t nsite = aln->getNSite();
+        // Track positively selected sites
+        struct PSSite { size_t site; char aa; double pw1; double pmean; };
+        vector<PSSite> ps_sites;
+
+        for (size_t s = 0; s < nsite; s++) {
+            int pid = aln->getPatternID(s);
+            double *pp = ptn_post + (size_t)pid * ncat;
+
+            // amino acid of first sequence at this codon site
+            char aa = '-';
+            if (aln->getNSeq() > 0) {
+                Pattern pat = aln->at(pid);
+                StateType st = pat[0];
+                if (st < aln->num_states && aln->codon_table != NULL
+                    && aln->genetic_code != NULL) {
+                    int codon = (int)aln->codon_table[(int)st];
+                    aa = aln->genetic_code[codon];
+                } else {
+                    aa = '-';
+                }
+            }
+
+            // best class (1-based)
+            int best = 0;
+            for (int c = 1; c < ncat; c++)
+                if (pp[c] > pp[best]) best = c;
+
+            // posterior mean omega and P(omega>1)
+            double pmean = 0.0, pw1 = 0.0;
+            for (int c = 0; c < ncat; c++) {
+                pmean += pp[c] * omegas[c];
+                if (omegas[c] > 1.0) pw1 += pp[c];
+            }
+
+            out << setw(6) << right << (s+1) << " " << aa << " ";
+            out << fixed << setprecision(5);
+            for (int c = 0; c < ncat; c++)
+                out << " " << setw(7) << pp[c];
+            out << " (" << setw(2) << (best+1) << ") ";
+            out << setprecision(3);
+            out << " " << setw(6) << pmean;
+            out << "  " << setw(5) << pw1 << endl;
+
+            if (pw1 > 0.5) {
+                PSSite p; p.site = s+1; p.aa = aa; p.pw1 = pw1; p.pmean = pmean;
+                ps_sites.push_back(p);
+            }
+        }
+
+        // Positively selected sites
+        out << endl << "Positively selected sites" << endl << endl;
+        out << "\tProb(w>1)  mean w" << endl << endl;
+        for (size_t i = 0; i < ps_sites.size(); i++) {
+            const PSSite &p = ps_sites[i];
+            out << setw(6) << right << p.site << " " << p.aa << "   ";
+            out << fixed << setprecision(3) << setw(6) << p.pw1;
+            // PAML-style significance markers
+            const char *mark = "  ";
+            if (p.pw1 >= 0.99) mark = "**";
+            else if (p.pw1 >= 0.95) mark = "* ";
+            out << mark << "      " << setw(6) << p.pmean << endl;
+        }
+
+        out << endl << endl;
+        out << "lnL = " << fixed << setprecision(6)
+            << iqtree.getCurScore() << endl;
+        out.close();
+        cout << "Codon-mixture rst-style results printed to " << filename << endl;
+    } catch (ios::failure) {
+        delete [] ptn_post;
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    delete [] ptn_post;
+}
+
 void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     if (params.print_site_lh && !params.pll) {
         string site_lh_file = params.out_prefix;
@@ -2675,6 +2807,17 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 
     if (params.print_site_prob && !params.pll) {
         printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
+    }
+
+    // For codon mixture models, write a CODEML-style "rst" file with
+    // per-site NEB posteriors and positively selected sites.
+    if (!params.pll && iqtree.aln->seq_type == SEQ_CODON
+        && iqtree.getModel() != NULL && iqtree.getModel()->isMixture()) {
+        ModelCodonMixture *codonMix = dynamic_cast<ModelCodonMixture*>(iqtree.getModel());
+        if (codonMix != NULL) {
+            string rst_file = (string)params.out_prefix + ".rst";
+            printCodonMixtureRst(rst_file.c_str(), iqtree, codonMix);
+        }
     }
     
     if (params.print_ancestral_sequence) {
