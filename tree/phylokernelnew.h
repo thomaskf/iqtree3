@@ -674,18 +674,6 @@ inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
 #endif
 {
     size_t i, j;
-    // The unrolled inner loop processes pairs (i, i+1), so the branch must
-    // be selected by the parity of the actual element count N — NOT by the
-    // parity of `nstates`. When this function is called from the per-branch
-    // derivative kernel for a non-fused mixture model, the caller passes
-    // N = ncat_mix * nstates as the element count and `nstates` as the
-    // number of states. If `nstates` is odd but `ncat_mix` is even (e.g.,
-    // codon mixture with K=2: 2*61 = 122 elements, nstates=61), N is even
-    // even though `nstates` is odd, and using the "odd states" path would
-    // double-count element N-1 (it is processed inside the loop AND in
-    // the trailing mul_add). That manifests as a systematically wrong
-    // gradient/Hessian for the codon mixture model and breaks Newton-
-    // Raphson branch-length optimization.
     if ((N & 1) == 0) {
         VectorClass AD[2], BD[2], CD[2];
         for (j = 0; j < 2; j++) {
