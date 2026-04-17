@@ -4211,10 +4211,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (jobs.empty())
         return;
 
-    cerr << "[DIAG] getBestModelforPartitionsNoMPI: nthreads=" << nthreads
-         << " n_jobs=" << jobs.size()
-         << " omp_get_max_threads()=" << omp_get_max_threads() << endl;
-
     // Precompute per-partition thread budget m_p using a two-case rule.
     // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
     //
