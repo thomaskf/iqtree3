@@ -2702,12 +2702,10 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
 
             int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
             better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
-            if (compatible_pairs.size() > 1)
+            if (verbose_mode >= VB_MED && compatible_pairs.size() > 1) {
                 clearProgressLine();
-            clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+                cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+            }
 
             // 2017-12-21: simultaneously merging better pairs
             for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
@@ -2753,7 +2751,7 @@ cout << compatible_pairs.size() << " compatible better partition pairs found" <<
         cout << "ModelFinder2\t";
         if (part_algo.length() > 0)
             cout << part_algo << "\t";
-        cout << "Step " << ++step << "\t" << compute_pairs << " Subsets\t" << criterionName(params.model_test_criterion) << " " << inf_score;
+        cout << "Step " << ++step << "\t" << compute_pairs << " Partitions\t" << criterionName(params.model_test_criterion) << " " << inf_score;
         cout << "\tdeltaBIC " << inf_score - pre_inf_score;
         cout << endl;
         pre_inf_score = inf_score;
@@ -4229,6 +4227,7 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
 #endif // _IQTREE_MPI
 
 
+
 /**
  * compute and process the best model for partitions (without MPI)
  * nthreads : the number of threads available for these jobs
@@ -5396,7 +5395,7 @@ cout << "Full partition model " << criterionName(params->model_test_criterion)
     clearProgressLine();
 cout << "PartitionFinder\t" << algo_name
                  << "\tStep " << merge_step
-                 << "\t" << gene_sets.size() << " Subsets\t"
+                 << "\t" << gene_sets.size() << " Partitions\t"
                  << criterionName(params->model_test_criterion)
                  << " " << inf_score
                  << "\tdelta" << criterionName(params->model_test_criterion)
