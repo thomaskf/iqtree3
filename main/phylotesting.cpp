@@ -49,6 +49,9 @@
 #include <condition_variable>
 //#include "vectorclass/vectorclass.h"
 
+// Screen-only output stream (bypasses log file). Defined in main.cpp.
+extern ostream cscreen;
+
 #if defined(_NN) || defined(_OLD_NN)
 #include "nn/neuralnetwork.h"
 #endif
@@ -2283,13 +2286,15 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
             if (!done_before) {
                 replaceModelInfo(set_name, model_info, part_model_info);
                 model_info.dump();
-                cout.width(4);
-                cout << right << cluster+1 << " ";
-                cout.width(12);
-                cout << left << best_model.getName() << " ";
-                cout.width(11);
-                cout << best_model.logl << " " << set_name;
-                cout << endl;
+                if (verbose_mode >= VB_MED) {
+                    cout.width(4);
+                    cout << right << cluster+1 << " ";
+                    cout.width(12);
+                    cout << left << best_model.getName() << " ";
+                    cout.width(11);
+                    cout << best_model.logl << " " << set_name;
+                    cout << endl;
+                }
             }
         }
     }
@@ -2708,9 +2713,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                         if (remain_time < 0.0)
                             remain_time = 0.0;
                         double finish_percent = (double) pair * 100.0 / num_pairs;
-                        cout << " Finished subset " << pair << "/" << num_pairs << "     " << finish_percent << "  percent done";
-                        cout << "     " << convert_time(getRealTime()-start_time) << " ("
-                            << convert_time(remain_time) << " left)     \r" << flush;
+                        cscreen << " Finished subset " << pair << "/" << num_pairs << "     " << finish_percent << "  percent done"
+                             << "     " << convert_time(getRealTime()-start_time) << " ("
+                             << convert_time(remain_time) << " left)     \r" << flush;
                     }
 //                    cout << endl;
 
@@ -2721,8 +2726,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
         }
 
-        // clear the message previous on this line
-        cout << blkStr << "\r" << flush;
+        // clear the progress line on screen
+        cscreen << blkStr << "\r" << flush;
 
         if (better_pairs.size() > 0) {
             ModelPairSet compatible_pairs;
@@ -2797,7 +2802,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		final_model_tree += ")";
 	}
 
-	// cout << "Agglomerative model selection: " << final_model_tree << endl;
+	// if (verbose_mode >= VB_MED) cout << "Agglomerative model selection: " << final_model_tree << endl;
     
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
@@ -2862,18 +2867,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     #endif
             {
             num_model++;
-            cout.width(4);
-            cout << right << ++partition_id << " ";
-            cout.width(12);
-            cout << left << best_model.getName() << " ";
-            cout.width(11);
-            cout << score << " " << this_tree->aln->name;
-            if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                << convert_time(remain_time) << " left)";
+            if (verbose_mode >= VB_MED) {
+                cout.width(4);
+                cout << right << ++partition_id << " ";
+                cout.width(12);
+                cout << left << best_model.getName() << " ";
+                cout.width(11);
+                cout << score << " " << this_tree->aln->name;
+                if (num_model >= 10) {
+                    double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                    << convert_time(remain_time) << " left)";
+                }
+                cout << endl;
             }
-            cout << endl;
             replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
             model_info.dump();
             }
@@ -3260,7 +3267,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         CKP_SAVE(best_tree_AICc);
         CKP_SAVE(best_tree_BIC);
         checkpoint->dump();
-		if (set_name == "") {
+		if (set_name == "" && verbose_mode >= VB_MED) {
             cout.width(3);
             cout << right << model+1 << "  ";
             cout.width(13);
@@ -3554,7 +3561,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             model_info.putSubCheckpoint(&out_model_info, "");
         }
         model_info.dump();
-        if (write_info) {
+        if (write_info && verbose_mode >= VB_MED) {
             cout.width(3);
             cout << right << model+1 << "  ";
             cout.width(13);
@@ -4555,7 +4562,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             if (total_num_model > 0) {
                 double finish_percent = (double)num_model * 100.0 / total_num_model;
                 double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << " Finished subset " << num_model << "/" << total_num_model
+                cscreen << " Finished subset " << num_model << "/" << total_num_model
                      << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
                      << "     " << convert_time(getRealTime()-start_time) << " ("
                      << convert_time(remain_time) << " left)     \r" << flush;
@@ -4594,7 +4601,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             if (total_num_model > 0) {
                 double finish_percent = (double)num_model * 100.0 / total_num_model;
                 double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << " Finished subset " << num_model << "/" << total_num_model
+                cscreen << " Finished subset " << num_model << "/" << total_num_model
                      << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
                      << "     " << convert_time(getRealTime()-start_time) << " ("
                      << convert_time(remain_time) << " left)     \r" << flush;
@@ -4655,7 +4662,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 if (total_num_model > 0) {
                     double finish_percent = (double)num_model * 100.0 / total_num_model;
                     double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cout << " Finished subset " << num_model << "/" << total_num_model
+                    cscreen << " Finished subset " << num_model << "/" << total_num_model
                          << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
                          << "     " << convert_time(getRealTime()-start_time) << " ("
                          << convert_time(remain_time) << " left)     \r" << flush;
@@ -4737,7 +4744,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 if (total_num_model > 0) {
                     double finish_percent = (double)num_model * 100.0 / total_num_model;
                     double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cout << " Finished subset " << num_model << "/" << total_num_model
+                    cscreen << " Finished subset " << num_model << "/" << total_num_model
                          << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
                          << "     " << convert_time(getRealTime()-start_time) << " ("
                          << convert_time(remain_time) << " left)     \r" << flush;
@@ -4978,7 +4985,7 @@ void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, in
             if (total_num_model > 0) {
                 double finish_percent = (double)num_model * 100.0 / total_num_model;
                 double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << " Finished subset " << num_model << "/" << total_num_model
+                cscreen << " Finished subset " << num_model << "/" << total_num_model
                      << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
                      << "     " << convert_time(getRealTime()-start_time) << " ("
                      << convert_time(remain_time) << " left)     \r" << flush;
@@ -5715,7 +5722,7 @@ void PartitionFinder::test_PartitionModel() {
             }
             final_model_tree += ")";
         }
-        cout << "Agglomerative model selection: " << final_model_tree << endl;
+        if (verbose_mode >= VB_MED) cout << "Agglomerative model selection: " << final_model_tree << endl;
     }
 
 #ifdef _IQTREE_MPI
