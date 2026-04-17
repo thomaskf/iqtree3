@@ -3509,18 +3509,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 #pragma omp parallel num_threads(outer_model_threads)
 #endif
     {
-#ifdef _OPENMP
-#pragma omp single
-    {
-        cerr << "[DIAG] test() OMP team: omp_get_num_threads()=" << omp_get_num_threads()
-             << " omp_get_max_threads()=" << omp_get_max_threads()
-             << " num_threads(requested)=" << num_threads
-             << " outer_model_threads=" << outer_model_threads
-             << " omp_get_max_active_levels()=" << omp_get_max_active_levels()
-             << " omp_get_level()=" << omp_get_level()
-             << " aln=" << (in_tree ? in_tree->aln->name : "?") << endl;
-    }
-#endif
     int64_t model;
     do {
         model = getNextModel();
@@ -3648,8 +3636,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads)
 {
-    cerr << "[DIAG] testPartitionModel entry: num_threads=" << num_threads
-         << " params.num_threads=" << params.num_threads << endl;
     PartitionFinder partitionFinder(&params, in_tree, &model_info, models_block, num_threads);
     partitionFinder.test_PartitionModel();
 }
@@ -4460,10 +4446,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
     if (jobs.empty())
         return;
-
-    cerr << "[DIAG] getBestModelforPartitionsNoMPI: nthreads=" << nthreads
-         << " n_jobs=" << jobs.size()
-         << " omp_get_max_threads()=" << omp_get_max_threads() << endl;
 
     // Precompute per-partition thread budget m_p using a two-case rule.
     // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
@@ -5313,8 +5295,6 @@ void PartitionFinder::test_PartitionModel() {
         brlen_type = BRLEN_OPTIMIZE;
     }
 
-    cerr << "[DIAG] test_PartitionModel before getBestModel: num_threads=" << num_threads
-         << " total_num_model=" << total_num_model << " in_tree->size()=" << in_tree->size() << endl;
     // compute the best model for all partitions
     job_type = 1; // for all partitions
     getBestModel(job_type);
