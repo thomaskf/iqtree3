@@ -2875,6 +2875,12 @@ public:
      * TRUE to output the alternative SPRs with their supports in the tree
      */
     bool out_alter_spr;
+    
+    /**
+     * @private
+     * TRUE to use local references in CMAPLE
+     */
+    bool cmaple_use_local_ref;
 
     /**
     *  Mutation file that specifies pre-defined mutations occurs at nodes

@@ -5503,25 +5503,25 @@ bool runCMaple(Params &params)
                 sub_model = cmaple::ModelBase::DEFAULT;
             }
             cmaple::Model model(sub_model, aln.getSeqType());
+            
+            // transfer CMAPLE params
+            std::unique_ptr<cmaple::Params> cmaple_params =
+            cmaple::ParamsBuilder()
+            .withComputeSPRTA(params.compute_SPRTA)
+            .withComputeSPRTAZeroBranches(params.SPRTA_zero_branches)
+            .withOutAlterSPR(params.out_alter_spr)
+            .withLocalRef(params.cmaple_use_local_ref)
+            .build();
 
             // Initialize a Tree
             const std::string input_treefile(params.user_file ? params.user_file : "");
-            cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), cmaple::ParamsBuilder().build());
-            
-            // transfer SPRTA options if any
-            if (params.compute_SPRTA)
-            {
-                tree.params->compute_SPRTA = params.compute_SPRTA;
-                tree.params->compute_SPRTA_zero_length_branches = params.SPRTA_zero_branches;
-                tree.params->print_SPRTA_less_info_seqs = params.SPRTA_zero_branches;
-                tree.params->output_alternative_spr = params.out_alter_spr;
-            }
+            cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), std::move(cmaple_params));
 
             // Infer a phylogenetic tree
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
             std::ostream null_stream(0);
             std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
-            tree.infer(params.num_threads, tree_search_type, params.shallow_tree_search, out_stream);
+            tree.infer(params.num_threads, tree_search_type, params.shallow_tree_search, params.compute_SPRTA, out_stream);
 
             // Compute branch supports (if users want to do so)
             if (params.aLRT_replicates)
