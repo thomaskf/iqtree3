@@ -4284,17 +4284,13 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     }
 
 #ifdef _OPENMP
-    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
-    // show the message
-    if (parallel_job)
-        cout << "In ModelFinder: parallelization over partitions" << endl;
-    else if (nthreads > 1)
-        cout << "In ModelFinder: parallelization over sites" << endl;
-
-#pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
+    if (!params->model_test_and_tree) {
+        if (params->parallel_over_sites)
+            cout << "In ModelFinder: parallelization over sites" << endl;
+        else if (params->parallel_per_partition)
+            cout << "In ModelFinder: assigning threads per partition" << endl;
+    }
 #endif
-
 
     if (params->model_test_and_tree || nthreads <= 1) {
         // Sequential fallback: one thread, process partitions one by one
