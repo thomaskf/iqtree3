@@ -494,6 +494,9 @@ private:
      */
     void getBestModelforMergesNoMPI(int nthreads, vector<pair<int,double> >& jobs);
 
+    /** Process a single merge job (called from sequential, OMP fast path, or nested dispatch) */
+    void processMergeJob(int j, vector<pair<int,double> >& jobs, int m_p);
+
     /**
      * compute the best model
      * job_type = 1 : for all partitions

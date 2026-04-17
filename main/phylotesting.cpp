@@ -4535,109 +4535,236 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
     if (jobs.empty())
         return;
 
-    bool parallel_job = false;
-
-#ifdef _OPENMP
-    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
-#pragma omp parallel for schedule(dynamic) if (parallel_job)
-#endif
-    for (int j = 0; j < jobs.size(); j++) {
-        // information of current partitions pair
-        int pair = jobs[j].first;
-        ModelPair cur_pair;
-        cur_pair.part1 = closest_pairs[pair].first;
-        cur_pair.part2 = closest_pairs[pair].second;
-        ASSERT(cur_pair.part1 < cur_pair.part2);
-        cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
-        cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
-        cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
-        double weight1 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part1]);
-        double weight2 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part2]);
-        double sum = 1.0 / (weight1 + weight2);
-        weight1 *= sum;
-        weight2 *= sum;
-        CandidateModel best_model;
-        bool done_before = false;
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-        {
-            // if pairs previously examined, reuse the information
-            model_info->startStruct(cur_pair.set_name);
-            if (model_info->getBestModel(best_model.subst_name)) {
-                best_model.restoreCheckpoint(model_info);
-                done_before = true;
-            }
-            model_info->endStruct();
+    if (params->model_test_and_tree || nthreads <= 1) {
+        // Sequential fallback
+        for (int j = 0; j < (int)jobs.size(); j++) {
+            processMergeJob(j, jobs, nthreads);
         }
-        ModelCheckpoint part_model_info;
-        double cur_tree_len = 0.0;
-        if (!done_before) {
-            Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
-            PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
-            //tree->scaleLength((weight1*lenvec[cur_pair.part1] + weight2*lenvec[cur_pair.part2])/tree->treeLength());
-            tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
-            cur_tree_len = tree->treeLength();
-            tree->setAlignment(aln);
+        return;
+    }
 
 #ifdef _OPENMP
-#pragma omp critical
-#endif
-            {
-                extractModelInfo(cur_pair.set_name, *model_info, part_model_info);
-                transferModelParameters(in_tree, *model_info, part_model_info, gene_sets[cur_pair.part1], gene_sets[cur_pair.part2]);
-            }
-
-            tree->num_precision = in_tree->num_precision;
-            tree->setParams(params);
-            tree->sse = params->SSE;
-            tree->optimize_by_newton = params->optimize_by_newton;
-            tree->setNumThreads(params->model_test_and_tree ? num_threads : 1);
-            {
-                tree->setCheckpoint(&part_model_info);
-                // trick to restore checkpoint
-                tree->restoreCheckpoint();
-                tree->saveCheckpoint();
-            }
-            best_model = CandidateModelSet().test(*params, tree, part_model_info, models_block,
-                                                  parallel_job ? 1 : nthreads, params->partition_type, cur_pair.set_name, "", true);
-            best_model.restoreCheckpoint(&part_model_info);
-            delete tree;
-            delete aln;
+    if (params->parallel_over_sites) {
+        // All threads on one merge at a time
+        for (int j = 0; j < (int)jobs.size(); j++) {
+            processMergeJob(j, jobs, nthreads);
         }
-        cur_pair.logl = best_model.logl;
-        cur_pair.df = best_model.df;
-        cur_pair.model_name = best_model.getName();
-        cur_pair.tree_len = best_model.tree_len;
-        double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
-        int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
-        cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-        {
-            if (!done_before) {
-                replaceModelInfo(cur_pair.set_name, *model_info, part_model_info);
-                model_info->dump();
-                num_model++;
-                cout.width(4);
-                cout << right << num_model << " ";
-                cout.width(12);
-                cout << left << best_model.getName() << " ";
-                cout.width(11);
-                cout << cur_pair.score << " ";
-                cout.width(11);
-                cout << cur_pair.tree_len << " " << cur_pair.set_name;
-                if (num_model >= 10) {
-                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)";
+        return;
+    }
+
+    // Compute per-merge thread budget using the same strategy as partitions.
+    // Estimate each merge's cap from the combined alignment size.
+    int n_jobs = (int)jobs.size();
+    vector<int> mp(n_jobs);
+
+    if (params->parallel_per_partition) {
+        // Per-partition mode: each merge gets its full cap
+        for (int j = 0; j < n_jobs; j++) {
+            // Estimate merged alignment size from the job cost (seq * patterns * states)
+            // and use maxThreadsForAlignment-style cap
+            int pair_idx = jobs[j].first;
+            int p1 = closest_pairs[pair_idx].first;
+            int p2 = closest_pairs[pair_idx].second;
+            // Sum the pattern counts of merged partitions as an estimate
+            int total_patterns = 0;
+            int num_states = 0;
+            for (int pid : gene_sets[p1]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
+                num_states = in_tree->at(pid)->aln->num_states;
+            }
+            for (int pid : gene_sets[p2]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
+            }
+            int cap = max(1, (int)(total_patterns * num_states / params->mf_thread_factor));
+            mp[j] = min(nthreads, cap);
+        }
+    } else if (n_jobs <= nthreads) {
+        // Case A: round-robin distribution
+        vector<int> size_cap(n_jobs);
+        for (int j = 0; j < n_jobs; j++) {
+            int pair_idx = jobs[j].first;
+            int p1 = closest_pairs[pair_idx].first;
+            int p2 = closest_pairs[pair_idx].second;
+            int total_patterns = 0;
+            int num_states = 0;
+            for (int pid : gene_sets[p1]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
+                num_states = in_tree->at(pid)->aln->num_states;
+            }
+            for (int pid : gene_sets[p2]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
+            }
+            size_cap[j] = max(1, (int)(total_patterns * num_states / params->mf_thread_factor));
+            mp[j] = 1;
+        }
+        int remaining = nthreads - n_jobs;
+        while (remaining > 0) {
+            bool any_added = false;
+            for (int j = 0; j < n_jobs && remaining > 0; j++) {
+                if (mp[j] < size_cap[j]) {
+                    mp[j]++;
+                    remaining--;
+                    any_added = true;
                 }
-                cout << endl;
             }
-            if (cur_pair.score < inf_score)
-                better_pairs.insertPair(cur_pair);
+            if (!any_added) break;
+        }
+    } else {
+        // Case B: maximize concurrency
+        for (int j = 0; j < n_jobs; j++) {
+            mp[j] = 1;
+        }
+    }
+
+    // Check if all merges need only 1 thread
+    bool all_single = true;
+    for (int j = 0; j < n_jobs; j++) {
+        if (mp[j] > 1) { all_single = false; break; }
+    }
+
+    if (all_single) {
+        // OMP fast path
+        int omp_threads = min(nthreads, n_jobs);
+        int omp_saved = omp_get_max_threads();
+        omp_set_num_threads(omp_threads);
+        int j;
+        #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
+        for (j = 0; j < n_jobs; j++) {
+            processMergeJob(j, jobs, 1);
+        }
+        omp_set_num_threads(omp_saved);
+    } else {
+        // OMP nested dispatch (batched)
+        int j = 0;
+        while (j < n_jobs) {
+            int batch_start = j;
+            int batch_threads = 0;
+            int batch_size = 0;
+            while (j < n_jobs && batch_threads + mp[j] <= nthreads) {
+                batch_threads += mp[j];
+                batch_size++;
+                j++;
+            }
+            if (batch_size == 0) {
+                batch_size = 1;
+                batch_threads = mp[j];
+                j++;
+            }
+
+            omp_set_max_active_levels(2);
+            #pragma omp parallel for schedule(static,1) num_threads(batch_size)
+            for (int k = 0; k < batch_size; k++) {
+                int idx = batch_start + k;
+                int m_p = mp[idx];
+                omp_set_num_threads(m_p);
+                processMergeJob(idx, jobs, m_p);
+            }
+            omp_set_max_active_levels(1);
+        }
+    }
+
+    omp_set_num_threads(nthreads);
+#endif
+}
+
+/**
+ * Process a single merge job. Factored out so it can be called from
+ * sequential, OMP fast path, or OMP nested dispatch contexts.
+ */
+void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, int m_p) {
+    int pair_idx = jobs[j].first;
+    ModelPair cur_pair;
+    cur_pair.part1 = closest_pairs[pair_idx].first;
+    cur_pair.part2 = closest_pairs[pair_idx].second;
+    ASSERT(cur_pair.part1 < cur_pair.part2);
+    cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
+    cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
+    cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
+    double weight1 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part1]);
+    double weight2 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part2]);
+    double sum = 1.0 / (weight1 + weight2);
+    weight1 *= sum;
+    weight2 *= sum;
+    CandidateModel best_model;
+    bool done_before = false;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+        model_info->startStruct(cur_pair.set_name);
+        if (model_info->getBestModel(best_model.subst_name)) {
+            best_model.restoreCheckpoint(model_info);
+            done_before = true;
+        }
+        model_info->endStruct();
+    }
+    ModelCheckpoint part_model_info;
+    double cur_tree_len = 0.0;
+    if (!done_before) {
+        Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
+        PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
+        tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
+        cur_tree_len = tree->treeLength();
+        tree->setAlignment(aln);
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
+            extractModelInfo(cur_pair.set_name, *model_info, part_model_info);
+            transferModelParameters(in_tree, *model_info, part_model_info, gene_sets[cur_pair.part1], gene_sets[cur_pair.part2]);
+        }
+
+        tree->num_precision = in_tree->num_precision;
+        tree->setParams(params);
+        tree->sse = params->SSE;
+        tree->optimize_by_newton = params->optimize_by_newton;
+        tree->setNumThreads(m_p);
+        {
+            tree->setCheckpoint(&part_model_info);
+            tree->restoreCheckpoint();
+            tree->saveCheckpoint();
+        }
+        best_model = CandidateModelSet().test(*params, tree, part_model_info, models_block,
+                                              m_p, params->partition_type, cur_pair.set_name, "", true);
+        best_model.restoreCheckpoint(&part_model_info);
+        delete tree;
+        delete aln;
+    }
+    cur_pair.logl = best_model.logl;
+    cur_pair.df = best_model.df;
+    cur_pair.model_name = best_model.getName();
+    cur_pair.tree_len = best_model.tree_len;
+    double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
+    int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
+    cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+        if (!done_before) {
+            replaceModelInfo(cur_pair.set_name, *model_info, part_model_info);
+            model_info->dump();
+            num_model++;
+            cout.width(4);
+            cout << right << num_model << " ";
+            cout.width(12);
+            cout << left << best_model.getName() << " ";
+            cout.width(11);
+            cout << cur_pair.score << " ";
+            cout.width(11);
+            cout << cur_pair.tree_len << " " << cur_pair.set_name;
+            if (num_model >= 10) {
+                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
+        }
+        if (cur_pair.score < inf_score)
+            better_pairs.insertPair(cur_pair);
+        if (params->marginal_lh_aic) {
+            sorted_pairs.insertPair(cur_pair);
         }
     }
 }
