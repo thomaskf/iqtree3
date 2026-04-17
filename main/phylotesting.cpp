@@ -5278,6 +5278,21 @@ void PartitionFinder::test_PartitionModel() {
 #endif
 
     bool proceed_stepwise_merge = perform_merge;
+
+    // variables for mAIC merging
+    bool switched_to_caic = false;
+    double lhsum_bu;
+    int dfsum_bu;
+    vector<set<int> > gene_sets_bu;
+    DoubleVector lhvec_bu;
+    IntVector dfvec_bu;
+    DoubleVector lenvec_bu;
+    StrVector model_names_bu;
+    StrVector greedy_model_trees_bu;
+
+    int merge_step = 0;
+    double pre_inf_score = inf_score;
+
     while (proceed_stepwise_merge) {
         // stepwise merging charsets
 
@@ -5313,8 +5328,9 @@ void PartitionFinder::test_PartitionModel() {
                 inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
                 ASSERT(inf_score <= opt_pair.score + 0.1);
 
-                cout << "Merging " << opt_pair.set_name << " with " << criterionName(params->model_test_criterion)
-                << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
+                if (!params->marginal_lh_aic || switched_to_caic) {
+                    ASSERT(inf_score <= opt_pair.score + 0.1);
+                }
                 // change entry opt_part1 to merged one
                 gene_sets[opt_pair.part1] = opt_pair.merged_set;
                 lhvec[opt_pair.part1] = opt_pair.logl;
@@ -5352,6 +5368,40 @@ void PartitionFinder::test_PartitionModel() {
                 model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "p_invar");
                 model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
 #endif
+            }
+
+            // Output merge step summary (Rob's format)
+            merge_step++;
+            cout << "ModelFinder2\tStep " << merge_step
+                 << "\t" << gene_sets.size() << " Subsets\t"
+                 << criterionName(params->model_test_criterion)
+                 << " " << inf_score
+                 << "\tdeltaBIC " << inf_score - pre_inf_score
+                 << endl;
+            pre_inf_score = inf_score;
+
+            // save and output mAIC after merging all pairs
+            if (params->marginal_lh_aic) {
+                double cur_score_maic = getmAICforMergeScheme(gene_sets, model_names, dfsum, true);
+                if (!switched_to_caic) {
+                    cout << "Current partition model mAIC score: " << cur_score_maic
+                         << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  "), cAIC score: "
+                         << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
+                    inf_score_maic = cur_score_maic;
+                } else {
+                    if (cur_score_maic <= inf_score_maic) {
+                        cout << "Current partition model mAIC score: " << cur_score_maic
+                             << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  ") is better than "
+                             << inf_score_maic << ", back to merging with mAIC since next round" << endl;
+                        inf_score_maic = cur_score_maic;
+                        switched_to_caic = false;
+                    } else {
+                        cout << "Current partition model mAIC score: " << cur_score_maic
+                             << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  ") is worse than "
+                             << inf_score_maic << endl;
+                    }
+                }
+                cout << endl;
             }
 
             // proceed to the next iteration if gene_sets.size() >= 2
