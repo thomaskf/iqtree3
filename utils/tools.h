@@ -2881,6 +2881,12 @@ public:
      * TRUE to use local references in CMAPLE
      */
     bool cmaple_use_local_ref;
+    
+    /**
+     * @private
+     * TRUE to output MAT with CMAPLE
+     */
+    bool cmaple_output_MAT;
 
     /**
     *  Mutation file that specifies pre-defined mutations occurs at nodes

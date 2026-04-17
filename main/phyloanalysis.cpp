@@ -5572,6 +5572,16 @@ bool runCMaple(Params &params)
                 out << tree.exportTSV();
                 out.close();
             }
+            
+            // export MAT if selected
+            if(params.cmaple_output_MAT)
+            {
+                std::string filename = output_treefile + ".mat.nex";
+                std::cout << "Writing MAT to file " << filename << std::endl;
+                ofstream out = ofstream(filename);
+                out << tree.exportNexus(tree_format, false, true);
+                out.close();
+            }
 
             // Show model parameters
             if (cmaple::verbose_mode > cmaple::VB_QUIET)
@@ -5587,10 +5597,12 @@ bool runCMaple(Params &params)
             // Show information about output files
             std::cout << "Analysis results written to:" << std::endl;
             std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
+            if (params.cmaple_output_MAT)
+                std::cout << "Estimated MAT:                 " << output_treefile + ".mat.nex" << std::endl;
             if (params.compute_SPRTA)
-                std::cout << "Tree in NEXUS format:      " << output_treefile + ".nex" << std::endl;
+                std::cout << "Tree in NEXUS format:          " << output_treefile + ".nex" << std::endl;
             if (params.compute_SPRTA && params.out_alter_spr)
-                std::cout << "Meta data in TSV format:   " << output_treefile + ".tsv" << std::endl;
+                std::cout << "Meta data in TSV format:       " << output_treefile + ".tsv" << std::endl;
             std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
 
             // show runtime
