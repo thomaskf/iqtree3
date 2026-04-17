@@ -2744,12 +2744,10 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
 
             int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
             better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
-            if (compatible_pairs.size() > 1)
+            if (verbose_mode >= VB_MED && compatible_pairs.size() > 1) {
                 clearProgressLine();
-            clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+                cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+            }
 
             // 2017-12-21: simultaneously merging better pairs
             for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
@@ -2795,7 +2793,7 @@ cout << compatible_pairs.size() << " compatible better partition pairs found" <<
         cout << "ModelFinder2\t";
         if (part_algo.length() > 0)
             cout << part_algo << "\t";
-        cout << "Step " << ++step << "\t" << compute_pairs << " Subsets\t" << criterionName(params.model_test_criterion) << " " << inf_score;
+        cout << "Step " << ++step << "\t" << compute_pairs << " Partitions\t" << criterionName(params.model_test_criterion) << " " << inf_score;
         cout << "\tdeltaBIC " << inf_score - pre_inf_score;
         cout << endl;
         pre_inf_score = inf_score;
@@ -4450,9 +4448,10 @@ ModelPairSet PartitionFinder::getBetterPairsmAIC() {
         cout << "Merging " << it->second.set_name << " with mAIC score: " << greedy_score_maic
              << " (Marginal LnL: " << greedy_lh_marginal << "  df: " << cur_df << ")" << endl;
     }
-    clearProgressLine();
-    clearProgressLine();
-cout << cur_better_pairs.size() << " compatible better partition pairs found based on mAIC" << endl;
+    if (verbose_mode >= VB_MED) {
+        clearProgressLine();
+        cout << cur_better_pairs.size() << " compatible better partition pairs found based on mAIC" << endl;
+    }
     /*if (cur_better_pairs.size() == 0 && better_pairs.size() == 0) {
         auto it = sorted_pairs.begin();
         cur_better_pairs.insertPair(it->second);
@@ -5578,11 +5577,10 @@ cout << "Full partition model mAIC score: " << inf_score_maic << " (Marginal LnL
             better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
             if (!params->marginal_lh_aic) {
                 if (compatible_pairs.size() > 1)
-                    clearProgressLine();
-            clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+                    if (verbose_mode >= VB_MED) {
+                        clearProgressLine();
+                        cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+                    }
             } else {
                 //cout <<  "[cAIC] "<< compatible_pairs.size() << " compatible better partition pairs found" << endl;
                 better_pairs = getBetterPairsmAIC();
@@ -5618,12 +5616,11 @@ cout << "No better pairs based on both mAIC and " << criterionName(params->model
             clearProgressLine();
         clearProgressLine();
     clearProgressLine();
-cout << "No better pairs based on mAIC, try merging better pairs based on " << criterionName(params->model_test_criterion) << endl;
-                        clearProgressLine();
-            clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << compatible_pairs.size() << " compatible better partition pairs found based on " << criterionName(params->model_test_criterion) << endl;
+                        cout << "No better pairs based on mAIC, try merging better pairs based on " << criterionName(params->model_test_criterion) << endl;
+                        if (verbose_mode >= VB_MED) {
+                            clearProgressLine();
+                            cout << compatible_pairs.size() << " compatible better partition pairs found based on " << criterionName(params->model_test_criterion) << endl;
+                        }
                         switched_to_caic = true;
                         //back up
                         lhsum_bu = lhsum;
@@ -5710,7 +5707,7 @@ cout << compatible_pairs.size() << " compatible better partition pairs found bas
     clearProgressLine();
 cout << "PartitionFinder\t" << algo_name
                  << "\tStep " << merge_step
-                 << "\t" << gene_sets.size() << " Subsets\t"
+                 << "\t" << gene_sets.size() << " Partitions\t"
                  << criterionName(params->model_test_criterion)
                  << " " << inf_score
                  << "\tdelta" << criterionName(params->model_test_criterion)
