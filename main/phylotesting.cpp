@@ -52,6 +52,12 @@
 // Screen-only output stream (bypasses log file). Defined in main.cpp.
 extern ostream cscreen;
 
+// Clear the progress line on screen before printing a cout message,
+// so progress text doesn't overlap with the new message.
+static void clearProgressLine() {
+    cscreen << "\r" << string(100, ' ') << "\r" << flush;
+}
+
 #if defined(_NN) || defined(_OLD_NN)
 #include "nn/neuralnetwork.h"
 #endif
@@ -2506,7 +2512,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     fixPartitions(in_tree);
     
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-	cout << "Full partition model " << criterionName(params.model_test_criterion)
+	clearProgressLine();
+cout << "Full partition model " << criterionName(params.model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     pre_inf_score = inf_score;
@@ -2696,7 +2703,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
             better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
             if (compatible_pairs.size() > 1)
-                cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+                clearProgressLine();
+            clearProgressLine();
+        clearProgressLine();
+    clearProgressLine();
+cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
 
             // 2017-12-21: simultaneously merging better pairs
             for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
@@ -2849,7 +2860,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-    cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+    clearProgressLine();
+    clearProgressLine();
+cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
@@ -4215,6 +4228,7 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
 
 #endif // _IQTREE_MPI
 
+
 /**
  * compute and process the best model for partitions (without MPI)
  * nthreads : the number of threads available for these jobs
@@ -5184,7 +5198,9 @@ void PartitionFinder::test_PartitionModel() {
     fixPartitions(in_tree);
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
-    cout << "Full partition model " << criterionName(params->model_test_criterion)
+    clearProgressLine();
+    clearProgressLine();
+cout << "Full partition model " << criterionName(params->model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     string criterion_name = criterionName(params->model_test_criterion);
@@ -5374,7 +5390,11 @@ void PartitionFinder::test_PartitionModel() {
                 case MERGE_KMEANS:   algo_name = "K-means"; break;
                 default:             algo_name = ""; break;
             }
-            cout << "PartitionFinder\t" << algo_name
+            clearProgressLine();
+            clearProgressLine();
+        clearProgressLine();
+    clearProgressLine();
+cout << "PartitionFinder\t" << algo_name
                  << "\tStep " << merge_step
                  << "\t" << gene_sets.size() << " Subsets\t"
                  << criterionName(params->model_test_criterion)
@@ -5502,8 +5522,9 @@ void PartitionFinder::test_PartitionModel() {
     }
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
+    clearProgressLine();
+    clearProgressLine();
     cout << "Best partition model " << criterionName(params->model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
-
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params->out_prefix) + ".best_scheme.nex").c_str());
     ((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params->out_prefix) + ".best_scheme").c_str());
     model_info->dump();
