@@ -5532,6 +5532,9 @@ void PartitionFinder::test_PartitionModel() {
     StrVector model_names_bu;
     StrVector greedy_model_trees_bu;
 
+    int merge_step = 0;
+    double pre_inf_score = inf_score;
+
     while (proceed_stepwise_merge) {
         // stepwise merging charsets
 
@@ -5613,8 +5616,6 @@ void PartitionFinder::test_PartitionModel() {
 
                 if (!params->marginal_lh_aic || switched_to_caic) {
                     ASSERT(inf_score <= opt_pair.score + 0.1);
-                    cout << "Merging " << opt_pair.set_name << " with " << criterionName(params->model_test_criterion)
-                         << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
                 }
                 // change entry opt_part1 to merged one
                 gene_sets[opt_pair.part1] = opt_pair.merged_set;
@@ -5654,6 +5655,17 @@ void PartitionFinder::test_PartitionModel() {
                 model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
 #endif
             }
+
+            // Output merge step summary (Rob's format)
+            merge_step++;
+            cout << "ModelFinder2\tStep " << merge_step
+                 << "\t" << gene_sets.size() << " Subsets\t"
+                 << criterionName(params->model_test_criterion)
+                 << " " << inf_score
+                 << "\tdeltaBIC " << inf_score - pre_inf_score
+                 << endl;
+            pre_inf_score = inf_score;
+
             // save and output mAIC after merging all pairs
             if (params->marginal_lh_aic) {
                 double cur_score_maic = getmAICforMergeScheme(gene_sets, model_names, dfsum, true);
