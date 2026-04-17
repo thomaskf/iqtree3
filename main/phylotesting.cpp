@@ -2092,7 +2092,8 @@ string CandidateModel::evaluate(Params &params,
                             in_model_info.putBool(getName()+".UnreliableParam",true);
                             in_model_info.endStruct();
                         }
-                        cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
+                        if (verbose_mode >= VB_MED)
+                            cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
                     }
 
                     // initialize the parameters from the (k-1)-class mixture model
@@ -2141,8 +2142,9 @@ string CandidateModel::evaluate(Params &params,
                 if (prev_info.logl < new_logl + params.modelfinder_eps) break;
                 weight_rescale *= 0.5;
                 iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
-                     << " with factor " << weight_rescale << endl;
+                if (verbose_mode >= VB_MED)
+                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+                         << " with factor " << weight_rescale << endl;
             }
             if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
                 outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
@@ -2823,7 +2825,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         }
 
         cout << endl;
-        cout << "No. Model        Score       Charset" << endl;
+        if (verbose_mode >= VB_MED)
+            cout << "No. Model        Score       Charset" << endl;
         int partition_id = 0;
 
     #ifdef _OPENMP
@@ -4552,16 +4555,14 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             dfsum += (dfvec[tree_id] = best_model.df);
             lenvec[tree_id] = best_model.tree_len;
             num_model++;
-            cout.width(4);  cout << right << num_model << " ";
-            cout.width(12); cout << left << best_model.getName() << " ";
-            cout.width(11); cout << score << " ";
-            cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
-            if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)";
+            if (total_num_model > 0) {
+                double finish_percent = (double)num_model * 100.0 / total_num_model;
+                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cout << " Finished subset " << num_model << "/" << total_num_model
+                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                     << "     " << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)     \r" << flush;
             }
-            cout << endl;
             replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
             model_info->dump();
         }
@@ -4593,16 +4594,14 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             dfsum += (dfvec[tree_id] = best_model.df);
             lenvec[tree_id] = best_model.tree_len;
             num_model++;
-            cout.width(4);  cout << right << num_model << " ";
-            cout.width(12); cout << left << best_model.getName() << " ";
-            cout.width(11); cout << score << " ";
-            cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
-            if (num_model >= 10) {
-                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)";
+            if (total_num_model > 0) {
+                double finish_percent = (double)num_model * 100.0 / total_num_model;
+                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cout << " Finished subset " << num_model << "/" << total_num_model
+                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                     << "     " << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)     \r" << flush;
             }
-            cout << endl;
             replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
             model_info->dump();
         }
@@ -4656,16 +4655,14 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 dfsum += (dfvec[tree_id] = best_model.df);
                 lenvec[tree_id] = best_model.tree_len;
                 num_model++;
-                cout.width(4);  cout << right << num_model << " ";
-                cout.width(12); cout << left << best_model.getName() << " ";
-                cout.width(11); cout << score << " ";
-                cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
-                if (num_model >= 10) {
-                    double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)";
+                if (total_num_model > 0) {
+                    double finish_percent = (double)num_model * 100.0 / total_num_model;
+                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                    cout << " Finished subset " << num_model << "/" << total_num_model
+                         << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                         << "     " << convert_time(getRealTime()-start_time) << " ("
+                         << convert_time(remain_time) << " left)     \r" << flush;
                 }
-                cout << endl;
                 replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
                 model_info->dump();
                 jobdone++;
@@ -4740,16 +4737,14 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 dfsum += (dfvec[tree_id] = best_model.df);
                 lenvec[tree_id] = best_model.tree_len;
                 num_model++;
-                cout.width(4);  cout << right << num_model << " ";
-                cout.width(12); cout << left << best_model.getName() << " ";
-                cout.width(11); cout << score << " ";
-                cout.width(11); cout << best_model.tree_len << " " << this_tree->aln->name;
-                if (num_model >= 10) {
-                    double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
-                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)";
+                if (total_num_model > 0) {
+                    double finish_percent = (double)num_model * 100.0 / total_num_model;
+                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                    cout << " Finished subset " << num_model << "/" << total_num_model
+                         << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                         << "     " << convert_time(getRealTime()-start_time) << " ("
+                         << convert_time(remain_time) << " left)     \r" << flush;
                 }
-                cout << endl;
                 replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
                 model_info->dump();
                 jobdone++;
@@ -5401,7 +5396,6 @@ void PartitionFinder::test_PartitionModel() {
 
     cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params->model_test_criterion) << "..." << endl;
     //cout << " No. AIC         AICc        BIC         Charset" << endl;
-    cout << " No. Model        Score       TreeLen     Charset" << endl;
 
     lhvec.resize(in_tree->size());
     dfvec.resize(in_tree->size());
