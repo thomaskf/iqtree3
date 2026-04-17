@@ -3697,22 +3697,22 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
             model_info->dump();
 
             num_model++;
-            cout.width(4);
-            cout << right << num_model << " ";
-            if (tag != -1)
-                cout << tag << " ";
-            cout.width(12);
-            cout << left << model_name << " ";
-            // cout.width(11);
-            // cout << score << " ";
-            cout.width(11);
-            cout << tree_len << " " << set_name;
-            if (num_model >= 10) {
-                remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)";
+            if (verbose_mode >= VB_MED) {
+                cout.width(4);
+                cout << right << num_model << " ";
+                if (tag != -1)
+                    cout << tag << " ";
+                cout.width(12);
+                cout << left << model_name << " ";
+                cout.width(11);
+                cout << tree_len << " " << set_name;
+                if (num_model >= 10) {
+                    remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                         << convert_time(remain_time) << " left)";
+                }
+                cout << endl;
             }
-            cout << endl;
         }
 
         // update the number of jobs done
@@ -3737,21 +3737,21 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
 
         for (i=0; i<tree_len.size(); i++) {
             num_model++;
-            cout.width(4);
-            cout << right << num_model << " ";
-            if (tag[i] != -1)
-                cout << tag[i] << " ";
-            cout.width(12);
-            cout << left << model_name[i] << " ";
-            // cout.width(11);
-            // cout << score[i] << " ";
-            cout.width(11);
-            cout << tree_len[i] << " " << set_name[i];
-            if (num_model >= 10) {
-                remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " (" << convert_time(remain_time) << " left)";
+            if (verbose_mode >= VB_MED) {
+                cout.width(4);
+                cout << right << num_model << " ";
+                if (tag[i] != -1)
+                    cout << tag[i] << " ";
+                cout.width(12);
+                cout << left << model_name[i] << " ";
+                cout.width(11);
+                cout << tree_len[i] << " " << set_name[i];
+                if (num_model >= 10) {
+                    remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " (" << convert_time(remain_time) << " left)";
+                }
+                cout << endl;
             }
-            cout << endl;
         }
 
         // update the number of jobs done
@@ -4124,13 +4124,15 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
                 cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
 
                 num_model++;
-                cout.width(4);
-                cout << right << num_model << " ";
-                cout.width(12);
-                cout << left << cur_pair.model_name << " ";
-                cout.width(11);
-                cout << cur_pair.tree_len << " " << cur_pair.set_name;
-                cout << endl;
+                if (verbose_mode >= VB_MED) {
+                    cout.width(4);
+                    cout << right << num_model << " ";
+                    cout.width(12);
+                    cout << left << cur_pair.model_name << " ";
+                    cout.width(11);
+                    cout << cur_pair.tree_len << " " << cur_pair.set_name;
+                    cout << endl;
+                }
 
                 if (params->marginal_lh_aic) {
                     //cur_pair.distance = closest_pairs[pair].distance;
