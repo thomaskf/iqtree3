@@ -4524,12 +4524,9 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
         if (params->parallel_over_sites)
             cout << "In ModelFinder: parallelization over sites" << endl;
         else if (params->parallel_per_partition)
-            cout << "In ModelFinder: assigning threads per partition (Case-B always, heavy to light)" << endl;
-        else
-            cout << "In ModelFinder: assigning threads to partitions from heavy to light" << endl;
+            cout << "In ModelFinder: assigning threads per partition" << endl;
     }
 #endif
-
 
     if (params->model_test_and_tree || nthreads <= 1) {
         // Sequential fallback: one thread, process partitions one by one
