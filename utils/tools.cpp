@@ -1234,8 +1234,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-optalg_qmix") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -optalg_qmix <BFGS|EM>";
-                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
+                    throw "Use -optalg_qmix <BFGS|EM|BFGS-all>";
+                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") && strcmp(argv[cnt], "BFGS-all") != 0)
                     throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
                 params.optimize_alg_qmix = argv[cnt];
                 continue;
@@ -2128,6 +2128,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.partition_type = BRLEN_OPTIMIZE;
                 else
                     throw "Use --edge equal|scale|unlink";
+                continue;
             }
             
             if (strcmp(argv[cnt], "-rcluster") == 0 || strcmp(argv[cnt], "--rcluster") == 0) {
@@ -2990,6 +2991,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "-parallel-over-sites") == 0 || strcmp(argv[cnt], "--parallel-over-sites") == 0) {
                 params.parallel_over_sites = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-parallel-per-partition") == 0 || strcmp(argv[cnt], "--parallel-per-partition") == 0) {
+                params.parallel_per_partition = true;
                 continue;
             }
 
@@ -4600,6 +4606,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ms <model_test_sample_size>";
 				params.model_test_sample_size = convert_int(argv[cnt]);
+				continue;
+			}
+			if (strcmp(argv[cnt], "--mf-thread-factor") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --mf-thread-factor <int>";
+				params.mf_thread_factor = convert_int(argv[cnt]);
+				if (params.mf_thread_factor <= 0)
+					throw "--mf-thread-factor must be a positive integer";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-nt") == 0 || strcmp(argv[cnt], "-c") == 0 ||
@@ -7232,6 +7247,7 @@ void Params::setDefault() {
     optimize_rate_matrix = false;
     store_trans_matrix = false;
     parallel_over_sites = false;
+    parallel_per_partition = false;
     order_by_threads = false;
     //freq_type = FREQ_EMPIRICAL;
     freq_type = FREQ_UNKNOWN;
@@ -7425,6 +7441,7 @@ void Params::setDefault() {
     model_test_criterion = MTC_BIC;
     //    model_test_stop_rule = MTC_ALL;
     model_test_sample_size = 0;
+    mf_thread_factor = 4000;
     root_state = nullptr;
     print_bootaln = false;
     print_boot_site_freq = false;

@@ -74,12 +74,19 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
             cout << "Info: multi-threading strategy over alignment sites";
         } else {
             cout << "Info: multi-threading strategy over partitions";
-            if (params.num_threads > partitions.size()) {
-                params.num_threads = partitions.size();
-                cout << " and number of threads is changed to " << params.num_threads << endl << endl;
-                cout << "Note: For long partitions, you can use --parallel-over-sites option to force" << endl;
-                cout << "      multi-threading strategy over alignment sites and utilise all the threads." << endl;
-                cout << "      However, parallelisation over sites will have adverse effect on short partitions.";
+            // Compute the total thread capacity across all partitions.
+            // Each partition can usefully employ max(1, patterns*states/factor)
+            // threads.  Any threads beyond the sum are guaranteed wasted.
+            int total_cap = 0;
+            for (auto part : partitions) {
+                total_cap += max(1, (int)(part->getNPattern()
+                             * part->num_states / params.mf_thread_factor));
+            }
+            if (params.num_threads > total_cap) {
+                params.num_threads = total_cap;
+                omp_set_num_threads(params.num_threads);
+                cout << " and number of threads is changed to "
+                     << params.num_threads;
             }
         }
     }

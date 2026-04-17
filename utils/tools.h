@@ -1663,6 +1663,11 @@ public:
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
+    /** each partition gets min(nthreads, size_cap) threads,
+     *  partitions dispatched heavy-first; no round-robin distribution of surplus threads
+     *  across partitions */
+    bool parallel_per_partition;
+
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
     bool order_by_threads;
 
@@ -2408,6 +2413,10 @@ public:
 
     /** sample size for AICc and BIC */
     int model_test_sample_size;
+
+    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
+     *  Default 4000. Set via --mf-thread-factor. */
+    int mf_thread_factor;
 
     /** root state, for Tina's zoombie domain */
     char *root_state;
