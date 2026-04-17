@@ -12,6 +12,7 @@
 #endif
 #include <iqtree_config.h>
 #include <numeric>
+#include <iomanip>
 #include "tree/phylotree.h"
 #include "tree/iqtree.h"
 #include "tree/phylotreemixlen.h"
@@ -4746,20 +4747,14 @@ void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, in
             replaceModelInfo(cur_pair.set_name, *model_info, part_model_info);
             model_info->dump();
             num_model++;
-            cout.width(4);
-            cout << right << num_model << " ";
-            cout.width(12);
-            cout << left << best_model.getName() << " ";
-            cout.width(11);
-            cout << cur_pair.score << " ";
-            cout.width(11);
-            cout << cur_pair.tree_len << " " << cur_pair.set_name;
-            if (num_model >= 10) {
+            if (total_num_model > 0) {
+                double finish_percent = (double)num_model * 100.0 / total_num_model;
                 double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)";
+                cout << " Finished subset " << num_model << "/" << total_num_model
+                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                     << "     " << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)     \r" << flush;
             }
-            cout << endl;
         }
         if (cur_pair.score < inf_score)
             better_pairs.insertPair(cur_pair);
@@ -5372,11 +5367,21 @@ void PartitionFinder::test_PartitionModel() {
 
             // Output merge step summary (Rob's format)
             merge_step++;
-            cout << "ModelFinder2\tStep " << merge_step
+            string algo_name;
+            switch (params->partition_merge) {
+                case MERGE_GREEDY:   algo_name = "Greedy"; break;
+                case MERGE_RCLUSTER: algo_name = "RCluster"; break;
+                case MERGE_RCLUSTERF: algo_name = "RClusterF"; break;
+                case MERGE_KMEANS:   algo_name = "K-means"; break;
+                default:             algo_name = ""; break;
+            }
+            cout << "PartitionFinder\t" << algo_name
+                 << "\tStep " << merge_step
                  << "\t" << gene_sets.size() << " Subsets\t"
                  << criterionName(params->model_test_criterion)
                  << " " << inf_score
-                 << "\tdeltaBIC " << inf_score - pre_inf_score
+                 << "\tdelta" << criterionName(params->model_test_criterion)
+                 << " " << inf_score - pre_inf_score
                  << endl;
             pre_inf_score = inf_score;
 
