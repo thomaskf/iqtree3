@@ -1241,6 +1241,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "-mstrategy") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mstrategy <1|2>";
+                params.multistart_strategy = convert_int(argv[cnt]);
+                if (params.multistart_strategy < 1 || params.multistart_strategy > 2)
+                    throw "Use -mstrategy <1|2> (1=one-phase, 2=two-phase)";
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-init_nucl_freq") == 0 || strcmp(argv[cnt], "--init_nucl_freq") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -7198,6 +7208,7 @@ void Params::setDefault() {
     optimize_alg_treeweight = "EM";
     optimize_from_given_params = false;
     optimize_alg_qmix = "BFGS";
+    multistart_strategy = 2;  // default: two-phase (screen + top-2)
     estimate_init_freq = 0;
 
     // defaults for new options -JD

@@ -1812,6 +1812,13 @@ public:
     string optimize_alg_qmix;
 
     /**
+     *  Multistart strategy for M7/M8 codon mixture models.
+     *  1 = one-phase: run starts sequentially, 2 rounds/start, early stop
+     *  2 = two-phase: cheap LL screen then top-2 full starts with 1 round/start (default)
+     */
+    int multistart_strategy;
+
+    /**
      * non-zero if want to estimate the initial frequency vectors for q-mixture model
      */
     int estimate_init_freq;

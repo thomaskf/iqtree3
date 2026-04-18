@@ -740,23 +740,37 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                               && !(fix_alpha && fix_beta);
         if (!multistart_done && can_multistart) {
             multistart_done = true;
-            // A compact set of starting points that covers the qualitative
-            // shapes of Beta(alpha, beta) on [0,1]: uniform, sharp decay,
-            // moderate decay, broad bell, U-shape. Kept small because each
-            // start runs a full model+BL alternation and we pay 5x this
-            // cost.  The BFGS dimension here is tiny (3 for M7, 5 for M8).
+            // Multistart for M7/M8 beta-distribution models.
+            //
+            // Strategy 1 (one-phase, -mstrategy 1):
+            //   Try starts sequentially in a fixed order. Each start runs
+            //   2 rounds of BFGS+BL. Stop early when two starts agree.
+            //
+            // Strategy 2 (two-phase, -mstrategy 2, DEFAULT):
+            //   Phase 1: cheap LL screen at all 5 starting (alpha, beta)
+            //     points (just one likelihood evaluation each, seconds).
+            //   Phase 2: fully optimise the top-2 starts ranked by
+            //     Phase 1 score (1 round of BFGS+BL each). Stop early
+            //     when two starts agree; extend one-by-one otherwise.
+            //
+            const int strategy = Params::getInstance().multistart_strategy;
             const std::vector<std::pair<double,double>> start_points = {
                 {1.0, 1.0},   // uniform (historical default)
+                {0.5, 0.5},   // U-shape
                 {0.1, 7.0},   // very sharp decay toward 0
                 {2.0, 5.0},   // moderate decay
                 {4.0, 2.0},   // broad bell peaked > 0.5
-                {0.5, 0.5},   // U-shape
             };
-            // Snapshot the initial state so every start runs BFGS from
-            // identical kappa / prop / free-omega / branch-lengths and only
-            // differs in (alpha, beta). This ensures the starts are
-            // independent samples of the landscape rather than a chained
-            // sequence whose later starts inherit drift from earlier ones.
+            const double MULTISTART_PARAM_REL_TOL = 0.10;
+            const double MULTISTART_LH_TOL        = 2.0;
+            // How many BFGS+BL rounds per start:
+            //   v1 = 2 rounds (historical), v2 = 1 round (cheaper).
+            const int ROUNDS_PER_START = (strategy == 1) ? 2 : 1;
+
+            cout << "Multistart strategy " << strategy
+                 << " (" << ROUNDS_PER_START << " round(s)/start)" << endl;
+
+            // Snapshot the initial state.
             double init_kappa = ((ModelCodon*)at(0))->kappa;
             double init_free_omega = (cmix_subtype == "8")
                 ? ((ModelCodon*)at(size()-1))->omega : 0.0;
@@ -764,6 +778,45 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             DoubleVector init_bl;
             phylo_tree->saveBranchLengths(init_bl);
 
+            // ---- Phase 1: cheap LL screen (strategy 2 only) ----
+            // Build a ranked order of starting points. For strategy 1,
+            // just use the fixed order; for strategy 2, rank by initial LL.
+            std::vector<size_t> start_order;
+            if (strategy == 2) {
+                struct ScreenResult { double score; size_t idx; };
+                std::vector<ScreenResult> screen;
+                int n_beta = (cmix_subtype == "7") ? (int)size() : (int)size() - 1;
+                for (size_t s = 0; s < start_points.size(); s++) {
+                    double s_alpha = fix_alpha ? alpha : start_points[s].first;
+                    double s_beta  = fix_beta  ? beta  : start_points[s].second;
+                    double* omega_arr = RateBeta::SampleOmegas(n_beta, s_alpha, s_beta);
+                    for (int k = 0; k < n_beta; k++)
+                        ((ModelCodon*)at(k))->omega = omega_arr[k];
+                    for (int k = 0; k < size(); k++) {
+                        ((ModelCodon*)at(k))->kappa = init_kappa;
+                        prop[k] = init_prop[k];
+                    }
+                    if (cmix_subtype == "8")
+                        ((ModelCodon*)at(size()-1))->omega = init_free_omega;
+                    phylo_tree->restoreBranchLengths(init_bl);
+                    rescale_codon_mix();
+                    double s_score = phylo_tree->computeLikelihood();
+                    cout << "  screen (alpha=" << s_alpha << ", beta=" << s_beta
+                         << ") -> LL = " << s_score << endl;
+                    screen.push_back({s_score, s});
+                }
+                sort(screen.begin(), screen.end(),
+                     [](const ScreenResult &a, const ScreenResult &b){
+                         return a.score > b.score;
+                     });
+                for (auto &sr : screen) start_order.push_back(sr.idx);
+            } else {
+                // Strategy 1: fixed sequential order.
+                for (size_t s = 0; s < start_points.size(); s++)
+                    start_order.push_back(s);
+            }
+
+            // ---- Full optimization of selected starts ----
             double best_score = -DBL_MAX;
             double best_alpha = alpha, best_beta = beta;
             double best_kappa = init_kappa;
@@ -771,33 +824,38 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             double best_free_weight = init_prop[size()-1];
             DoubleVector best_prop = init_prop;
             DoubleVector best_bl = init_bl;
-            for (size_t s = 0; s < start_points.size(); s++) {
-                // If the user fixed alpha (or beta), keep the user's value
-                // for that coordinate and only vary the free one.
+
+            struct StartResult { double score, alpha, beta; };
+            std::vector<StartResult> results;
+
+            // For strategy 2 start with top N_FULL=2; for strategy 1
+            // just go through all 5 (early stop will break if two agree).
+            const int N_FULL = 2;
+            size_t n_to_try = (strategy == 2)
+                ? min((size_t)N_FULL, start_order.size())
+                : start_order.size();
+            bool early_stop = false;
+            for (size_t rank = 0; rank < start_order.size() && !early_stop; rank++) {
+                if (rank >= n_to_try) break;
+
+                size_t s = start_order[rank];
                 alpha = fix_alpha ? alpha : start_points[s].first;
                 beta  = fix_beta  ? beta  : start_points[s].second;
-                // restore kappa / prop / free-omega / BL from the snapshot
-                // so every start begins from the same baseline
                 for (int k = 0; k < size(); k++) {
                     ((ModelCodon*)at(k))->kappa = init_kappa;
                     prop[k] = init_prop[k];
                 }
-                if (cmix_subtype == "8") {
+                if (cmix_subtype == "8")
                     ((ModelCodon*)at(size()-1))->omega = init_free_omega;
-                }
                 phylo_tree->restoreBranchLengths(init_bl);
                 phylo_tree->clearAllPartialLH();
-                // Alternate model + BL optimisation a couple of times so
-                // each start converges fairly. Without the BL refit, the
-                // first start's BL bleeds into all subsequent starts and
-                // BFGS sees a stale tree, "moving" the model away from a
-                // perfectly good (alpha, beta) basin.
+
                 double s_score = 0.0;
-                for (int it = 0; it < 2; it++) {
+                for (int it = 0; it < ROUNDS_PER_START; it++) {
                     s_score = ModelMarkov::optimizeParameters(gradient_epsilon);
-                    s_score = phylo_tree->optimizeAllBranches(1,
-                                                              gradient_epsilon);
+                    s_score = phylo_tree->optimizeAllBranches(1, gradient_epsilon);
                 }
+
                 cout << "  multistart point (alpha=" << start_points[s].first
                      << ", beta=" << start_points[s].second << ") -> score = "
                      << s_score << " (final alpha=" << alpha
@@ -813,6 +871,34 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                     }
                     for (int k = 0; k < size(); k++) best_prop[k] = prop[k];
                     phylo_tree->saveBranchLengths(best_bl);
+                }
+                results.push_back({s_score, alpha, beta});
+
+                // Agreement check (both strategies).
+                if (results.size() >= 2) {
+                    for (size_t prev = 0; prev < results.size() - 1; prev++) {
+                        if (best_score - results[prev].score > MULTISTART_LH_TOL)
+                            continue;
+                        if (best_score - results.back().score > MULTISTART_LH_TOL)
+                            continue;
+                        double a1 = results[prev].alpha, a2 = results.back().alpha;
+                        double b1 = results[prev].beta,  b2 = results.back().beta;
+                        double a_rel = fabs(a1 - a2) / max(max(a1, a2), 1e-6);
+                        double b_rel = fabs(b1 - b2) / max(max(b1, b2), 1e-6);
+                        if (a_rel < MULTISTART_PARAM_REL_TOL &&
+                            b_rel < MULTISTART_PARAM_REL_TOL) {
+                            cout << "  early stop: starts agree"
+                                 << " (alpha rel.diff=" << a_rel
+                                 << ", beta rel.diff=" << b_rel
+                                 << ", LL gap=" << fabs(results[prev].score - results.back().score)
+                                 << ")" << endl;
+                            early_stop = true;
+                            break;
+                        }
+                    }
+                    if (!early_stop && rank + 1 >= n_to_try && n_to_try < start_order.size()) {
+                        n_to_try++;
+                    }
                 }
             }
             // Restore the best start's converged state (model + branch
