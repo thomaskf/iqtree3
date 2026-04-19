@@ -1241,6 +1241,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "-mstrategy") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mstrategy <1|2|3>";
+                params.multistart_strategy = convert_int(argv[cnt]);
+                if (params.multistart_strategy < 1 || params.multistart_strategy > 3)
+                    throw "Use -mstrategy <1|2|3> (1=one-phase 2rounds, 2=two-phase 1round, 3=one-phase 1round)";
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-init_nucl_freq") == 0 || strcmp(argv[cnt], "--init_nucl_freq") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -7198,6 +7208,7 @@ void Params::setDefault() {
     optimize_alg_treeweight = "EM";
     optimize_from_given_params = false;
     optimize_alg_qmix = "BFGS";
+    multistart_strategy = 3;  // default: one-phase light (sequential, 1 round/start)
     estimate_init_freq = 0;
 
     // defaults for new options -JD
