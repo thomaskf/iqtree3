@@ -753,6 +753,12 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             //     Phase 1 score (1 round of BFGS+BL each). Stop early
             //     when two starts agree; extend one-by-one otherwise.
             //
+            // Strategy 3 (one-phase light, -mstrategy 3):
+            //   Like strategy 1 (sequential fixed order, early stop) but
+            //   each start runs only 1 round of BFGS+BL instead of 2.
+            //   Cheaper per start than strategy 1, without the screening
+            //   overhead of strategy 2.
+            //
             const int strategy = Params::getInstance().multistart_strategy;
             const std::vector<std::pair<double,double>> start_points = {
                 {1.0, 1.0},   // uniform (historical default)
@@ -764,7 +770,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             const double MULTISTART_PARAM_REL_TOL = 0.10;
             const double MULTISTART_LH_TOL        = 2.0;
             // How many BFGS+BL rounds per start:
-            //   v1 = 2 rounds (historical), v2 = 1 round (cheaper).
+            //   strategy 1 = 2 rounds, strategies 2 & 3 = 1 round.
             const int ROUNDS_PER_START = (strategy == 1) ? 2 : 1;
 
             cout << "Multistart strategy " << strategy
@@ -811,7 +817,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                      });
                 for (auto &sr : screen) start_order.push_back(sr.idx);
             } else {
-                // Strategy 1: fixed sequential order.
+                // Strategies 1 and 3: fixed sequential order.
                 for (size_t s = 0; s < start_points.size(); s++)
                     start_order.push_back(s);
             }
@@ -828,8 +834,8 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             struct StartResult { double score, alpha, beta; };
             std::vector<StartResult> results;
 
-            // For strategy 2 start with top N_FULL=2; for strategy 1
-            // just go through all 5 (early stop will break if two agree).
+            // For strategy 2 start with top N_FULL=2; for strategies 1
+            // and 3 go through all 5 (early stop will break if two agree).
             const int N_FULL = 2;
             size_t n_to_try = (strategy == 2)
                 ? min((size_t)N_FULL, start_order.size())
