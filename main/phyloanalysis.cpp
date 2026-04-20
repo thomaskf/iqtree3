@@ -2633,14 +2633,159 @@ void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
 }
 
 /**
+ * Smoothed Bootstrap Aggregation (SBA) for codon mixture models.
+ * Lu & Goldman, MBE 33(11):2976-2986, 2016.
+ *
+ * For each of B bootstrap replicates:
+ *   1. Resample site patterns with replacement.
+ *   2. Re-estimate model parameters (omega, weights, kappa, branch lengths)
+ *      on the bootstrap alignment with the tree topology fixed.
+ *   3. Using the bootstrap MLEs, compute per-site posterior Pr(omega>1)
+ *      on the original alignment.
+ *
+ * Returns per-site mean and median of the B posteriors.
+ */
+void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
+                                     ModelCodonMixture *codonMix,
+                                     vector<double> &sba_mean_pw1,
+                                     vector<double> &sba_median_pw1) {
+    Alignment *aln = iqtree.aln;
+    int B = params.sba_replicates;
+    size_t nptn = aln->getNPattern();
+    size_t nsite = aln->getNSite();
+    int ncat = codonMix->getNMixtures();
+
+    cout << endl << "Performing Smoothed Bootstrap Aggregation (SBA) with "
+         << B << " replicates..." << endl;
+
+    // --- Save original state ---
+    // Pattern frequencies
+    vector<int> orig_freq(nptn);
+    for (size_t p = 0; p < nptn; p++)
+        orig_freq[p] = aln->at(p).frequency;
+    // Branch lengths
+    DoubleVector orig_bl;
+    iqtree.saveBranchLengths(orig_bl);
+    // Model parameters: kappa, per-class omega, weights, alpha/beta
+    double orig_kappa = ((ModelCodon*)codonMix->getMixtureClass(0))->kappa;
+    vector<double> orig_omegas(ncat), orig_props(ncat);
+    for (int c = 0; c < ncat; c++) {
+        orig_omegas[c] = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
+        orig_props[c] = codonMix->getMixtureWeight(c);
+    }
+    double orig_alpha = codonMix->alpha;
+    double orig_beta = codonMix->beta;
+
+    // --- Allocate storage: B posteriors per site ---
+    // sba_pw1[b][s] = Pr(omega > 1 | x_s, theta_b)
+    vector<vector<double>> sba_pw1(B, vector<double>(nsite, 0.0));
+
+    // --- SBA loop ---
+    for (int b = 0; b < B; b++) {
+        cout << "  SBA replicate " << (b+1) << "/" << B << "..." << flush;
+
+        // (a) Restore original model params + branch lengths as starting point
+        iqtree.restoreBranchLengths(orig_bl);
+        for (int c = 0; c < ncat; c++) {
+            ((ModelCodon*)codonMix->getMixtureClass(c))->omega = orig_omegas[c];
+            ((ModelCodon*)codonMix->getMixtureClass(c))->kappa = orig_kappa;
+            codonMix->setMixtureWeight(c, orig_props[c]);
+        }
+        codonMix->alpha = orig_alpha;
+        codonMix->beta = orig_beta;
+
+        // (b) Generate bootstrap pattern frequencies
+        IntVector boot_freq;
+        init_random(params.ran_seed + 2000000 + b);
+        aln->createBootstrapAlignment(boot_freq, nullptr);
+
+        // (c) Set bootstrap frequencies on the alignment
+        for (size_t p = 0; p < nptn; p++)
+            aln->at(p).frequency = boot_freq[p];
+        iqtree.ptn_freq_computed = false;
+        iqtree.clearAllPartialLH();
+
+        // (d) Re-estimate model params + branch lengths (fixed topology)
+        iqtree.getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, 0.1, 0.001);
+
+        // (e) Collect bootstrap MLEs (omegas may have changed)
+        vector<double> boot_omegas(ncat);
+        for (int c = 0; c < ncat; c++)
+            boot_omegas[c] = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
+
+        // (f) Restore original pattern frequencies (keep bootstrap model params)
+        for (size_t p = 0; p < nptn; p++)
+            aln->at(p).frequency = orig_freq[p];
+        iqtree.ptn_freq_computed = false;
+        iqtree.clearAllPartialLH();
+
+        // (g) Compute per-pattern posteriors on original data using bootstrap MLEs
+        double *ptn_post = new double[nptn * (size_t)ncat];
+        iqtree.computePatternProbabilityCategory(ptn_post, WSL_MIXTURE);
+
+        // (h) Compute P(omega > 1) for each site
+        for (size_t s = 0; s < nsite; s++) {
+            int pid = aln->getPatternID(s);
+            double *pp = ptn_post + (size_t)pid * ncat;
+            double pw1 = 0.0;
+            for (int c = 0; c < ncat; c++) {
+                if (boot_omegas[c] > 1.0)
+                    pw1 += pp[c];
+            }
+            sba_pw1[b][s] = pw1;
+        }
+        delete[] ptn_post;
+
+        cout << " done." << endl;
+    }
+
+    // --- Restore original state completely ---
+    for (size_t p = 0; p < nptn; p++)
+        aln->at(p).frequency = orig_freq[p];
+    iqtree.ptn_freq_computed = false;
+    iqtree.restoreBranchLengths(orig_bl);
+    for (int c = 0; c < ncat; c++) {
+        ((ModelCodon*)codonMix->getMixtureClass(c))->omega = orig_omegas[c];
+        ((ModelCodon*)codonMix->getMixtureClass(c))->kappa = orig_kappa;
+        codonMix->setMixtureWeight(c, orig_props[c]);
+    }
+    codonMix->alpha = orig_alpha;
+    codonMix->beta = orig_beta;
+    iqtree.clearAllPartialLH();
+
+    // --- Aggregate: compute mean and median per site ---
+    sba_mean_pw1.resize(nsite);
+    sba_median_pw1.resize(nsite);
+    for (size_t s = 0; s < nsite; s++) {
+        double sum = 0.0;
+        vector<double> vals(B);
+        for (int b = 0; b < B; b++) {
+            vals[b] = sba_pw1[b][s];
+            sum += vals[b];
+        }
+        sba_mean_pw1[s] = sum / B;
+        sort(vals.begin(), vals.end());
+        if (B % 2 == 1)
+            sba_median_pw1[s] = vals[B / 2];
+        else
+            sba_median_pw1[s] = (vals[B / 2 - 1] + vals[B / 2]) / 2.0;
+    }
+
+    cout << "SBA analysis completed." << endl;
+}
+
+/**
  * Write a CODEML-style "rst" file for codon mixture models. The file lists
  * site-class proportions and omega values, the Naive Empirical Bayes (NEB)
  * posterior probability that each site belongs to each site class
  * (along with the posterior mean omega and P(omega>1)), and finally a list
- * of positively selected sites.
+ * of positively selected sites. If SBA results are provided, they are
+ * appended after the NEB section.
  */
 void printCodonMixtureRst(const char *filename, IQTree &iqtree,
-                          ModelCodonMixture *codonMix) {
+                          ModelCodonMixture *codonMix,
+                          const vector<double> *sba_mean_pw1 = nullptr,
+                          const vector<double> *sba_median_pw1 = nullptr) {
     Alignment *aln = iqtree.aln;
     if (aln->seq_type != SEQ_CODON || codonMix == NULL)
         return;
@@ -2751,6 +2896,74 @@ void printCodonMixtureRst(const char *filename, IQTree &iqtree,
             out << mark << "      " << setw(6) << p.pmean << endl;
         }
 
+        // SBA section (if available)
+        if (sba_mean_pw1 && sba_median_pw1 && !sba_mean_pw1->empty()) {
+            out << endl << endl;
+            out << "Smoothed Bootstrap Aggregation (SBA) analysis" << endl;
+            out << "(Lu & Goldman, MBE 33:2976-2986, 2016)" << endl << endl;
+
+            out << setw(6) << right << "Site" << " AA"
+                << "   NEB P(w>1)"
+                << "  SBA mean P(w>1)"
+                << "  SBA median P(w>1)" << endl;
+
+            struct SBASite { size_t site; char aa; double neb_pw1; double sba_mean; double sba_median; };
+            vector<SBASite> sba_ps_sites;
+
+            for (size_t s = 0; s < nsite; s++) {
+                int pid = aln->getPatternID(s);
+                double *pp = ptn_post + (size_t)pid * ncat;
+
+                // amino acid of first sequence
+                char aa = '-';
+                if (aln->getNSeq() > 0) {
+                    Pattern pat = aln->at(pid);
+                    StateType st = pat[0];
+                    if (st < aln->num_states && aln->codon_table != NULL
+                        && aln->genetic_code != NULL) {
+                        int codon = (int)aln->codon_table[(int)st];
+                        aa = aln->genetic_code[codon];
+                    }
+                }
+
+                // NEB P(omega>1)
+                double neb_pw1 = 0.0;
+                for (int c = 0; c < ncat; c++)
+                    if (omegas[c] > 1.0) neb_pw1 += pp[c];
+
+                double mean_val = (*sba_mean_pw1)[s];
+                double median_val = (*sba_median_pw1)[s];
+
+                out << setw(6) << right << (s+1) << " " << aa << "   ";
+                out << fixed << setprecision(5);
+                out << setw(9) << neb_pw1;
+                out << "       " << setw(9) << mean_val;
+                out << "         " << setw(9) << median_val;
+                out << endl;
+
+                if (median_val > 0.5) {
+                    SBASite sb; sb.site = s+1; sb.aa = aa;
+                    sb.neb_pw1 = neb_pw1; sb.sba_mean = mean_val; sb.sba_median = median_val;
+                    sba_ps_sites.push_back(sb);
+                }
+            }
+
+            out << endl << "Positively selected sites (SBA, median P(w>1) > 0.5)" << endl << endl;
+            out << "\tSBA median  SBA mean  NEB P(w>1)" << endl << endl;
+            for (size_t i = 0; i < sba_ps_sites.size(); i++) {
+                const SBASite &sb = sba_ps_sites[i];
+                out << setw(6) << right << sb.site << " " << sb.aa << "   ";
+                out << fixed << setprecision(3);
+                out << setw(6) << sb.sba_median;
+                const char *mark = "  ";
+                if (sb.sba_median >= 0.99) mark = "**";
+                else if (sb.sba_median >= 0.95) mark = "* ";
+                out << mark << "    ";
+                out << setw(6) << sb.sba_mean << "    ";
+                out << setw(6) << sb.neb_pw1 << endl;
+            }
+        }
+
         out << endl << endl;
         out << "lnL = " << fixed << setprecision(6)
             << iqtree.getCurScore() << endl;
@@ -2811,12 +3024,34 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 
     // For codon mixture models, write a CODEML-style "rst" file with
     // per-site NEB posteriors and positively selected sites.
+    // If --sba is specified, also run SBA and include those results.
+    // SBA is only supported for M2a and M8, where class roles (purifying /
+    // neutral / positive selection) are fixed by the model structure. For
+    // models with unconstrained omegas (e.g. M3), a class omega can drift
+    // across the omega=1 boundary between bootstrap replicates, which makes
+    // the hard-threshold posterior P(omega>1) highly unstable.
     if (!params.pll && iqtree.aln->seq_type == SEQ_CODON
         && iqtree.getModel() != NULL && iqtree.getModel()->isMixture()) {
         ModelCodonMixture *codonMix = dynamic_cast<ModelCodonMixture*>(iqtree.getModel());
         if (codonMix != NULL) {
+            vector<double> sba_mean, sba_median;
+            bool run_sba = false;
+            if (params.sba_replicates > 0) {
+                if (codonMix->cmix_subtype == "2a" || codonMix->cmix_subtype == "8") {
+                    run_sba = true;
+                } else {
+                    outWarning("--sba is only supported for CMIX2a and CMIX8 models. "
+                               "Skipping SBA analysis for " + codonMix->name + ".");
+                }
+            }
+            if (run_sba) {
+                runSmoothedBootstrapAggregation(params, iqtree, codonMix,
+                                               sba_mean, sba_median);
+            }
             string rst_file = (string)params.out_prefix + ".rst";
-            printCodonMixtureRst(rst_file.c_str(), iqtree, codonMix);
+            printCodonMixtureRst(rst_file.c_str(), iqtree, codonMix,
+                                 run_sba ? &sba_mean : nullptr,
+                                 run_sba ? &sba_median : nullptr);
         }
     }
     

@@ -1905,6 +1905,10 @@ public:
      */
     int num_bootstrap_samples;
 
+    /** Number of Smoothed Bootstrap Aggregation (SBA) replicates for
+        codon mixture models. 0 means disabled (default). */
+    int sba_replicates;
+
     /** bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
         to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
         must equal m, where m is the alignment length. Otherwise, an error will occur.

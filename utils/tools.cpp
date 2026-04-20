@@ -3484,6 +3484,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
+			if (strcmp(argv[cnt], "--sba") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --sba <num_replicates>";
+				params.sba_replicates = convert_int(argv[cnt]);
+				if (params.sba_replicates < 1)
+					throw "Wrong number of SBA replicates";
+				continue;
+			}
 			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0 || strcmp(argv[cnt], "--sampling") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -7096,6 +7105,7 @@ void Params::setDefault() {
     gurobi_format = true;
     gurobi_threads = 1;
     num_bootstrap_samples = 0;
+    sba_replicates = 0;
     bootstrap_spec = nullptr;
     transfer_bootstrap = 0;
 
