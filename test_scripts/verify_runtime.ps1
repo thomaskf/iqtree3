@@ -52,7 +52,7 @@ for ($i = 0; $i -lt $thresholds.Count; $i++) {
     if ($expected -eq 0) {
         if ($FallbackColumn -ne "" -and $fallbackValues.Count -gt $i) {
             $expected = $fallbackValues[$i]
-            Write-Host "ℹ️  $command: IQ-TREE 2 baseline unavailable, using pre-defined expected value (${expected}s)"
+            Write-Host "ℹ️  ${command}: IQ-TREE 2 baseline unavailable, using pre-defined expected value (${expected}s)"
         } else {
             Write-Host "⏭ $command skipped (IQ-TREE 2 baseline unavailable, no fallback column provided)"
             continue
