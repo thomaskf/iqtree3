@@ -5788,10 +5788,11 @@ cout << "PartitionFinder\t" << algo_name
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    if (params->num_threads > in_tree->size() && !params->parallel_over_sites) {
-        params->num_threads = in_tree->size();
-        cout << "Number of threads is changed to " << params->num_threads << endl;
-    }
+    // Do not reduce params->num_threads here — after merging, the partition
+    // count may be much smaller than the original, but the tree search phase
+    // still needs the full thread count.  Thread capping for ModelFinder is
+    // handled by the sum(cap) reduction in SuperAlignment and the per-partition
+    // thread budgeting in getBestModelforPartitionsNoMPI/MergesNoMPI.
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
 #ifdef _IQTREE_MPI
