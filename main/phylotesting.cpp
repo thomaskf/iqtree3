@@ -1822,11 +1822,10 @@ void transferModelParameters(PhyloSuperTree *super_tree, ModelCheckpoint &model_
 }
 
 PhyloSuperTree* mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, StrVector &model_names, bool replace_super_tree = true) {
-    if (replace_super_tree)
+    if (replace_super_tree) {
         clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
+        cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
+    }
 	vector<set<int> >::iterator it;
 	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
 	vector<PartitionInfo> part_info;
@@ -5788,10 +5787,11 @@ cout << "PartitionFinder\t" << algo_name
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    if (params->num_threads > in_tree->size() && !params->parallel_over_sites) {
-        params->num_threads = in_tree->size();
-        cout << "Number of threads is changed to " << params->num_threads << endl;
-    }
+    // Do not reduce params->num_threads here — after merging, the partition
+    // count may be much smaller than the original, but the tree search phase
+    // still needs the full thread count.  Thread capping for ModelFinder is
+    // handled by the sum(cap) reduction in SuperAlignment and the per-partition
+    // thread budgeting in getBestModelforPartitionsNoMPI/MergesNoMPI.
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
 #ifdef _IQTREE_MPI
