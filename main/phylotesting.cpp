@@ -1822,11 +1822,10 @@ void transferModelParameters(PhyloSuperTree *super_tree, ModelCheckpoint &model_
 }
 
 PhyloSuperTree* mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, StrVector &model_names, bool replace_super_tree = true) {
-    if (replace_super_tree)
+    if (replace_super_tree) {
         clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
+        cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
+    }
 	vector<set<int> >::iterator it;
 	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
 	vector<PartitionInfo> part_info;
