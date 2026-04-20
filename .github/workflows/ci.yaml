@@ -64,16 +64,6 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
-        run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
-
-      - name: Run verify_results.sh
-        run: |
-          chmod +x test_scripts/verify_results.sh
-          ./test_scripts/verify_results.sh
-
       - name: Cache IQ-TREE 2 binary
         id: cache-iqtree2
         uses: actions/cache@v4
@@ -90,11 +80,17 @@ jobs:
 
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
+          chmod +x test_scripts/test_iqtree.sh
           ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
           ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
+
+      - name: Run verify_results.sh
+        run: |
+          chmod +x test_scripts/verify_results.sh
+          ./test_scripts/verify_results.sh
 
       - name: Run verify_runtimes.sh
         run: |
@@ -137,16 +133,6 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
-        run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
-
-      - name: Run verify_results.sh
-        run: |
-          chmod +x test_scripts/verify_results.sh
-          ./test_scripts/verify_results.sh
-
       - name: Cache IQ-TREE 2 binary
         id: cache-iqtree2
         uses: actions/cache@v4
@@ -163,11 +149,17 @@ jobs:
 
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
+          chmod +x test_scripts/test_iqtree.sh
           ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
           ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
+
+      - name: Run verify_results.sh
+        run: |
+          chmod +x test_scripts/verify_results.sh
+          ./test_scripts/verify_results.sh
 
       - name: Run verify_runtimes.sh
         run: |
@@ -249,16 +241,6 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
-        run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
-
-      - name: Run verify_results.sh
-        run: |
-          chmod +x test_scripts/verify_results.sh
-          ./test_scripts/verify_results.sh
-
       - name: Cache IQ-TREE 2 binary
         id: cache-iqtree2
         uses: actions/cache@v4
@@ -276,11 +258,17 @@ jobs:
 
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
+          chmod +x test_scripts/test_iqtree.sh
           ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
           ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
+
+      - name: Run verify_results.sh
+        run: |
+          chmod +x test_scripts/verify_results.sh
+          ./test_scripts/verify_results.sh
 
       - name: Run verify_runtimes.sh
         run: |
@@ -325,16 +313,6 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
-        run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
-
-      - name: Run verify_results.sh
-        run: |
-          chmod +x test_scripts/verify_results.sh
-          ./test_scripts/verify_results.sh
-
       - name: Cache IQ-TREE 2 binary
         id: cache-iqtree2
         uses: actions/cache@v4
@@ -352,11 +330,17 @@ jobs:
 
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
+          chmod +x test_scripts/test_iqtree.sh
           ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
           ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
+
+      - name: Run verify_results.sh
+        run: |
+          chmod +x test_scripts/verify_results.sh
+          ./test_scripts/verify_results.sh
 
       - name: Run verify_runtimes.sh
         run: |
@@ -464,16 +448,6 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.ps1
-        shell: pwsh
-        run: |
-          ./test_scripts/test_iqtree.ps1
-
-      - name: Run verify_results.ps1
-        shell: pwsh
-        run: |
-          ./test_scripts/verify_results.ps1
-
       - name: Cache IQ-TREE 2 binary
         id: cache-iqtree2
         uses: actions/cache@v4
@@ -500,6 +474,11 @@ jobs:
         shell: pwsh
         run: |
           ./test_scripts/test_iqtree.ps1 -IQTreeBin "./build/iqtree3.exe" -LogFile time_log_iqtree3.tsv
+
+      - name: Run verify_results.ps1
+        shell: pwsh
+        run: |
+          ./test_scripts/verify_results.ps1
 
       - name: Run verify_runtimes.ps1
         shell: pwsh
