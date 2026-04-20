@@ -64,24 +64,10 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Cache IQ-TREE 2 binary
-        id: cache-iqtree2
-        uses: actions/cache@v4
-        with:
-          path: iqtree2-bin
-          key: iqtree2-v2.4.0-linux-intel
-
-      - name: Download IQ-TREE 2 baseline binary
-        if: steps.cache-iqtree2.outputs.cache-hit != 'true'
-        run: |
-          curl -L -o /tmp/iqtree2.tar.gz https://github.com/iqtree/iqtree2/releases/download/v2.4.0/iqtree-2.4.0-Linux-intel.tar.gz
-          mkdir -p iqtree2-bin
-          tar -xzf /tmp/iqtree2.tar.gz --strip-components=1 -C iqtree2-bin
-
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/Linux-intel/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -133,24 +119,10 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Cache IQ-TREE 2 binary
-        id: cache-iqtree2
-        uses: actions/cache@v4
-        with:
-          path: iqtree2-bin
-          key: iqtree2-v2.4.0-linux-arm
-
-      - name: Download IQ-TREE 2 baseline binary
-        if: steps.cache-iqtree2.outputs.cache-hit != 'true'
-        run: |
-          curl -L -o /tmp/iqtree2.tar.gz https://github.com/iqtree/iqtree2/releases/download/v2.4.0/iqtree-2.4.0-Linux-arm.tar.gz
-          mkdir -p iqtree2-bin
-          tar -xzf /tmp/iqtree2.tar.gz --strip-components=1 -C iqtree2-bin
-
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/Linux-arm/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -241,25 +213,10 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Cache IQ-TREE 2 binary
-        id: cache-iqtree2
-        uses: actions/cache@v4
-        with:
-          path: iqtree2-bin
-          key: iqtree2-v2.4.0-macos-intel
-
-      - name: Download IQ-TREE 2 baseline binary
-        if: steps.cache-iqtree2.outputs.cache-hit != 'true'
-        run: |
-          curl -L -o /tmp/iqtree2.zip https://github.com/iqtree/iqtree2/releases/download/v2.4.0/iqtree-2.4.0-macOS-intel.zip
-          unzip -q /tmp/iqtree2.zip -d /tmp/iqtree2-extract
-          cp -r /tmp/iqtree2-extract/iqtree-2.4.0-macOS-intel/. iqtree2-bin/
-          chmod +x iqtree2-bin/bin/iqtree2
-
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+          chmod +x test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-intel/iqtree2
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-intel/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -313,25 +270,10 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Cache IQ-TREE 2 binary
-        id: cache-iqtree2
-        uses: actions/cache@v4
-        with:
-          path: iqtree2-bin
-          key: iqtree2-v2.4.0-macos-arm
-
-      - name: Download IQ-TREE 2 baseline binary
-        if: steps.cache-iqtree2.outputs.cache-hit != 'true'
-        run: |
-          curl -L -o /tmp/iqtree2.zip https://github.com/iqtree/iqtree2/releases/download/v2.4.0/iqtree-2.4.0-macOS-arm.zip
-          unzip -q /tmp/iqtree2.zip -d /tmp/iqtree2-extract
-          cp -r /tmp/iqtree2-extract/iqtree-2.4.0-macOS-arm/. iqtree2-bin/
-          chmod +x iqtree2-bin/bin/iqtree2
-
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+          chmod +x test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-arm/iqtree2
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-arm/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -448,27 +390,10 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Cache IQ-TREE 2 binary
-        id: cache-iqtree2
-        uses: actions/cache@v4
-        with:
-          path: iqtree2-bin
-          key: iqtree2-v2.4.0-windows
-
-      - name: Download IQ-TREE 2 baseline binary
-        if: steps.cache-iqtree2.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          curl -L -o "$env:TEMP\iqtree2.zip" https://github.com/iqtree/iqtree2/releases/download/v2.4.0/iqtree-2.4.0-Windows.zip
-          Expand-Archive -Path "$env:TEMP\iqtree2.zip" -DestinationPath "$env:TEMP\iqtree2-extract"
-          $extracted = Get-ChildItem "$env:TEMP\iqtree2-extract" -Directory | Select-Object -First 1
-          Copy-Item "$($extracted.FullName)" -Destination iqtree2-bin -Recurse
-
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         shell: pwsh
         run: |
-          $iqtree2bin = (Get-ChildItem iqtree2-bin -Recurse -Filter "iqtree2.exe" | Select-Object -First 1).FullName
-          ./test_scripts/test_iqtree.ps1 -IQTreeBin $iqtree2bin -LogFile time_log_iqtree2.tsv -OutDir test_scripts/test_data/iqtree2_out
+          ./test_scripts/test_iqtree.ps1 -IQTreeBin test_scripts/iqtree2/Windows/iqtree2.exe -LogFile time_log_iqtree2.tsv -OutDir test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         shell: pwsh
