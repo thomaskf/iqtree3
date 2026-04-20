@@ -81,7 +81,7 @@ jobs:
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
+          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -150,7 +150,7 @@ jobs:
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
+          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -259,7 +259,7 @@ jobs:
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
+          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -331,7 +331,7 @@ jobs:
       - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv
+          ./test_scripts/test_iqtree.sh iqtree2-bin/bin/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         run: |
@@ -468,7 +468,7 @@ jobs:
         shell: pwsh
         run: |
           $iqtree2bin = (Get-ChildItem iqtree2-bin -Recurse -Filter "iqtree2.exe" | Select-Object -First 1).FullName
-          ./test_scripts/test_iqtree.ps1 -IQTreeBin $iqtree2bin -LogFile time_log_iqtree2.tsv
+          ./test_scripts/test_iqtree.ps1 -IQTreeBin $iqtree2bin -LogFile time_log_iqtree2.tsv -OutDir test_scripts/test_data/iqtree2_out
 
       - name: Run benchmarks with IQ-TREE 3
         shell: pwsh
