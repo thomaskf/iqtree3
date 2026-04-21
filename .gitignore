@@ -2,6 +2,7 @@
 .cproject
 .settings
 .project
+.claude
 examples
 pll/CMakeFiles/
 pll/Makefile
@@ -36,3 +37,6 @@ zlib-1.2.7/
 /.direnv/
 /.envrc
 softwipe_build
+scripts
+bench_aa_c2
+sim_partitions

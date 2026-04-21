@@ -64,6 +64,8 @@
 #include "utils/operatingsystem.h" //for getOSName()
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
+#include "alignment/alignment.h"
+#include "alignment/superalignment.h"
 
 #include "utils/MPIHelper.h"
 
@@ -1846,6 +1848,7 @@ outstreambuf _out_buf;
 errstreambuf _err_buf;
 muststreambuf _must_buf;
 ostream cmust(&_must_buf);
+ostream cscreen(nullptr);  // screen-only output (initialized in startLogFile)
 
 string _log_file;
 int _exit_wait_optn = FALSE;
@@ -1857,6 +1860,9 @@ extern "C" void startLogFile(bool append_log) {
         _out_buf.open(_log_file.c_str());
     _err_buf.init(_out_buf.get_fout_buf());
     _must_buf.init(_out_buf.get_cout_buf(), _out_buf.get_fout_buf());
+    // cscreen writes to the terminal only (not the log file),
+    // used for progress lines that should not clutter the log.
+    cscreen.rdbuf(_out_buf.get_cout_buf());
 }
 
 extern "C" void endLogFile() {
@@ -2583,6 +2589,19 @@ int main(int argc, char *argv[]) {
         tree->gen_all_nni_trees();
     } else if (Params::getInstance().terrace_analysis) { /**Olga: Terrace analysis*/
         runterraceanalysis(Params::getInstance());
+    } else if (Params::getInstance().model_tamer < 100 && !Params::getInstance().model_tamer_only) {
+        // ModelTamer workflow with model selection
+        // Generate SU datasets and run model selection on each
+        runModelTamerAnalysis(Params::getInstance(), checkpoint);
+    } else if (Params::getInstance().model_tamer_only && Params::getInstance().model_tamer < 100) {
+        // ModelTamer only: generate SU datasets without model selection
+        if (Params::getInstance().partition_file) {
+            SuperAlignment *super_aln = new SuperAlignment(Params::getInstance());
+            super_aln->createSUPartitions(Params::getInstance());
+            delete super_aln;
+        } else {
+            createSUAlignment(Params::getInstance());
+        }
     } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
                Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
     {
