@@ -1156,6 +1156,34 @@ void AliSimulator::writeAllSeqChunkFromCache(ostream *&out)
 */
 void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data)
 {
+    // Write per-site mixture class assignments to a .siteclass file
+    // when simulating from a mixture model.
+    if (site_specific_model_index.size() > 0 && output_filepath.length() > 0
+        && tree->getModel() && tree->getModel()->isMixture()) {
+        string siteclass_file = output_filepath;
+        // remove file extension (.phy or .fa) to get prefix
+        size_t dot = siteclass_file.rfind('.');
+        if (dot != string::npos)
+            siteclass_file = siteclass_file.substr(0, dot);
+        siteclass_file += ".siteclass";
+        try {
+            ofstream out(siteclass_file);
+            out << "# Per-site mixture class assignment (0-indexed class)" << endl;
+            out << "# Site\tClass" << endl;
+            int num_entries = (int)site_specific_model_index.size();
+            // For codon data, each codon is 3 nucleotide positions but
+            // site_specific_model_index has one entry per site (not per nt).
+            // Output one line per site.
+            for (int i = 0; i < num_entries; i++) {
+                out << (i + 1) << "\t" << site_specific_model_index[i] << endl;
+            }
+            out.close();
+            cout << "Per-site class assignments written to " << siteclass_file << endl;
+        } catch (...) {
+            outWarning("Could not write site class file " + siteclass_file);
+        }
+    }
+
     // delete sub_rates, J_Matrix
     delete[] sub_rates;
     delete[] Jmatrix;

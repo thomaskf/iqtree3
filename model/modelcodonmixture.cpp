@@ -571,10 +571,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
                 prop[i] = (1.0 - w_extra) / (size() - 1);
             }
             ModelCodon *mlast = (ModelCodon*)at(size() - 1);
-            cout << "alpha: " << alpha << "\tbeta: " << beta
-                 << "\tomega_free: " << mlast->omega
-                 << "\tfree_weight: " << w_extra
-                 << "\tkappa: " << kappa << endl;
+            (void)mlast; // omega already set above via getExtraParams
         }
     }
 
@@ -736,9 +733,9 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // The multistart is skipped when the user has *fixed* both alpha
         // and beta via the new "+CMIX7/8{...}" syntax, since in that case
         // there is nothing to search over.
-        bool can_multistart = (cmix_subtype == "7" || cmix_subtype == "8")
+        bool can_multistart_m78 = (cmix_subtype == "7" || cmix_subtype == "8")
                               && !(fix_alpha && fix_beta);
-        if (!multistart_done && can_multistart) {
+        if (!multistart_done && can_multistart_m78) {
             multistart_done = true;
             // Multistart for M7/M8 beta-distribution models.
             //

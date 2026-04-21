@@ -3025,11 +3025,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     // For codon mixture models, write a CODEML-style "rst" file with
     // per-site NEB posteriors and positively selected sites.
     // If --sba is specified, also run SBA and include those results.
-    // SBA is only supported for M2a and M8, where class roles (purifying /
-    // neutral / positive selection) are fixed by the model structure. For
-    // models with unconstrained omegas (e.g. M3), a class omega can drift
-    // across the omega=1 boundary between bootstrap replicates, which makes
-    // the hard-threshold posterior P(omega>1) highly unstable.
+    // SBA is supported for M2a, M3, and M8. For M3, omega values are
+    // unconstrained and may drift across the omega=1 boundary between
+    // bootstrap replicates. This is handled correctly: for each replicate
+    // we sum posteriors over whichever classes have omega > 1 under that
+    // replicate's MLEs. The SBA aggregate (mean/median) then naturally
+    // reflects the uncertainty — sites from classes with omega fluctuating
+    // around 1 will show intermediate SBA values (~0.5), correctly
+    // indicating ambiguous selection status.
+    // SBA is not supported for M1a or M7 (no class with omega > 1).
     if (!params.pll && iqtree.aln->seq_type == SEQ_CODON
         && iqtree.getModel() != NULL && iqtree.getModel()->isMixture()) {
         ModelCodonMixture *codonMix = dynamic_cast<ModelCodonMixture*>(iqtree.getModel());
@@ -3037,10 +3041,11 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             vector<double> sba_mean, sba_median;
             bool run_sba = false;
             if (params.sba_replicates > 0) {
-                if (codonMix->cmix_subtype == "2a" || codonMix->cmix_subtype == "8") {
+                if (codonMix->cmix_subtype == "2a" || codonMix->cmix_subtype == "3"
+                    || codonMix->cmix_subtype == "8") {
                     run_sba = true;
                 } else {
-                    outWarning("--sba is only supported for CMIX2a and CMIX8 models. "
+                    outWarning("--sba is only supported for CMIX2a, CMIX3, and CMIX8 models. "
                                "Skipping SBA analysis for " + codonMix->name + ".");
                 }
             }
