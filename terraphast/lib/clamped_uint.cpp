@@ -56,50 +56,8 @@ index checked_uint<except>::value() const {
 	return m_value;
 }
 
-template <bool except>
-bool operator==(checked_uint<except> a, checked_uint<except> b) {
-	return a.value() == b.value();
-}
-
-template <bool except>
-bool operator!=(checked_uint<except> a, checked_uint<except> b) {
-	return !(a == b);
-}
-
-template <bool except>
-checked_uint<except> operator+(checked_uint<except> a, checked_uint<except> b) {
-	return a += b;
-}
-
-template <bool except>
-checked_uint<except> operator*(checked_uint<except> a, checked_uint<except> b) {
-	return a *= b;
-}
-
-template <bool except>
-std::ostream& operator<<(std::ostream& stream, checked_uint<except> val) {
-	if (val.is_clamped()) {
-		stream << ">= ";
-	}
-	stream << val.value();
-	return stream;
-}
-
 // explicitly instantiate template class
 template class checked_uint<false>;
 template class checked_uint<true>;
-
-// explicitly instantiate template functions
-template bool operator==(checked_uint<false>, checked_uint<false>);
-template bool operator!=(checked_uint<false>, checked_uint<false>);
-template checked_uint<false> operator+(checked_uint<false>, checked_uint<false>);
-template checked_uint<false> operator*(checked_uint<false>, checked_uint<false>);
-template std::ostream& operator<<(std::ostream&, checked_uint<false>);
-
-template bool operator==(checked_uint<true>, checked_uint<true>);
-template bool operator!=(checked_uint<true>, checked_uint<true>);
-template checked_uint<true> operator+(checked_uint<true>, checked_uint<true>);
-template checked_uint<true> operator*(checked_uint<true>, checked_uint<true>);
-template std::ostream& operator<<(std::ostream&, checked_uint<true>);
 
 } // namespace terraces
