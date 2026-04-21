@@ -1244,10 +1244,14 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-mstrategy") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -mstrategy <1|2|3>";
-                params.multistart_strategy = convert_int(argv[cnt]);
-                if (params.multistart_strategy < 1 || params.multistart_strategy > 3)
-                    throw "Use -mstrategy <1|2|3> (1=one-phase 2rounds, 2=two-phase 1round, 3=one-phase 1round)";
+                    throw "Use -mstrategy <1|2|3|all>";
+                if (strcmp(argv[cnt], "all") == 0) {
+                    params.multistart_strategy = 4;
+                } else {
+                    params.multistart_strategy = convert_int(argv[cnt]);
+                    if (params.multistart_strategy < 1 || params.multistart_strategy > 3)
+                        throw "Use -mstrategy <1|2|3|all> (1=one-phase 2rounds, 2=two-phase 1round, 3=one-phase 1round, all=all 5 starts 2rounds)";
+                }
                 continue;
             }
 

@@ -768,7 +768,8 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             const double MULTISTART_LH_TOL        = 2.0;
             // How many BFGS+BL rounds per start:
             //   strategy 1 = 2 rounds, strategies 2 & 3 = 1 round.
-            const int ROUNDS_PER_START = (strategy == 1) ? 2 : 1;
+            // Strategy 4 ("all"): all 5 starts, 2 rounds each, no early stopping.
+            const int ROUNDS_PER_START = (strategy == 1 || strategy == 4) ? 2 : 1;
 
             cout << "Multistart strategy " << strategy
                  << " (" << ROUNDS_PER_START << " round(s)/start)" << endl;
@@ -833,6 +834,7 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
 
             // For strategy 2 start with top N_FULL=2; for strategies 1
             // and 3 go through all 5 (early stop will break if two agree).
+            // Strategy 4 ("all"): always try all 5, no early stopping.
             const int N_FULL = 2;
             size_t n_to_try = (strategy == 2)
                 ? min((size_t)N_FULL, start_order.size())
@@ -889,7 +891,8 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                         double a_rel = fabs(a1 - a2) / max(max(a1, a2), 1e-6);
                         double b_rel = fabs(b1 - b2) / max(max(b1, b2), 1e-6);
                         if (a_rel < MULTISTART_PARAM_REL_TOL &&
-                            b_rel < MULTISTART_PARAM_REL_TOL) {
+                            b_rel < MULTISTART_PARAM_REL_TOL &&
+                            strategy != 4) {
                             cout << "  early stop: starts agree"
                                  << " (alpha rel.diff=" << a_rel
                                  << ", beta rel.diff=" << b_rel
