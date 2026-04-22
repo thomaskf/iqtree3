@@ -3547,7 +3547,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "--sba") == 0) {
+			if (strcmp(argv[cnt], "-sba") == 0 || strcmp(argv[cnt], "--sba") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use --sba <num_replicates>";
