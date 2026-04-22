@@ -206,12 +206,26 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             // class 0: user-controlled omega (default 0.5); class 1: omega = 1
             init_omegas[0] = user_input_param ? resolveValue(specs[1], 0.5) : 0.5;
             init_omegas[1] = 1.0;
+            // Validate: omega_0 must be < 1 (if user provided a fixed value)
+            if (user_input_param && specs[1].has_value && !specs[1].optimize
+                && init_omegas[0] >= 1.0)
+                outError("CMIX1a: omega of class 0 must be < 1 (got "
+                         + convertDoubleToString(init_omegas[0]) + ")");
         }
         else if (cmix_type == "2a") {
             // class 0 (omega < 1), class 1 (omega = 1), class 2 (omega > 1)
             init_omegas[0] = user_input_param ? resolveValue(specs[1], 0.5) : 0.5;
             init_omegas[1] = 1.0;
             init_omegas[2] = user_input_param ? resolveValue(specs[3], 2.0) : 2.0;
+            // Validate: omega_0 must be < 1, omega_2 must be > 1
+            if (user_input_param && specs[1].has_value && !specs[1].optimize
+                && init_omegas[0] >= 1.0)
+                outError("CMIX2a: omega of class 0 must be < 1 (got "
+                         + convertDoubleToString(init_omegas[0]) + ")");
+            if (user_input_param && specs[3].has_value && !specs[3].optimize
+                && init_omegas[2] <= 1.0)
+                outError("CMIX2a: omega of class 2 must be > 1 (got "
+                         + convertDoubleToString(init_omegas[2]) + ")");
         }
         else { // M3
             if (user_input_param) {
@@ -232,6 +246,12 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         if (user_input_param) {
             alpha = resolveValue(specs[0], 1.0);
             beta  = resolveValue(specs[1], 1.0);
+            if (specs[0].has_value && alpha <= 0.0)
+                outError("CMIX7: beta-distribution shape parameter p must be > 0 (got "
+                         + convertDoubleToString(alpha) + ")");
+            if (specs[1].has_value && beta <= 0.0)
+                outError("CMIX7: beta-distribution shape parameter q must be > 0 (got "
+                         + convertDoubleToString(beta) + ")");
         }
         double *o = RateBeta::SampleOmegas(ncat, alpha, beta);
         for (int i = 0; i < ncat; i++) appendClass(o[i]);
@@ -242,6 +262,18 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             alpha            = resolveValue(specs[0], 1.0);
             beta             = resolveValue(specs[1], 1.0);
             extra_omega_init = resolveValue(specs[3], 2.0);
+            // Validate: extra omega must be > 1
+            if (specs[3].has_value && !specs[3].optimize
+                && extra_omega_init <= 1.0)
+                outError("CMIX8: omega of the positive-selection class must be > 1 (got "
+                         + convertDoubleToString(extra_omega_init) + ")");
+            // Validate: alpha and beta must be > 0
+            if (specs[0].has_value && alpha <= 0.0)
+                outError("CMIX8: beta-distribution shape parameter p must be > 0 (got "
+                         + convertDoubleToString(alpha) + ")");
+            if (specs[1].has_value && beta <= 0.0)
+                outError("CMIX8: beta-distribution shape parameter q must be > 0 (got "
+                         + convertDoubleToString(beta) + ")");
         }
         if (ncat < 2)
             outError("M8 requires at least 2 categories");
@@ -428,6 +460,18 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                 outError("Mixture weight cannot be negative in " + orig_model_name);
         }
 
+        // Validate weight sum when user provides fixed weights
+        if (user_input_param && !any_weight_optimised) {
+            double wsum = 0.0;
+            for (double p : init_props) wsum += p;
+            if (fabs(wsum - 1.0) > 0.1)
+                outError("Sum of mixture weights (" + convertDoubleToString(wsum)
+                         + ") is too far from 1.0 in " + orig_model_name);
+            if (fabs(wsum - 1.0) > 0.01)
+                outWarning("Sum of mixture weights (" + convertDoubleToString(wsum)
+                           + ") is not exactly 1.0; will be normalised.");
+        }
+
         // Normalise: fixed weights keep their exact user values; free
         // weights are scaled to fill the remaining probability mass.
         if (any_weight_fixed && any_weight_optimised) {
@@ -476,18 +520,17 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         fix_prop = true;
     }
     else if (cmix_type == "8") {
-        // p_0 in the PDF table is the weight of the beta-distributed
-        // sub-component (combined over all K-1 classes); the extra
-        // positive-selection category therefore takes weight 1 - p_0.
-        double p_beta_init = 0.9;  // sensible default: most sites neutral/purifying
+        // The third parameter is the weight of the extra positive-selection
+        // class.  The remaining weight (1 - p_extra) is shared equally
+        // among the K-1 beta-distributed classes.
+        double p_extra_init = 0.1;  // sensible default: small fraction under positive selection
         if (user_input_param)
-            p_beta_init = resolveValue(specs[2], 0.9);
-        if (p_beta_init < 0.0 || p_beta_init > 1.0)
-            outError("M8: weight of beta-distributed component must be in [0,1]");
-        double p_extra = 1.0 - p_beta_init;
-        double share   = p_beta_init / (ncat - 1);
+            p_extra_init = resolveValue(specs[2], 0.1);
+        if (p_extra_init < 0.0 || p_extra_init > 1.0)
+            outError("M8: weight of positive-selection class must be in [0,1]");
+        double share = (1.0 - p_extra_init) / (ncat - 1);
         for (int i = 0; i < ncat - 1; i++) prop[i] = share;
-        prop[ncat - 1] = p_extra;
+        prop[ncat - 1] = p_extra_init;
         // Mixture weights for M8 are managed by getVariables/setVariables;
         // the underlying ModelMixture optimisation is bypassed.
         fix_prop = true;
