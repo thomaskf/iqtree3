@@ -83,6 +83,9 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
                              * part->num_states / params.mf_thread_factor));
             }
             if (params.num_threads > total_cap) {
+                // Save user-requested thread count for later phases (tree search)
+                // that can benefit from more threads after partition merging.
+                params.num_threads_max = max(params.num_threads_max, params.num_threads);
                 params.num_threads = total_cap;
                 omp_set_num_threads(params.num_threads);
                 cout << " and number of threads is changed to "
