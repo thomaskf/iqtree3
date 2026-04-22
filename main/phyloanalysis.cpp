@@ -4278,6 +4278,16 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     // initialize tree and model strucgture
     ModelsBlock *models_block = readModelsDefinition(params);
     tree->setParams(&params);
+    // Restore the user-requested thread count for tree search.
+    // ModelFinder may have reduced params.num_threads via sum(cap) for the
+    // original partitions, but after merging the partition count is smaller
+    // and the tree search can benefit from more threads.
+    if (params.num_threads_max > params.num_threads) {
+        params.num_threads = params.num_threads_max;
+#ifdef _OPENMP
+        omp_set_num_threads(params.num_threads);
+#endif
+    }
     tree->setNumThreads(params.num_threads);
     if (!tree->getModelFactory()) {
         tree->initializeModel(params, tree->aln->model_name, models_block);
