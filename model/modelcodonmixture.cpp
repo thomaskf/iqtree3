@@ -206,9 +206,8 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             // class 0: user-controlled omega (default 0.5); class 1: omega = 1
             init_omegas[0] = user_input_param ? resolveValue(specs[1], 0.5) : 0.5;
             init_omegas[1] = 1.0;
-            // Validate: omega_0 must be < 1 (if user provided a fixed value)
-            if (user_input_param && specs[1].has_value && !specs[1].optimize
-                && init_omegas[0] >= 1.0)
+            // Validate: omega_0 must be < 1
+            if (user_input_param && specs[1].has_value && init_omegas[0] >= 1.0)
                 outError("CMIX1a: omega of class 0 must be < 1 (got "
                          + convertDoubleToString(init_omegas[0]) + ")");
         }
@@ -218,12 +217,10 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             init_omegas[1] = 1.0;
             init_omegas[2] = user_input_param ? resolveValue(specs[3], 2.0) : 2.0;
             // Validate: omega_0 must be < 1, omega_2 must be > 1
-            if (user_input_param && specs[1].has_value && !specs[1].optimize
-                && init_omegas[0] >= 1.0)
+            if (user_input_param && specs[1].has_value && init_omegas[0] >= 1.0)
                 outError("CMIX2a: omega of class 0 must be < 1 (got "
                          + convertDoubleToString(init_omegas[0]) + ")");
-            if (user_input_param && specs[3].has_value && !specs[3].optimize
-                && init_omegas[2] <= 1.0)
+            if (user_input_param && specs[3].has_value && init_omegas[2] <= 1.0)
                 outError("CMIX2a: omega of class 2 must be > 1 (got "
                          + convertDoubleToString(init_omegas[2]) + ")");
         }
@@ -263,8 +260,7 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             beta             = resolveValue(specs[1], 1.0);
             extra_omega_init = resolveValue(specs[3], 2.0);
             // Validate: extra omega must be > 1
-            if (specs[3].has_value && !specs[3].optimize
-                && extra_omega_init <= 1.0)
+            if (specs[3].has_value && extra_omega_init <= 1.0)
                 outError("CMIX8: omega of the positive-selection class must be > 1 (got "
                          + convertDoubleToString(extra_omega_init) + ")");
             // Validate: alpha and beta must be > 0
