@@ -87,7 +87,9 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
                 // that can benefit from more threads after partition merging.
                 params.num_threads_max = max(params.num_threads_max, params.num_threads);
                 params.num_threads = total_cap;
-                omp_set_num_threads(params.num_threads);
+                // Do NOT call omp_set_num_threads() — use num_threads()
+                // clauses on pragmas instead. Shrinking the pool here
+                // permanently degrades tree search performance.
                 cout << " and number of threads is changed to "
                      << params.num_threads;
             }

@@ -286,7 +286,7 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
     if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    #pragma omp parallel for private(part) schedule(dynamic) if(num_threads > 1)
+    #pragma omp parallel for private(part) schedule(dynamic) num_threads(num_threads) if(num_threads > 1)
     #endif    
     for (int partid = 0; partid < size(); partid++) {
         part = part_order_by_nptn[partid];
@@ -326,7 +326,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
+    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) num_threads(num_threads) if(num_threads > 1)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
             int part = part_order_by_nptn[partid];
@@ -384,7 +384,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic) if(num_threads > 1)
+    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic) num_threads(num_threads) if(num_threads > 1)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
         int part = part_order_by_nptn[partid];

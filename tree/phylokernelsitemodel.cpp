@@ -87,7 +87,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
     
         // now for-loop computing partial_lh over all site-patterns
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static) num_threads(num_threads)
 #endif
         for (ptn = 0; ptn < nptn; ptn++) {
             double partial_lh_all[block];
@@ -213,7 +213,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel for private(ptn, c, x, i) schedule(static) num_threads(num_threads)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -271,7 +271,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static) num_threads(num_threads)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -354,7 +354,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static) num_threads(num_threads)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -476,7 +476,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
             double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
             
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static) num_threads(num_threads)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -497,7 +497,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 
 //	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i) schedule(static)
+#pragma omp parallel for private(ptn, i) schedule(static) num_threads(num_threads)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *theta = theta_all + ptn*block;
@@ -515,7 +515,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
     double my_df = 0.0, my_ddf = 0.0;
     
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c) schedule(static)
+#pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c) schedule(static) num_threads(num_threads)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
@@ -597,7 +597,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     	// special treatment for TIP-INTERNAL NODE case
         double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static) num_threads(num_threads)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
@@ -627,7 +627,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     {
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static) num_threads(num_threads)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
@@ -702,7 +702,7 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
     double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static) num_threads(num_threads)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = ptn_invar[ptn];

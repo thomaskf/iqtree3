@@ -3231,7 +3231,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         double *const_lh_next = const_lh + step_unobserved_ptns;
         for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
             #ifdef _OPENMP
-            #pragma omp parallel for
+            #pragma omp parallel for num_threads(num_threads)
             #endif
             for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
                 (VectorClass().load_a(&const_lh[ptn]) + VectorClass().load_a(&const_lh_next[ptn])).store_a(&const_lh[ptn]);
@@ -3263,7 +3263,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         
         all_prob_const = log(1.0 - all_prob_const);
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(num_threads)
         #endif
         for (size_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
             (VectorClass().load_a(&_pattern_lh[ptn])-all_prob_const).store_a(&_pattern_lh[ptn]);

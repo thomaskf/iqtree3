@@ -3514,8 +3514,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         if (capped < num_threads) {
             num_threads = capped;
 #ifdef _OPENMP
-            omp_threads_saved = omp_get_max_threads();
-            omp_set_num_threads(num_threads);
 #endif
         }
     }
@@ -3646,7 +3644,6 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 
 #ifdef _OPENMP
     if (omp_threads_saved != -1)
-        omp_set_num_threads(omp_threads_saved);
 #endif
     return at(best_model);
 }
@@ -4631,22 +4628,22 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     }
 
     // -----------------------------------------------------------------------
-    // Fast path: when every partition needs only 1 thread, use a simple
-    // OMP parallel-for with dynamic scheduling.  This avoids the overhead
-    // of creating std::thread workers and atomic spin-waits, which can
-    // dominate wall time for lightweight partitions.
+    // Check if any partition benefits from multi-threaded evaluation.
+    // If all caps are 1, use flat concurrent dispatch (1 thread per partition).
+    // Otherwise, process partitions sequentially with per-partition thread
+    // budgeting via omp_set_num_threads (safe because tree search uses
+    // concurrent-over-partitions where inner nesting is disabled).
     // -----------------------------------------------------------------------
-    bool all_single = true;
+    bool any_multi = false;
     for (int j = 0; j < n_jobs; j++) {
-        if (mp[j] > 1) { all_single = false; break; }
+        if (mp[j] > 1) { any_multi = true; break; }
     }
-    if (all_single) {
+
+    if (!any_multi) {
+        // All partitions need only 1 thread — flat concurrent dispatch
         int j;
         int omp_threads = min(nthreads, n_jobs);
-        // Temporarily reduce the global OMP thread count so that inner code
-        // (likelihood kernels, model evaluation) does not spin up excess threads.
-        int omp_saved = omp_get_max_threads();
-        omp_set_num_threads(omp_threads);
+
         #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
         for (j = 0; j < n_jobs; j++) {
             int tree_id = jobs[j].first;
@@ -4690,55 +4687,20 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 jobdone++;
             }
         }
-        omp_set_num_threads(omp_saved);
-        return;
-    }
-
-    // -----------------------------------------------------------------------
-    // Multi-thread dispatch strategy (OMP nested parallelism):
-    // Group partitions into batches where sum(mp) <= nthreads.
-    // Within each batch, partitions run concurrently using OMP nested
-    // parallel regions — all threads stay in a single OMP pool.
-    // This follows the same pattern used by iqtreemix.cpp.
-    // -----------------------------------------------------------------------
-
-    int j = 0;
-    while (j < n_jobs) {
-        // Build a batch of partitions whose total thread budget <= nthreads
-        int batch_start = j;
-        int batch_threads = 0;
-        int batch_size = 0;
-        while (j < n_jobs && batch_threads + mp[j] <= nthreads) {
-            batch_threads += mp[j];
-            batch_size++;
-            j++;
-        }
-        if (batch_size == 0) {
-            // Single partition needs >= nthreads (mp[j] was capped to nthreads,
-            // so this means mp[j] == nthreads)
-            batch_size = 1;
-            batch_threads = mp[j];
-            j++;
-        }
-
-        // Run this batch: partitions execute concurrently with nested OMP
-        omp_set_max_active_levels(2);
-
-        #pragma omp parallel for schedule(static,1) num_threads(batch_size)
-        for (int k = 0; k < batch_size; k++) {
-            int idx = batch_start + k;
-            int m_p = mp[idx];
-            int tree_id = jobs[idx].first;
+    } else {
+        // Per-partition thread budgeting: process partitions sequentially,
+        // each with its size-aware thread cap via omp_set_num_threads().
+        // Since partitions run one at a time, each gets min(nthreads, cap)
+        // rather than the round-robin budget (which assumed concurrent execution).
+        for (int j = 0; j < n_jobs; j++) {
+            int tree_id = jobs[j].first;
             PhyloTree *this_tree = in_tree->at(tree_id);
+            int m_p = min(nthreads,
+                          maxThreadsForAlignment(this_tree->aln, params->mf_thread_factor));
             ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
 
-            // Set inner thread budget for this partition's OMP regions
             omp_set_num_threads(m_p);
-
-            #pragma omp critical
-            {
-                extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            }
 
             string part_model_name;
             if (params->model_name.empty())
@@ -4752,32 +4714,25 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
             double score = best_model.computeICScore(this_tree->getAlnNSite());
             this_tree->aln->model_name = best_model.getName();
-
-            #pragma omp critical
-            {
-                lhsum += (lhvec[tree_id] = best_model.logl);
-                dfsum += (dfvec[tree_id] = best_model.df);
-                lenvec[tree_id] = best_model.tree_len;
-                num_model++;
-                if (total_num_model > 0) {
-                    double finish_percent = (double)num_model * 100.0 / total_num_model;
-                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cscreen << " Finished subset " << num_model << "/" << total_num_model
-                         << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
-                         << "     " << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)     \r" << flush;
-                }
-                replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-                model_info->dump();
-                jobdone++;
+            lhsum += (lhvec[tree_id] = best_model.logl);
+            dfsum += (dfvec[tree_id] = best_model.df);
+            lenvec[tree_id] = best_model.tree_len;
+            num_model++;
+            if (total_num_model > 0) {
+                double finish_percent = (double)num_model * 100.0 / total_num_model;
+                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cscreen << " Finished subset " << num_model << "/" << total_num_model
+                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                     << "     " << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)     \r" << flush;
             }
+            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            model_info->dump();
+            jobdone++;
         }
-
-        omp_set_max_active_levels(1);
+        // Restore OMP thread count for subsequent phases
+        omp_set_num_threads(nthreads);
     }
-
-    // Restore original OMP thread count
-    omp_set_num_threads(nthreads);
 #endif
 }
 
@@ -4870,54 +4825,44 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
         }
     }
 
-    // Check if all merges need only 1 thread
-    bool all_single = true;
+    // Check if any merge benefits from multi-threaded evaluation.
+    bool any_multi = false;
     for (int j = 0; j < n_jobs; j++) {
-        if (mp[j] > 1) { all_single = false; break; }
+        if (mp[j] > 1) { any_multi = true; break; }
     }
 
-    if (all_single) {
-        // OMP fast path
+    if (!any_multi) {
+        // All merges need only 1 thread — flat concurrent dispatch
         int omp_threads = min(nthreads, n_jobs);
-        int omp_saved = omp_get_max_threads();
-        omp_set_num_threads(omp_threads);
         int j;
         #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
         for (j = 0; j < n_jobs; j++) {
             processMergeJob(j, jobs, 1);
         }
-        omp_set_num_threads(omp_saved);
     } else {
-        // OMP nested dispatch (batched)
-        int j = 0;
-        while (j < n_jobs) {
-            int batch_start = j;
-            int batch_threads = 0;
-            int batch_size = 0;
-            while (j < n_jobs && batch_threads + mp[j] <= nthreads) {
-                batch_threads += mp[j];
-                batch_size++;
-                j++;
+        // Per-merge thread budgeting: sequential, each with full thread cap
+        for (int j = 0; j < n_jobs; j++) {
+            // Recompute cap for sequential execution (use full nthreads, not round-robin)
+            int pair_idx = jobs[j].first;
+            int p1 = closest_pairs[pair_idx].first;
+            int p2 = closest_pairs[pair_idx].second;
+            int total_patterns = 0;
+            int num_states = 0;
+            for (int pid : gene_sets[p1]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
+                num_states = in_tree->at(pid)->aln->num_states;
             }
-            if (batch_size == 0) {
-                batch_size = 1;
-                batch_threads = mp[j];
-                j++;
+            for (int pid : gene_sets[p2]) {
+                total_patterns += in_tree->at(pid)->aln->getNPattern();
             }
-
-            omp_set_max_active_levels(2);
-            #pragma omp parallel for schedule(static,1) num_threads(batch_size)
-            for (int k = 0; k < batch_size; k++) {
-                int idx = batch_start + k;
-                int m_p = mp[idx];
-                omp_set_num_threads(m_p);
-                processMergeJob(idx, jobs, m_p);
-            }
-            omp_set_max_active_levels(1);
+            int m_p = min(nthreads,
+                          max(1, (int)(total_patterns * num_states / params->mf_thread_factor)));
+            omp_set_num_threads(m_p);
+            processMergeJob(j, jobs, m_p);
         }
+        omp_set_num_threads(nthreads);
     }
 
-    omp_set_num_threads(nthreads);
 #endif
 }
 

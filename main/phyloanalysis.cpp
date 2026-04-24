@@ -3653,6 +3653,26 @@ bool isTreeMixture(Params& params) {
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
+    // Restore the user-requested thread count, capped by partition count.
+    // ModelFinder may have reduced params.num_threads via sum(cap), and
+    // per-partition budgeting may have changed omp_set_num_threads.
+    // For partitioned trees, use concurrent-over-partitions strategy:
+    // each partition runs single-threaded, processed in parallel.
+    if (params.num_threads_max > params.num_threads) {
+        params.num_threads = params.num_threads_max;
+    }
+    if (iqtree->isSuperTree()) {
+        int n_parts = ((PhyloSuperTree*)iqtree)->size();
+        if (params.num_threads > n_parts) {
+            params.num_threads = n_parts;
+        }
+    }
+#ifdef _OPENMP
+    // Ensure the OMP thread pool matches the tree search thread count.
+    // ModelFinder's per-partition budgeting may have left it at a different value.
+    omp_set_num_threads(params.num_threads);
+#endif
+
     iqtree->aln->checkAbsentStates("alignment");
 
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
@@ -4419,17 +4439,19 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     // initialize tree and model strucgture
     ModelsBlock *models_block = readModelsDefinition(params);
     tree->setParams(&params);
-    // Restore the user-requested thread count for tree search.
-    // ModelFinder may have reduced params.num_threads via sum(cap) for the
-    // original partitions, but after merging the partition count is smaller
-    // and the tree search can benefit from more threads.
+    // Restore the user-requested thread count, capped by partition count.
     if (params.num_threads_max > params.num_threads) {
         params.num_threads = params.num_threads_max;
-#ifdef _OPENMP
-        omp_set_num_threads(params.num_threads);
-#endif
     }
-    tree->setNumThreads(params.num_threads);
+    if (tree->isSuperTree()) {
+        int n_parts = ((PhyloSuperTree*)tree)->size();
+        if (params.num_threads > n_parts) {
+            params.num_threads = n_parts;
+        }
+    }
+#ifdef _OPENMP
+    omp_set_num_threads(params.num_threads);
+#endif
     if (!tree->getModelFactory()) {
         tree->initializeModel(params, tree->aln->model_name, models_block);
     }

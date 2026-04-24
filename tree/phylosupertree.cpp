@@ -722,7 +722,7 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh, bool save_log_value
 	} else {
         if (part_order.empty()) computePartitionOrder();
 		#ifdef _OPENMP
-		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
+		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) num_threads(num_threads) if(num_threads > 1)
 		#endif
 		for (int j = 0; j < ntrees; j++) {
             int i = part_order[j];
@@ -783,7 +783,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	int ntrees = size();
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) num_threads(num_threads) if(num_threads > 1)
 	#endif
 	for (int j = 0; j < ntrees; j++) {
         int i = part_order[j];
