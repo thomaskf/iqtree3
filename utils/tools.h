@@ -1660,6 +1660,17 @@ public:
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
+    /** each partition gets min(nthreads, size_cap) threads,
+     *  partitions dispatched heavy-first; no round-robin distribution of surplus threads
+     *  across partitions. This is now the DEFAULT strategy. */
+    bool parallel_per_partition;
+
+    /** distribute surplus threads round-robin across partitions (old default).
+     *  Case A (n_jobs <= nthreads): each partition starts with 1 thread, surplus
+     *  distributed evenly up to each partition's size cap.
+     *  Case B (n_jobs > nthreads): 1 thread per partition. */
+    bool parallel_round_robin;
+
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
     bool order_by_threads;
 

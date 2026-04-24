@@ -3004,6 +3004,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "-parallel-per-partition") == 0 || strcmp(argv[cnt], "--parallel-per-partition") == 0) {
+                params.parallel_per_partition = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-parallel-round-robin") == 0 || strcmp(argv[cnt], "--parallel-round-robin") == 0) {
+                params.parallel_round_robin = true;
+                continue;
+            }
+
             // parallelization ordered by threads
             if (strcmp(argv[cnt], "-parallel-order-thread") == 0 || strcmp(argv[cnt], "--parallel-order-thread") == 0) {
                 params.order_by_threads = true;
@@ -7181,6 +7191,8 @@ void Params::setDefault() {
     optimize_rate_matrix = false;
     store_trans_matrix = false;
     parallel_over_sites = false;
+    parallel_per_partition = false;
+    parallel_round_robin = false;
     order_by_threads = false;
     //freq_type = FREQ_EMPIRICAL;
     freq_type = FREQ_UNKNOWN;
