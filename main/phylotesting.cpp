@@ -2833,6 +2833,12 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
+    // After merging, reduce thread count to merged partition count for tree search
+    if (num_threads > (int)in_tree->size() && !params.parallel_over_sites) {
+        num_threads = in_tree->size();
+        cout << "Number of threads is changed to " << num_threads << endl;
+    }
+
     if (!iEquals(params.merge_models, "all")) {
         // test all candidate models again
         lhsum = 0.0;
@@ -5838,11 +5844,13 @@ cout << "PartitionFinder\t" << algo_name
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    // Do not reduce params->num_threads here — after merging, the partition
-    // count may be much smaller than the original, but the tree search phase
-    // still needs the full thread count.  Thread capping for ModelFinder is
-    // handled by the sum(cap) reduction in SuperAlignment and the per-partition
-    // thread budgeting in getBestModelforPartitionsNoMPI/MergesNoMPI.
+    // After merging, reduce thread count to the number of merged partitions.
+    // Tree search uses concurrent-over-partitions (Case 1) where more threads
+    // than partitions just wastes resources on small DNA partitions.
+    if (params->num_threads > (int)in_tree->size() && !params->parallel_over_sites) {
+        params->num_threads = in_tree->size();
+        cout << "Number of threads is changed to " << params->num_threads << endl;
+    }
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
 #ifdef _IQTREE_MPI
