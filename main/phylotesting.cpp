@@ -2792,6 +2792,12 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
+    // After merging, reduce thread count to merged partition count for tree search
+    if (num_threads > (int)in_tree->size() && !params.parallel_over_sites) {
+        num_threads = in_tree->size();
+        cout << "Number of threads is changed to " << num_threads << endl;
+    }
+
     if (!iEquals(params.merge_models, "all")) {
         // test all candidate models again
         lhsum = 0.0;
