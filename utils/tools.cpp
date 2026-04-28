@@ -7376,6 +7376,7 @@ void Params::setDefault() {
     tree_freq_file = nullptr;
     num_threads = 1;
     num_threads_max = 10000;
+    num_threads_orig = 0;
     openmp_by_model = false;
     model_test_criterion = MTC_BIC;
 //    model_test_stop_rule = MTC_ALL;

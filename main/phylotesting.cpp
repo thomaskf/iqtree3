@@ -2792,10 +2792,16 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    // After merging, reduce thread count to merged partition count for tree search
-    if (num_threads > (int)in_tree->size() && !params.parallel_over_sites) {
-        num_threads = in_tree->size();
-        cout << "Number of threads is changed to " << num_threads << endl;
+    // After merging, restore user's original thread count for tree search,
+    // capped by the sum of per-partition caps for the merged partitions.
+    if (params.num_threads_orig > 0 && params.num_threads_orig > num_threads) {
+        int total_cap_merged = 0;
+        for (int p = 0; p < (int)in_tree->size(); p++) {
+            total_cap_merged += maxThreadsForAlignment(
+                in_tree->at(p)->aln, params.mf_thread_factor);
+        }
+        num_threads = min(params.num_threads_orig, total_cap_merged);
+        cout << "Number of threads for tree search: " << num_threads << endl;
     }
 
     if (!iEquals(params.merge_models, "all")) {
@@ -5532,6 +5538,17 @@ cout << "PartitionFinder\t" << algo_name
         lhvec.resize(in_tree->size());
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
+    }
+    // After merging, restore user's original thread count for tree search,
+    // capped by the sum of per-partition caps for the merged partitions.
+    if (params->num_threads_orig > 0 && params->num_threads_orig > params->num_threads) {
+        int total_cap_merged = 0;
+        for (int p = 0; p < (int)in_tree->size(); p++) {
+            total_cap_merged += maxThreadsForAlignment(
+                in_tree->at(p)->aln, params->mf_thread_factor);
+        }
+        params->num_threads = min(params->num_threads_orig, total_cap_merged);
+        cout << "Number of threads for tree search: " << params->num_threads << endl;
     }
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
