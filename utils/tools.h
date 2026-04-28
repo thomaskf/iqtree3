@@ -2371,9 +2371,13 @@ public:
 
     /** number of threads for OpenMP version     */
     int num_threads;
-    
+
     /** maximum number of threads, default: #CPU scores  */
     int num_threads_max;
+
+    /** user's original -nt value, saved before sum(cap) reduction.
+     *  Restored after partition merging for tree search. 0 = not saved yet. */
+    int num_threads_orig;
     
     /** true to parallel ModelFinder by models instead of sites */
     bool openmp_by_model;
