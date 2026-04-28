@@ -3014,6 +3014,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--mf-thread-factor") == 0 || strcmp(argv[cnt], "-mf-thread-factor") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mf-thread-factor <factor>";
+                params.mf_thread_factor = convert_int(argv[cnt]);
+                if (params.mf_thread_factor <= 0)
+                    throw "--mf-thread-factor must be positive";
+                continue;
+            }
+
             // parallelization ordered by threads
             if (strcmp(argv[cnt], "-parallel-order-thread") == 0 || strcmp(argv[cnt], "--parallel-order-thread") == 0) {
                 params.order_by_threads = true;
@@ -7193,6 +7203,7 @@ void Params::setDefault() {
     parallel_over_sites = false;
     parallel_per_partition = false;
     parallel_round_robin = false;
+    mf_thread_factor = 4000;
     order_by_threads = false;
     //freq_type = FREQ_EMPIRICAL;
     freq_type = FREQ_UNKNOWN;

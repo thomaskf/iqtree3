@@ -662,6 +662,14 @@ string criterionName(ModelTestCriterion mtc) {
 
 
 /**
+ * Compute the maximum number of CPU threads appropriate for evaluating a model
+ * on the given alignment, based on alignment size (patterns x states).
+ */
+int maxThreadsForAlignment(Alignment *aln, int factor = 4000) {
+    return max(1, (int)(aln->getNPattern() * aln->num_states / factor));
+}
+
+/**
  * select models for all partitions
  * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
@@ -4566,14 +4574,15 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
             }
 
-        bool check = (best_model.restoreCheckpoint(&part_model_info));
-        ASSERT(check);
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                m_p, brlen_type, this_tree->aln->name, part_model_name, test_merge);
 
-        double score = best_model.computeICScore(this_tree->getAlnNSite());
-        this_tree->aln->model_name = best_model.getName();
-        lhsum += (lhvec[tree_id] = best_model.logl);
-        dfsum += (dfvec[tree_id] = best_model.df);
-        lenvec[tree_id] = best_model.tree_len;
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
 
             double score = best_model.computeICScore(this_tree->getAlnNSite());
             this_tree->aln->model_name = best_model.getName();
@@ -4834,9 +4843,6 @@ void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, in
         }
         if (cur_pair.score < inf_score)
             better_pairs.insertPair(cur_pair);
-        if (params->marginal_lh_aic) {
-            sorted_pairs.insertPair(cur_pair);
-        }
     }
 }
 
@@ -5400,9 +5406,6 @@ cout << "Full partition model " << criterionName(params->model_test_criterion)
                 inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
                 ASSERT(inf_score <= opt_pair.score + 0.1);
 
-                if (!params->marginal_lh_aic || switched_to_caic) {
-                    ASSERT(inf_score <= opt_pair.score + 0.1);
-                }
                 // change entry opt_part1 to merged one
                 gene_sets[opt_pair.part1] = opt_pair.merged_set;
                 lhvec[opt_pair.part1] = opt_pair.logl;
@@ -5465,30 +5468,6 @@ cout << "PartitionFinder\t" << algo_name
                  << " " << inf_score - pre_inf_score
                  << endl;
             pre_inf_score = inf_score;
-
-            // save and output mAIC after merging all pairs
-            if (params->marginal_lh_aic) {
-                double cur_score_maic = getmAICforMergeScheme(gene_sets, model_names, dfsum, true);
-                if (!switched_to_caic) {
-                    cout << "Current partition model mAIC score: " << cur_score_maic
-                         << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  "), cAIC score: "
-                         << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
-                    inf_score_maic = cur_score_maic;
-                } else {
-                    if (cur_score_maic <= inf_score_maic) {
-                        cout << "Current partition model mAIC score: " << cur_score_maic
-                             << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  ") is better than "
-                             << inf_score_maic << ", back to merging with mAIC since next round" << endl;
-                        inf_score_maic = cur_score_maic;
-                        switched_to_caic = false;
-                    } else {
-                        cout << "Current partition model mAIC score: " << cur_score_maic
-                             << " (Marginal LnL: " << lh_marginal << "  df:" << dfsum <<  ") is worse than "
-                             << inf_score_maic << endl;
-                    }
-                }
-                cout << endl;
-            }
 
             // proceed to the next iteration if gene_sets.size() >= 2
             proceed_stepwise_merge = (gene_sets.size() >= 2);

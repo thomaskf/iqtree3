@@ -1671,6 +1671,10 @@ public:
      *  Case B (n_jobs > nthreads): 1 thread per partition. */
     bool parallel_round_robin;
 
+    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
+     *  Default 4000. Set via --mf-thread-factor. */
+    int mf_thread_factor;
+
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
     bool order_by_threads;
 
