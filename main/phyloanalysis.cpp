@@ -657,9 +657,10 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
                 out << endl;
             }
         }
-        // report the frequencey array
+        // report the frequency array
         double state_freq[20];
         m->getStateFrequency(state_freq);
+        out.precision(6);
         for (i = 0; i < m->num_states; i++)
             out << " " << state_freq[i];
         out << endl << endl;
@@ -770,9 +771,11 @@ void reportModel(ostream &out, PhyloTree &tree) {
         double* state_freq = new double[nstate];
         treeBrModel->getRootFrequency(state_freq);
         out << "Root frequencies:";
+        out.precision(6);
         for (i = 0; i < nstate; i++)
             out << " " << state_freq[i];
         out << endl << endl;
+        out.precision(4);
         delete[] state_freq;
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
