@@ -2461,19 +2461,59 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
     bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
     
-    // Determine whether to use flat concurrent dispatch or sequential per-partition budgeting
+    // Compute per-partition thread caps
+    int n_parts_local = (int)in_tree->size();
+    bool any_multi_local = false;
 #ifdef _OPENMP
-    if (params.parallel_round_robin || params.parallel_over_sites) {
-        // --parallel-round-robin or --parallel-over-sites: flat concurrent dispatch
-        parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads)
-                                   && !params.parallel_over_sites;
-        int part_threads = parallel_over_partitions ? 1 : num_threads;
-#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
-        for (int j = 0; j < (int)in_tree->size(); j++) {
+    if (!params.parallel_round_robin && !params.parallel_over_sites && num_threads > 1) {
+        for (int j = 0; j < n_parts_local; j++) {
+            int cap = maxThreadsForAlignment(in_tree->at(partitionID[j].first)->aln, params.mf_thread_factor);
+            if (min(num_threads, cap) > 1) { any_multi_local = true; break; }
+        }
+    }
+#endif
+
+#ifdef _OPENMP
+    if (params.parallel_over_sites) {
+        // --parallel-over-sites: sequential, all threads per partition
+        for (int j = 0; j < n_parts_local; j++) {
             i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
             ModelCheckpoint part_model_info;
             extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+            string part_model_name;
+            if (params.model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
+                num_threads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+            bool check = (best_model.restoreCheckpoint(&part_model_info));
+            ASSERT(check);
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+            lhsum += (lhvec[i] = best_model.logl);
+            dfsum += (dfvec[i] = best_model.df);
+            lenvec[i] = best_model.tree_len;
+            num_model++;
+            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+            model_info.dump();
+        }
+    } else if (!any_multi_local) {
+        // All caps <= 1 (or round-robin): flat concurrent dispatch
+        parallel_over_partitions = !params.model_test_and_tree && (n_parts_local >= num_threads);
+        int part_threads = parallel_over_partitions ? 1 : num_threads;
+        int omp_threads = min(num_threads, n_parts_local);
+        int omp_saved = omp_get_max_threads();
+        omp_set_num_threads(omp_threads);
+#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+        for (int j = 0; j < n_parts_local; j++) {
+            i = partitionID[j].first;
+            PhyloTree *this_tree = in_tree->at(i);
+            ModelCheckpoint part_model_info;
+#pragma omp critical
+            {
+                extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+            }
             string part_model_name;
             if (params.model_name.empty())
                 part_model_name = this_tree->aln->model_name;
@@ -2494,12 +2534,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 model_info.dump();
             }
         }
+        omp_set_num_threads(omp_saved);
     } else
 #endif
     {
-        // Default: sequential per-partition budgeting — each partition gets
-        // min(num_threads, cap) threads via omp_set_num_threads().
-        for (int j = 0; j < (int)in_tree->size(); j++) {
+        // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
+        for (int j = 0; j < n_parts_local; j++) {
             i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
             int m_p = min(num_threads,
@@ -2845,18 +2885,58 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
             cout << "No. Model        Score       Charset" << endl;
         int partition_id = 0;
 
+        // Check if any partition needs multi-threading for re-test
+        bool any_multi_retest = false;
     #ifdef _OPENMP
-        if (params.parallel_round_robin || params.parallel_over_sites) {
-            // --parallel-round-robin: flat concurrent dispatch
-            parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads)
-                                       && !params.parallel_over_sites;
-            int part_threads = parallel_over_partitions ? 1 : num_threads;
-            #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+        if (!params.parallel_round_robin && !params.parallel_over_sites && num_threads > 1) {
+            for (int j = 0; j < (int)in_tree->size(); j++) {
+                int cap = maxThreadsForAlignment(in_tree->at(partitionID[j].first)->aln, params.mf_thread_factor);
+                if (min(num_threads, cap) > 1) { any_multi_retest = true; break; }
+            }
+        }
+    #endif
+
+    #ifdef _OPENMP
+        if (params.parallel_over_sites) {
+            // --parallel-over-sites: sequential, all threads per partition
             for (int j = 0; j < (int)in_tree->size(); j++) {
                 i = partitionID[j].first;
                 PhyloTree *this_tree = in_tree->at(i);
                 ModelCheckpoint part_model_info;
                 extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+                string part_model_name;
+                if (params.model_name.empty())
+                    part_model_name = this_tree->aln->model_name;
+                CandidateModel best_model;
+                best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
+                    num_threads, brlen_type, this_tree->aln->name, part_model_name, false);
+                bool check = (best_model.restoreCheckpoint(&part_model_info));
+                ASSERT(check);
+                double score = best_model.computeICScore(this_tree->getAlnNSite());
+                this_tree->aln->model_name = best_model.getName();
+                lhsum += (lhvec[i] = best_model.logl);
+                dfsum += (dfvec[i] = best_model.df);
+                lenvec[i] = best_model.tree_len;
+                num_model++;
+                replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+                model_info.dump();
+            }
+        } else if (!any_multi_retest) {
+            // All caps <= 1 (or round-robin): flat concurrent dispatch
+            parallel_over_partitions = !params.model_test_and_tree && ((int)in_tree->size() >= num_threads);
+            int part_threads = parallel_over_partitions ? 1 : num_threads;
+            int omp_threads = min(num_threads, (int)in_tree->size());
+            int omp_saved = omp_get_max_threads();
+            omp_set_num_threads(omp_threads);
+            #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+            for (int j = 0; j < (int)in_tree->size(); j++) {
+                i = partitionID[j].first;
+                PhyloTree *this_tree = in_tree->at(i);
+                ModelCheckpoint part_model_info;
+                #pragma omp critical
+                {
+                    extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+                }
                 string part_model_name;
                 if (params.model_name.empty())
                     part_model_name = this_tree->aln->model_name;
@@ -2891,10 +2971,11 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
                     model_info.dump();
                 }
             }
+            omp_set_num_threads(omp_saved);
         } else
     #endif
         {
-            // Default: sequential per-partition budgeting
+            // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
             for (int j = 0; j < (int)in_tree->size(); j++) {
                 i = partitionID[j].first;
                 PhyloTree *this_tree = in_tree->at(i);
