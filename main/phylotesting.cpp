@@ -2809,6 +2809,9 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
                 in_tree->at(p)->aln, params.mf_thread_factor);
         }
         num_threads = min(params.num_threads_orig, total_cap_merged);
+#ifdef _OPENMP
+        omp_set_num_threads(num_threads);
+#endif
         cout << "Number of threads for tree search: " << num_threads << endl;
     }
 
@@ -5527,6 +5530,9 @@ cout << "PartitionFinder\t" << algo_name
                 in_tree->at(p)->aln, params->mf_thread_factor);
         }
         params->num_threads = min(params->num_threads_orig, total_cap_merged);
+#ifdef _OPENMP
+        omp_set_num_threads(params->num_threads);
+#endif
         cout << "Number of threads for tree search: " << params->num_threads << endl;
     }
 
