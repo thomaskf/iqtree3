@@ -2800,19 +2800,22 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    // After merging, restore user's original thread count for tree search,
-    // capped by the sum of per-partition caps for the merged partitions.
-    if (params.num_threads_orig > 0 && params.num_threads_orig > num_threads) {
+    // After merging, set thread count for tree search.
+    {
+        int orig_threads = (params.num_threads_orig > 0) ? params.num_threads_orig : num_threads;
         int total_cap_merged = 0;
         for (int p = 0; p < (int)in_tree->size(); p++) {
             total_cap_merged += maxThreadsForAlignment(
                 in_tree->at(p)->aln, params.mf_thread_factor);
         }
-        num_threads = min(params.num_threads_orig, total_cap_merged);
+        int tree_threads = min(orig_threads, total_cap_merged);
+        if (tree_threads != num_threads) {
+            num_threads = tree_threads;
 #ifdef _OPENMP
-        omp_set_num_threads(num_threads);
+            omp_set_num_threads(num_threads);
 #endif
-        cout << "Number of threads for tree search: " << num_threads << endl;
+            cout << "Number of threads for tree search: " << num_threads << endl;
+        }
     }
 
     if (!iEquals(params.merge_models, "all")) {
@@ -5521,19 +5524,25 @@ cout << "PartitionFinder\t" << algo_name
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    // After merging, restore user's original thread count for tree search,
-    // capped by the sum of per-partition caps for the merged partitions.
-    if (params->num_threads_orig > 0 && params->num_threads_orig > params->num_threads) {
+    // After merging, set thread count for tree search.
+    // Use min(original_user_threads, sum_of_caps_merged).
+    // This handles all cases including when SuperAlignment reduction didn't fire
+    // (e.g., num_threads == sum_caps before merge but merged cap is smaller).
+    {
+        int orig_threads = (params->num_threads_orig > 0) ? params->num_threads_orig : params->num_threads;
         int total_cap_merged = 0;
         for (int p = 0; p < (int)in_tree->size(); p++) {
             total_cap_merged += maxThreadsForAlignment(
                 in_tree->at(p)->aln, params->mf_thread_factor);
         }
-        params->num_threads = min(params->num_threads_orig, total_cap_merged);
+        int tree_threads = min(orig_threads, total_cap_merged);
+        if (tree_threads != params->num_threads) {
+            params->num_threads = tree_threads;
 #ifdef _OPENMP
-        omp_set_num_threads(params->num_threads);
+            omp_set_num_threads(params->num_threads);
 #endif
-        cout << "Number of threads for tree search: " << params->num_threads << endl;
+            cout << "Number of threads for tree search: " << params->num_threads << endl;
+        }
     }
 
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
