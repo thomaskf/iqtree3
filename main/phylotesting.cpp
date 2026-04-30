@@ -2538,15 +2538,23 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     } else
 #endif
     {
-        // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
+        // Per-partition budgeting: sequential, each with min(num_threads, cap) threads.
+        // Set omp pool to max cap ONCE to avoid repeated pool resizing overhead.
+        int max_mp = 1;
+        for (int j = 0; j < n_parts_local; j++) {
+            int cap = min(num_threads, maxThreadsForAlignment(
+                in_tree->at(partitionID[j].first)->aln, params.mf_thread_factor));
+            if (cap > max_mp) max_mp = cap;
+        }
+#ifdef _OPENMP
+        int omp_saved = omp_get_max_threads();
+        omp_set_num_threads(max_mp);
+#endif
         for (int j = 0; j < n_parts_local; j++) {
             i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
             int m_p = min(num_threads,
                           maxThreadsForAlignment(this_tree->aln, params.mf_thread_factor));
-#ifdef _OPENMP
-            omp_set_num_threads(m_p);
-#endif
             ModelCheckpoint part_model_info;
             extractModelInfo(this_tree->aln->name, model_info, part_model_info);
             string part_model_name;
@@ -2567,7 +2575,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             model_info.dump();
         }
 #ifdef _OPENMP
-        omp_set_num_threads(num_threads);
+        omp_set_num_threads(omp_saved);
 #endif
     }
 
@@ -2841,6 +2849,7 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
         mergePartitions(in_tree, gene_sets, model_names);
 
     // After merging, set thread count for tree search.
+    // Use min(original_user_threads, sum_of_caps_merged).
     {
         int orig_threads = (params.num_threads_orig > 0) ? params.num_threads_orig : num_threads;
         int total_cap_merged = 0;
@@ -2975,15 +2984,22 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
         } else
     #endif
         {
-            // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
+            // Per-partition budgeting: sequential. Set omp pool to max cap ONCE.
+            int max_mp_rt = 1;
+            for (int j = 0; j < (int)in_tree->size(); j++) {
+                int cap = min(num_threads, maxThreadsForAlignment(
+                    in_tree->at(partitionID[j].first)->aln, params.mf_thread_factor));
+                if (cap > max_mp_rt) max_mp_rt = cap;
+            }
+#ifdef _OPENMP
+            int omp_saved_rt = omp_get_max_threads();
+            omp_set_num_threads(max_mp_rt);
+#endif
             for (int j = 0; j < (int)in_tree->size(); j++) {
                 i = partitionID[j].first;
                 PhyloTree *this_tree = in_tree->at(i);
                 int m_p = min(num_threads,
                               maxThreadsForAlignment(this_tree->aln, params.mf_thread_factor));
-#ifdef _OPENMP
-                omp_set_num_threads(m_p);
-#endif
                 ModelCheckpoint part_model_info;
                 extractModelInfo(this_tree->aln->name, model_info, part_model_info);
                 string part_model_name;
@@ -3018,7 +3034,7 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
                 model_info.dump();
             }
 #ifdef _OPENMP
-            omp_set_num_threads(num_threads);
+            omp_set_num_threads(omp_saved_rt);
 #endif
         }
     }
@@ -4553,9 +4569,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
     // -----------------------------------------------------------------------
     // Fast path: when every partition needs only 1 thread, use a simple
-    // OMP parallel-for with dynamic scheduling.  This avoids the overhead
-    // of creating std::thread workers and atomic spin-waits, which can
-    // dominate wall time for lightweight partitions.
+    // OMP parallel-for with dynamic scheduling.
     // -----------------------------------------------------------------------
     bool all_single = true;
     for (int j = 0; j < n_jobs; j++) {
@@ -4564,8 +4578,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (all_single) {
         int j;
         int omp_threads = min(nthreads, n_jobs);
-        // Temporarily reduce the global OMP thread count so that inner code
-        // (likelihood kernels, model evaluation) does not spin up excess threads.
         int omp_saved = omp_get_max_threads();
         omp_set_num_threads(omp_threads);
         #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
@@ -4610,6 +4622,61 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 model_info->dump();
                 jobdone++;
             }
+        }
+        omp_set_num_threads(omp_saved);
+        return;
+    }
+
+    // -----------------------------------------------------------------------
+    // Per-partition budgeting: process partitions sequentially.
+    // Set omp_set_num_threads ONCE to the max cap across all partitions,
+    // avoiding repeated pool resizing which causes overhead on Linux.
+    // Each partition still gets its own thread count via setNumThreads(m_p)
+    // inside CandidateModelSet::test, but bare OMP pragmas in the likelihood
+    // kernels use the fixed pool size (max_cap).
+    // -----------------------------------------------------------------------
+    {
+        int max_mp = 1;
+        for (int j = 0; j < n_jobs; j++) {
+            if (mp[j] > max_mp) max_mp = mp[j];
+        }
+        int omp_saved = omp_get_max_threads();
+        omp_set_num_threads(max_mp);
+
+        for (int j = 0; j < n_jobs; j++) {
+            int m_p = mp[j];
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+
+            string part_model_name;
+            if (params->model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+                m_p, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+            bool check = best_model.restoreCheckpoint(&part_model_info);
+            ASSERT(check);
+
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+            lhsum += (lhvec[tree_id] = best_model.logl);
+            dfsum += (dfvec[tree_id] = best_model.df);
+            lenvec[tree_id] = best_model.tree_len;
+            num_model++;
+            if (total_num_model > 0) {
+                double finish_percent = (double)num_model * 100.0 / total_num_model;
+                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                cscreen << " Finished subset " << num_model << "/" << total_num_model
+                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                     << "     " << convert_time(getRealTime()-start_time) << " ("
+                     << convert_time(remain_time) << " left)     \r" << flush;
+            }
+            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+            model_info->dump();
+            jobdone++;
         }
         omp_set_num_threads(omp_saved);
         return;
@@ -5607,8 +5674,6 @@ cout << "PartitionFinder\t" << algo_name
     }
     // After merging, set thread count for tree search.
     // Use min(original_user_threads, sum_of_caps_merged).
-    // This handles all cases including when SuperAlignment reduction didn't fire
-    // (e.g., num_threads == sum_caps before merge but merged cap is smaller).
     {
         int orig_threads = (params->num_threads_orig > 0) ? params->num_threads_orig : params->num_threads;
         int total_cap_merged = 0;
