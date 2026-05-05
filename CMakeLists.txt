@@ -1043,6 +1043,19 @@ if (GCC_USE_BUNDLED_OMP)
     endif()
 endif()
 
+if (UNIX AND NOT APPLE AND NOT __ARM_NEON
+    AND NOT BUILD_LIB
+    AND NOT IQTREE_FLAGS MATCHES "single")
+    set_target_properties(iqtree3 PROPERTIES
+        POSITION_INDEPENDENT_CODE OFF
+        LINK_FLAGS "-no-pie")
+    if (USE_CMAPLE_AA STREQUAL "ON")
+        set_target_properties(iqtree3-aa PROPERTIES
+            POSITION_INDEPENDENT_CODE OFF
+            LINK_FLAGS "-no-pie")
+    endif()
+endif()
+
 LIST(APPEND STATIC_LIBS "${PROJECT_BINARY_DIR}/pll/libpll.a" "${PROJECT_BINARY_DIR}/ncl/libncl.a" "${PROJECT_BINARY_DIR}/nclextra/libnclextra.a" "${PROJECT_BINARY_DIR}/utils/libutils.a" "${PROJECT_BINARY_DIR}/pda/libpda.a" "${PROJECT_BINARY_DIR}/lbfgsb/liblbfgsb.a" "${PROJECT_BINARY_DIR}/whtest/libwhtest.a" "${PROJECT_BINARY_DIR}/sprng/libsprng.a" "${PROJECT_BINARY_DIR}/vectorclass/libvectorclass.a" "${PROJECT_BINARY_DIR}/model/libmodel.a" "${PROJECT_BINARY_DIR}/gsl/libgsl.a" "${PROJECT_BINARY_DIR}/alignment/libalignment.a" "${PROJECT_BINARY_DIR}/tree/libtree.a" "${PROJECT_BINARY_DIR}/simulator/libsimulator.a" "${PROJECT_BINARY_DIR}/terrace/libterrace.a" "${PROJECT_BINARY_DIR}/yaml-cpp/libyaml-cpp.a" "${PROJECT_BINARY_DIR}/phylo-yaml/libphyloYAML.a" "${PROJECT_BINARY_DIR}/main/libmain.a")
 
 if (USE_CMAPLE_AA STREQUAL "ON")
