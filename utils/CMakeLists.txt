@@ -45,19 +45,17 @@ if(CLANG AND WIN32)
   target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
 endif()
 
-# Mirror the OpenMP linking strategy used for iqtree3 in the parent CMakeLists.
-# For GCC builds where -fopenmp was set compile-only, link the bundled LLVM
-# libomp.a explicitly so libgomp is not pulled in. dl is needed by libomp on
-# Linux for dlsym.
 if (GCC_USE_BUNDLED_OMP)
   target_link_libraries(decentTree ${BUNDLED_OMP_LIB})
   if (UNIX AND NOT APPLE)
     target_link_libraries(decentTree dl)
-    # The bundled libomp.a is not built with -fPIC, so it cannot be linked
-    # into a PIE executable. On modern Linux distros gcc defaults to -pie,
-    # so disable PIE for this target (compile and link).
-    set_target_properties(decentTree PROPERTIES
-      POSITION_INDEPENDENT_CODE OFF
-      LINK_FLAGS "-no-pie")
   endif()
+endif()
+
+if (UNIX AND NOT APPLE AND NOT __ARM_NEON
+    AND NOT BUILD_LIB
+    AND NOT IQTREE_FLAGS MATCHES "single")
+  set_target_properties(decentTree PROPERTIES
+    POSITION_INDEPENDENT_CODE OFF
+    LINK_FLAGS "-no-pie")
 endif()
