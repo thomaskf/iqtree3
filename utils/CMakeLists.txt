@@ -44,3 +44,14 @@ endif(ZLIB_FOUND)
 if(CLANG AND WIN32)
   target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
 endif()
+
+# Mirror the OpenMP linking strategy used for iqtree3 in the parent CMakeLists.
+# For GCC builds where -fopenmp was set compile-only, link the bundled LLVM
+# libomp.a explicitly so libgomp is not pulled in. dl is needed by libomp on
+# Linux for dlsym.
+if (GCC_USE_BUNDLED_OMP)
+  target_link_libraries(decentTree ${BUNDLED_OMP_LIB})
+  if (UNIX AND NOT APPLE)
+    target_link_libraries(decentTree dl)
+  endif()
+endif()
