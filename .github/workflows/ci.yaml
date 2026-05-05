@@ -24,14 +24,10 @@ jobs:
           - gcc-version: 9
             cmake-version: 3.14.7
             upload: true
-            runtime-arg: Linux-gcc-9
-            memory-arg: Linux-gcc-9
           # Latest supported gcc and cmake versions
           - gcc-version: 12
             cmake-version: latest
             upload: false
-            runtime-arg: Linux-gcc-12
-            memory-arg: Linux-gcc-12
 
     steps:
       - name: Checkout
@@ -68,10 +64,14 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
+      - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/Linux-intel/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+
+      - name: Run benchmarks with IQ-TREE 3
+        run: |
+          ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
 
       - name: Run verify_results.sh
         run: |
@@ -81,12 +81,12 @@ jobs:
       - name: Run verify_runtimes.sh
         run: |
           chmod +x test_scripts/verify_runtime.sh
-          ./test_scripts/verify_runtime.sh "${{ matrix.runtime-arg }}"
+          ./test_scripts/verify_runtime.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-gcc-${{ matrix.gcc-version }}
 
       - name: Run verify_memory.sh
         run: |
           chmod +x test_scripts/verify_memory.sh
-          ./test_scripts/verify_memory.sh "${{ matrix.memory-arg }}"
+          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-gcc-${{ matrix.gcc-version }}
 
   build-linux-aarch64:
     name: Linux aarch64
@@ -119,10 +119,14 @@ jobs:
           path: build/iqtree*.tar.gz
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
+      - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
           chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/Linux-arm/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+
+      - name: Run benchmarks with IQ-TREE 3
+        run: |
+          ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
 
       - name: Run verify_results.sh
         run: |
@@ -132,12 +136,12 @@ jobs:
       - name: Run verify_runtimes.sh
         run: |
           chmod +x test_scripts/verify_runtime.sh
-          ./test_scripts/verify_runtime.sh Linux-aarch64
+          ./test_scripts/verify_runtime.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-aarch64
 
       - name: Run verify_memory.sh
         run: |
           chmod +x test_scripts/verify_memory.sh
-          ./test_scripts/verify_memory.sh Linux-aarch64
+          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-aarch64
 
   compile-linux-universal:
     name: Linux Universal
@@ -209,10 +213,14 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
+      - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
+          chmod +x test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-intel/iqtree2
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-intel/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+
+      - name: Run benchmarks with IQ-TREE 3
+        run: |
+          ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
 
       - name: Run verify_results.sh
         run: |
@@ -222,12 +230,12 @@ jobs:
       - name: Run verify_runtimes.sh
         run: |
           chmod +x test_scripts/verify_runtime.sh
-          ./test_scripts/verify_runtime.sh mac-os-x86-64
+          ./test_scripts/verify_runtime.sh time_log_iqtree2.tsv time_log_iqtree3.tsv mac-os-x86-64
 
       - name: Run verify_memory.sh
         run: |
           chmod +x test_scripts/verify_memory.sh
-          ./test_scripts/verify_memory.sh mac-os-x86-64
+          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv mac-os-x86-64
 
   build-macos-arm:
     name: Mac OS ARM64
@@ -262,10 +270,14 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.sh
+      - name: Run benchmarks with IQ-TREE 2 (baseline)
         run: |
-          chmod +x test_scripts/test_iqtree.sh
-          ./test_scripts/test_iqtree.sh
+          chmod +x test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-arm/iqtree2
+          ./test_scripts/test_iqtree.sh test_scripts/iqtree2/macOS-arm/iqtree2 time_log_iqtree2.tsv test_scripts/test_data/iqtree2_out
+
+      - name: Run benchmarks with IQ-TREE 3
+        run: |
+          ./test_scripts/test_iqtree.sh build/iqtree3 time_log_iqtree3.tsv
 
       - name: Run verify_results.sh
         run: |
@@ -275,12 +287,12 @@ jobs:
       - name: Run verify_runtimes.sh
         run: |
           chmod +x test_scripts/verify_runtime.sh
-          ./test_scripts/verify_runtime.sh mac-os-arm64
+          ./test_scripts/verify_runtime.sh time_log_iqtree2.tsv time_log_iqtree3.tsv mac-os-arm64
 
       - name: Run verify_memory.sh
         run: |
           chmod +x test_scripts/verify_memory.sh
-          ./test_scripts/verify_memory.sh mac-os-arm64
+          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv mac-os-arm64
 
   compile-mac-universal:
     name: Mac OS Universal
@@ -378,10 +390,15 @@ jobs:
           path: build/iqtree*.zip
           if-no-files-found: error
 
-      - name: Run test_iqtree.ps1
+      - name: Run benchmarks with IQ-TREE 2 (baseline)
         shell: pwsh
         run: |
-          ./test_scripts/test_iqtree.ps1
+          ./test_scripts/test_iqtree.ps1 -IQTreeBin test_scripts/iqtree2/Windows/iqtree2.exe -LogFile time_log_iqtree2.tsv -OutDir test_scripts/test_data/iqtree2_out
+
+      - name: Run benchmarks with IQ-TREE 3
+        shell: pwsh
+        run: |
+          ./test_scripts/test_iqtree.ps1 -IQTreeBin "./build/iqtree3.exe" -LogFile time_log_iqtree3.tsv
 
       - name: Run verify_results.ps1
         shell: pwsh
@@ -391,8 +408,9 @@ jobs:
       - name: Run verify_runtimes.ps1
         shell: pwsh
         run: |
-          ./test_scripts/verify_runtime.ps1
+          ./test_scripts/verify_runtime.ps1 -IQTree2Log time_log_iqtree2.tsv -IQTree3Log time_log_iqtree3.tsv -FallbackColumn windows-x86
 
       - name: Run verify_memory.ps1
+        shell: pwsh
         run: |
-          ./test_scripts/verify_memory.ps1
+          ./test_scripts/verify_memory.ps1 -IQTree2Log time_log_iqtree2.tsv -IQTree3Log time_log_iqtree3.tsv -FallbackColumn windows-x86
