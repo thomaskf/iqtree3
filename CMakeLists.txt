@@ -417,6 +417,18 @@ else()
 endif()
 message("Compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 
+if (CLANG AND UNIX AND NOT APPLE AND NOT __ARM_NEON)
+    find_program(LLD_EXECUTABLE NAMES ld.lld lld)
+    if (LLD_EXECUTABLE)
+        message("Linker        : lld (${LLD_EXECUTABLE})")
+        set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+        set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=lld")
+    else()
+        message(FATAL_ERROR "lld not found on PATH. Required for clang LTO builds on Linux. Install with: apt install lld   (or: yum install lld). Alternatively, disable LTO in iqtree3/cmaple/CMakeLists.txt.")
+    endif()
+endif()
+
 set(EXE_SUFFIX "")
 
 if (MSVC)
