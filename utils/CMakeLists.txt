@@ -53,5 +53,11 @@ if (GCC_USE_BUNDLED_OMP)
   target_link_libraries(decentTree ${BUNDLED_OMP_LIB})
   if (UNIX AND NOT APPLE)
     target_link_libraries(decentTree dl)
+    # The bundled libomp.a is not built with -fPIC, so it cannot be linked
+    # into a PIE executable. On modern Linux distros gcc defaults to -pie,
+    # so disable PIE for this target (compile and link).
+    set_target_properties(decentTree PROPERTIES
+      POSITION_INDEPENDENT_CODE OFF
+      LINK_FLAGS "-no-pie")
   endif()
 endif()
