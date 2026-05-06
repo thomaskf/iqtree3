@@ -546,13 +546,9 @@ if (NOT IQTREE_FLAGS MATCHES "single")
         endif()
     endif()
 
-    # Path of the bundled LLVM libomp.a for the current target platform.
-    # Used by the GCC branch below to link this in place of GCC's libgomp,
-    # which has poor performance for IQ-TREE.
+    # Path of the bundled LLVM libomp.a for different platforms.
     set(BUNDLED_OMP_LIB "")
 
-    # Note: APPLE (not just CLANG AND APPLE) so GCC on macOS also picks up the
-    # bundled libomp instead of falling through to the Linux paths below.
     if(APPLE)
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
             if(MACOS_MAJOR_VERSION GREATER_EQUAL 26)
@@ -605,9 +601,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
         endif()
     elseif (GCC)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-        # GCC's -fopenmp auto-links libgomp at link time, which has poor performance
-        # for IQ-TREE on Linux and macOS. When a bundled LLVM libomp.a is available
-        # for this platform, prefer it
+        # To improve the performance, use the bundled LLVM libomp.a if it is available for the platform
         if (BUNDLED_OMP_LIB AND EXISTS "${BUNDLED_OMP_LIB}" AND NOT BUILD_LIB)
             message("GCC: linking bundled LLVM libomp instead of libgomp (${BUNDLED_OMP_LIB})")
             add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fopenmp>)
@@ -1025,10 +1019,8 @@ endif()
 target_link_libraries(iqtree3 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
-# Explicitly link the bundled LLVM libomp.a for GCC builds. -fopenmp was set
-# compile-only above, so libgomp is NOT auto-linked; this provides the OpenMP
-# runtime via the bundled (faster) LLVM libomp instead. dl is needed by libomp
-# on Linux for dlsym; harmless on macOS (libdl is part of libSystem there).
+# Link the bundled LLVM libomp.a even for GCC builds
+# dl is needed by libomp on Linux for dlsym
 if (GCC_USE_BUNDLED_OMP)
     target_link_libraries(iqtree3 ${BUNDLED_OMP_LIB})
     if (UNIX AND NOT APPLE)
