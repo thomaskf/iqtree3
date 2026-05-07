@@ -2772,6 +2772,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 
               continue;
             }
+            if (strcmp(argv[cnt], "--disable-local-ref") == 0) {
+                params.cmaple_use_local_ref = false;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--estimate-MAT") == 0) {
+                params.cmaple_output_MAT = true;
+
+              continue;
+            }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
                 params.output_format = FORMAT_CSV;
                 continue;
@@ -7640,6 +7650,9 @@ void Params::setDefault() {
     SPRTA_zero_branches = false;
     out_alter_spr = false;
     intree_str = "";
+    
+    cmaple_use_local_ref = true;
+    cmaple_output_MAT = false;
 }
 
 int countPhysicalCPUCores() {

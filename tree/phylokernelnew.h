@@ -698,7 +698,7 @@ inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
             Z  = CD[0] + CD[1];
         }
     } else {
-        // odd N: handle the trailing element separately
+        // odd N
         VectorClass AD[2], BD[2], CD[2];
         for (j = 0; j < 2; j++) {
             AD[j] = A[j] * D[j];
