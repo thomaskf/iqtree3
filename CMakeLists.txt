@@ -309,21 +309,22 @@ if (WIN32)
 elseif (APPLE)
     message("Target OS     : Mac OS X")
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-		add_definitions("--target=arm64-apple-macos11.0.1")
-        # set the first version of mac 11 that supports ARM
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=arm64-apple-macos11.0.1")
+		# macOS 11 Big Sur is the first version supporting Apple Silicon
+		set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architectures")
+		set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Min macOS version")
 	else()
 		# to be compatible back to Mac OS X 10.7
     	if (IQTREE_FLAGS MATCHES "oldmac")
-        	add_definitions("-mmacosx-version-min=10.5")
+        	add_compile_options(-mmacosx-version-min=10.5)
         	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
     	else()
-            # supports the first version changed from OS X to macOS
-        	add_definitions("--target=x86_64-apple-macos10.12")
-            set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
-            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=x86_64-apple-macos10.12")
+            # 10.14 Mojave is the lowest realistic target given the bundled libomp.a;
+            # override with -DCMAKE_OSX_DEPLOYMENT_TARGET=<version> on the cmake line.
+            set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build architectures")
+            set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Min macOS version")
     	endif()
 	endif()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_warn_duplicate_libraries")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (UNIX)
     message("Target OS     : Unix")
