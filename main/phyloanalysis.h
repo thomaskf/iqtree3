@@ -29,6 +29,8 @@
 #include "treetesting.h"
 #include "tree/upperbounds.h" // Olga: functions for Upper Bounds analysis
 #include "utils/pllnni.h"
+#include <string>
+#include <vector>
 
 #if defined(USE_CMAPLE)
     #include "cmaple/maple/cmaple.h"
@@ -48,6 +50,31 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
     @param params program parameters
 */
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln, bool align_is_given = false, ModelCheckpoint *model_info = NULL);
+
+/**
+    Compute the MCMCTree-style gradient and Hessian of the log-likelihood
+    with respect to the branch lengths, returning the results in memory
+    instead of writing them to a .mcmctree.hessian file.
+
+    Pre-condition: the tree must already have been visited by computeHessian()
+    (typically via doTimeTree() with params.dating_method == "mcmctree"), so
+    that PhyloTree::gradient_vector, PhyloTree::hessian_diagonal and
+    PhyloTree::G_matrix are populated.
+
+    Only the non-partitioned (single-tree) case is supported. Throws std::runtime_error
+    if iqtree is a PhyloSuperTree.
+
+    @param iqtree         the tree on which doTimeTree() has already run
+    @param branch_lengths (OUT) length n_branches, in the MCMCTree branch order
+    @param gradient       (OUT) length n_branches, first derivatives w.r.t. branch lengths
+    @param hessian        (OUT) length n_branches * n_branches, row-major Hessian
+    @param tree_newick    (OUT) the rooted Newick tree (matches branch order)
+*/
+void computeMCMCHessian(IQTree *iqtree,
+                        std::vector<double> &branch_lengths,
+                        std::vector<double> &gradient,
+                        std::vector<double> &hessian,
+                        std::string &tree_newick);
 
 /*! \brief Run CMaple algorithm for phylogenetic inference (if suitable)
  *  @param params program parameters

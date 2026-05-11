@@ -7418,6 +7418,7 @@ void Params::setDefault() {
     clock_stddev = -1.0;
     date_outlier = -1.0;
     dating_mf = false;
+    no_hessian_file = false;
     mcmc_clock = CORRELATED;
     mcmc_bds = "1 1 0.5";
     mcmc_iter = "20000, 100, 20000";

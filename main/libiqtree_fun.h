@@ -46,6 +46,21 @@ typedef struct {
   char* errorStr;
 } DoubleArrayResult;
 
+/*
+ * Result of fit_tree_hessian: the fitted rooted tree (Newick), per-branch
+ * lengths, log-likelihood gradient (first derivatives w.r.t. branch lengths)
+ * and the n x n Hessian matrix (row-major). All pointers are owned by the
+ * caller and must be released with iqtree_free.
+ */
+typedef struct {
+  char* tree;              /* Newick tree string (matches branch_lengths order) */
+  double* branch_lengths;  /* length n_branches */
+  double* gradient;        /* length n_branches */
+  double* hessian;         /* length n_branches * n_branches, row-major */
+  size_t n_branches;
+  char* errorStr;
+} HessianResult;
+
 #ifdef _MSC_VER
 #pragma pack(pop)
 #else
@@ -80,6 +95,25 @@ extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const 
  * output: results in YAML format with the details of parameters
  */
 extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix = false, int rand_seed = 0, int num_thres = 1, const char* other_options = NULL);
+
+/*
+ * Like fit_tree, but in addition to fitting the tree this also computes the
+ * log-likelihood gradient (first derivatives w.r.t. branch lengths) and the
+ * full n x n Hessian matrix at the fitted point. The branch lengths, gradient
+ * and Hessian are returned in the MCMCTree branch ordering and share that
+ * order with the returned Newick tree string.
+ *
+ * Only the non-partitioned (single-tree) case is supported; passing a
+ * partitioned model raises an error.
+ *
+ * blfix      -- whether to fix the branch lengths as those on the given tree
+ * num_thres  -- number of threads, default 1; 0 = auto-detect
+ * other_options -- additional CLI-style options forwarded to IQ-TREE
+ *
+ * The caller owns the returned tree/branch_lengths/gradient/hessian pointers
+ * and must release each one with iqtree_free.
+ */
+extern "C" HessianResult fit_tree_hessian(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix = false, int rand_seed = 0, int num_thres = 1, const char* other_options = NULL);
 
 /*
  * Perform phylogenetic analysis with ModelFinder

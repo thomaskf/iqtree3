@@ -2712,7 +2712,8 @@ void convertToVectorStr(StringArray& names, StringArray& seqs, vector<string>& n
 }
 
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
-                          int rand_seed, string& prog, input_options* in_options, const char* other_options);
+                          int rand_seed, string& prog, input_options* in_options, const char* other_options,
+                          HessianResult* hessian_out = NULL);
 
 // Calculates the robinson fould distance between two trees
 extern "C" IntegerResult robinson_fould(const char* ctree1, const char* ctree2) {
@@ -2869,6 +2870,61 @@ extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const ch
             strcpy(output.errorStr, e.what());
         }
         // reset the output and error buffers
+        funcExit();
+    }
+    return output;
+}
+
+// Fit a tree and also compute the log-likelihood gradient and Hessian matrix
+// in memory (no MCMCTree output files are written). See libiqtree_fun.h for
+// the full contract and ownership rules.
+extern "C" HessianResult fit_tree_hessian(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix, int rand_seed, int num_thres, const char* other_options) {
+    HessianResult output;
+    output.tree = NULL;
+    output.branch_lengths = NULL;
+    output.gradient = NULL;
+    output.hessian = NULL;
+    output.n_branches = 0;
+    output.errorStr = strdup("");
+
+    try {
+        input_options* in_options = NULL;
+        if (num_thres >= 0 || blfix) {
+            in_options = new input_options();
+            if (num_thres >= 0)
+                in_options->insert("-nt", convertIntToString(num_thres));
+            if (blfix)
+                in_options->insert("-blfix", "");
+        }
+
+        // Force --dating mcmctree so doTimeTree() populates the tree's
+        // gradient_vector / hessian_diagonal / G_matrix, and the in-memory
+        // capture (via Params::no_hessian_file = true, set inside
+        // build_phylogenetic when hessian_out != NULL) suppresses the file
+        // output that would normally follow.
+        string forced("--dating mcmctree");
+        string merged_options;
+        if (other_options != NULL && strlen(other_options) > 0) {
+            merged_options = string(other_options) + " " + forced;
+        } else {
+            merged_options = forced;
+        }
+
+        string prog = "fit_tree_hessian";
+        char* checkpoint_yaml = build_phylogenetic(names, seqs, model, intree, rand_seed, prog,
+                                                   in_options, merged_options.c_str(), &output);
+        // build_phylogenetic returns the YAML checkpoint dump; we don't use it
+        // here (the Hessian data is the value of interest) so free it.
+        if (checkpoint_yaml != NULL && checkpoint_yaml[0] != '\0')
+            delete[] checkpoint_yaml;
+
+        if (in_options != NULL)
+            delete in_options;
+    } catch (const exception& e) {
+        if (strlen(e.what()) > 0) {
+            output.errorStr = new char[strlen(e.what())+1];
+            strcpy(output.errorStr, e.what());
+        }
         funcExit();
     }
     return output;
@@ -3385,7 +3441,8 @@ void split(const char* s, vector<char*>& out) {
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
-                          int rand_seed, string& prog, input_options* in_options, const char* other_options) {
+                          int rand_seed, string& prog, input_options* in_options, const char* other_options,
+                          HessianResult* hessian_out) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -3645,6 +3702,13 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     checkpoint->endStruct();
     
     Params params = Params::getInstance();
+    // When the caller wants the gradient/Hessian captured in memory, suppress
+    // the .mcmctree.hessian file output. doTimeTree() still runs because
+    // --dating mcmctree is forwarded via other_options.
+    if (hessian_out != NULL) {
+        params.no_hessian_file = true;
+        Params::getInstance().no_hessian_file = true;
+    }
     IQTree *tree;
     Alignment *alignment = new Alignment(names, seqs, params.sequence_type, params.model_name);
     bool align_is_given = true;
@@ -3654,7 +3718,31 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     }
 
     runPhyloAnalysis(params, checkpoint, tree, alignment, align_is_given, model_info);
-    
+
+    // Capture gradient/Hessian in memory while the IQTree is still alive
+    // (its gradient_vector / hessian_diagonal / G_matrix buffers are freed
+    // when the tree is destroyed). The caller owns the returned heap buffers.
+    if (hessian_out != NULL) {
+        std::vector<double> br_lens, grad, hess;
+        std::string tree_newick;
+        computeMCMCHessian(tree, br_lens, grad, hess, tree_newick);
+
+        size_t n = br_lens.size();
+        hessian_out->n_branches = n;
+
+        hessian_out->tree = (char*) malloc(tree_newick.size() + 1);
+        memcpy(hessian_out->tree, tree_newick.c_str(), tree_newick.size() + 1);
+
+        hessian_out->branch_lengths = (double*) malloc(n * sizeof(double));
+        memcpy(hessian_out->branch_lengths, br_lens.data(), n * sizeof(double));
+
+        hessian_out->gradient = (double*) malloc(n * sizeof(double));
+        memcpy(hessian_out->gradient, grad.data(), n * sizeof(double));
+
+        hessian_out->hessian = (double*) malloc(n * n * sizeof(double));
+        memcpy(hessian_out->hessian, hess.data(), n * n * sizeof(double));
+    }
+
     stringstream ss;
     if (model_info != NULL) {
         // output the modelfinder results in YAML format

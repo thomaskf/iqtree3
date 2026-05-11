@@ -2088,7 +2088,11 @@ void exportMCMCTreeCMD(Params &params, ostream &out)
     out << "Ctl file for MCMCTree: "  << ((string) params.out_prefix + ".mcmctree.ctl") << endl << endl;
 
     out << "For Divergence time estimation with approximate likelihood method a substitution or an alignment is not needed after the gradients and Hessian file is generated." << endl;
-    out << "Note: The tree file should be calibrate with time records (eg: fossil dates). You can find the tree file at: " << (string) params.user_file << endl;
+    // params.user_file is null when the caller supplied the tree as an in-memory
+    // string (e.g. piqtree's fit_tree_hessian via libiqtree); guard the
+    // char* -> string cast so we don't segfault on null.
+    const char *tree_path = params.user_file ? params.user_file : "(provided in memory)";
+    out << "Note: The tree file should be calibrate with time records (eg: fossil dates). You can find the tree file at: " << tree_path << endl;
     out << "Note: Please make sure the gradients and Hessian file: " << ((string) params.out_prefix + ".in.BV") << " is named as in.BV" << endl;
     out << "Note: The parameters for MCMC runs could be change via ctl file at: " << ((string) params.out_prefix + ".mcmctree.ctl")  << endl << endl;
 
@@ -3253,6 +3257,49 @@ void printHessian(IQTree *iqtree, int partition_type) {
     // cout << "Add time records calibrations to: " << iqtree->params->user_file << endl;
 }
 
+void computeMCMCHessian(IQTree *iqtree,
+                        std::vector<double> &branch_lengths,
+                        std::vector<double> &gradient,
+                        std::vector<double> &hessian,
+                        std::string &tree_newick) {
+    if (iqtree->isSuperTree())
+        throw std::runtime_error("In-memory MCMCTree Hessian extraction is not supported for partitioned/super-tree models.");
+
+    // Mirror the rooting/initialisation step that printHessian() performs for
+    // the non-partitioned branch, so the produced branch ordering matches.
+    if (iqtree->traversal_starting_node) {
+        auto traversal_starting_nei = (Neighbor*)(((Node*)iqtree->traversal_starting_node)->neighbors[0]->node)
+                ->findNeighbor((Node*)iqtree->traversal_starting_node);
+        iqtree->root = traversal_starting_nei->node;
+        iqtree->initializeTree();
+        if (traversal_starting_nei->node->neighbors.size() == 1) {
+            iqtree->leftSingleRoot = true;
+        }
+    }
+
+    MatrixXd hessian_eigen;
+    stringstream tree_stream;
+    RowVectorXd branch_lengths_vector;
+    RowVectorXd gradient_vector_eigen;
+
+    printMCMCFileFormat(iqtree, hessian_eigen, tree_stream, branch_lengths_vector,
+                        gradient_vector_eigen, nullptr, 0, iqtree->leftSingleRoot);
+
+    size_t n = (size_t) branch_lengths_vector.size();
+    branch_lengths.assign(branch_lengths_vector.data(), branch_lengths_vector.data() + n);
+    gradient.assign(gradient_vector_eigen.data(), gradient_vector_eigen.data() + n);
+
+    hessian.resize(n * n);
+    // Eigen MatrixXd is column-major by default; copy to row-major double array.
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            hessian[i * n + j] = hessian_eigen(i, j);
+        }
+    }
+
+    tree_newick = tree_stream.str();
+}
+
 // method to check the existence of traversal starting node of species-tree on a gene-tree for hessian calculation
 // SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id){
 //     if(super_root && super_root->link_neighbors[part_id]){
@@ -4111,7 +4158,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
         cout << "--- Completed the gradients and the Hessian generation ---" << endl;
 
-        printHessian(iqtree, params.partition_type);
+        // piqtree may request the gradient/Hessian in memory (via libiqtree's
+        // fit_tree_hessian). In that case the tree's gradient_vector,
+        // hessian_diagonal and G_matrix have already been populated by
+        // doTimeTree above, and we skip the MCMCTree file output here so the
+        // caller can read the data directly without disk I/O.
+        if (!params.no_hessian_file)
+            printHessian(iqtree, params.partition_type);
     }
     // BUG FIX: readTreeString(bestTreeString) not needed before this line
     iqtree->printResultTree();

@@ -2506,6 +2506,16 @@ public:
     /** flag for phylogenetic dating with MCMCtree with modelFinder */
     bool dating_mf;
 
+    /** if true, skip writing the .mcmctree.hessian/.ctl/.dummy.phy files when
+     * --dating mcmctree is requested.
+     * Why: piqtree wants to capture the gradient/Hessian in memory rather than
+     *      paying the disk-I/O cost of round-tripping the matrices through a file.
+     * How to apply: a caller (e.g. fit_tree_hessian via libiqtree) sets this to
+     *      true together with dating_method="mcmctree" so doTimeTree() still
+     *      populates the tree's gradient_vector/G_matrix/hessian_diagonal,
+     *      but printHessian() is skipped. */
+    bool no_hessian_file;
+
     /** the rate model for MCMCtree (Global/Equal, Independent and Correlated clock models are supported) */
     int mcmc_clock;
 
