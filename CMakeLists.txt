@@ -1164,7 +1164,7 @@ if (BUILD_LIB)
     if(APPLE)
         add_custom_command(
             TARGET iqtree3 POST_BUILD
-            COMMAND libtool -static -o libiqtree.a ${STATIC_LIBS}
+            COMMAND libtool -no_warning_for_no_symbols -static -o libiqtree.a ${STATIC_LIBS}
             COMMAND rm libiqtree3.a
             VERBATIM)
     elseif(UNIX)
