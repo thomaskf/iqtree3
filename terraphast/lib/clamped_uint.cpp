@@ -56,35 +56,6 @@ index checked_uint<except>::value() const {
 	return m_value;
 }
 
-template <bool except>
-bool operator==(checked_uint<except> a, checked_uint<except> b) {
-	return a.value() == b.value();
-}
-
-template <bool except>
-bool operator!=(checked_uint<except> a, checked_uint<except> b) {
-	return !(a == b);
-}
-
-template <bool except>
-checked_uint<except> operator+(checked_uint<except> a, checked_uint<except> b) {
-	return a += b;
-}
-
-template <bool except>
-checked_uint<except> operator*(checked_uint<except> a, checked_uint<except> b) {
-	return a *= b;
-}
-
-template <bool except>
-std::ostream& operator<<(std::ostream& stream, checked_uint<except> val) {
-	if (val.is_clamped()) {
-		stream << ">= ";
-	}
-	stream << val.value();
-	return stream;
-}
-
 // explicitly instantiate template class
 template class checked_uint<false>;
 template class checked_uint<true>;

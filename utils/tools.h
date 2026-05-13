@@ -1041,6 +1041,9 @@ public:
 
     /** use logarithm of rates for clustering algorithm */
     bool partfinder_log_rate;
+
+    /** use mAIC as partition merging criterion */
+    bool marginal_lh_aic;
     
     /************************************************/
     /******* variables for Terrace analysis *********/
@@ -1660,6 +1663,11 @@ public:
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
+    /** each partition gets min(nthreads, size_cap) threads,
+     *  partitions dispatched heavy-first; no round-robin distribution of surplus threads
+     *  across partitions */
+    bool parallel_per_partition;
+
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
     bool order_by_threads;
 
@@ -1763,6 +1771,36 @@ public:
     bool check_combin_q_mat;
 
     /**
+            estimate the DNA mixture model initialising from one class (like MixtureFinder way)
+     */
+    bool est_from_one;
+
+    /**
+            % of distinct site pattern required in a sample.
+            if model_tamer < 100, do ModelTamer subsample-upsampling.
+     */
+    double model_tamer;
+
+    /**
+        Only do ModelTamer, without downstream analyses.
+    */
+    int model_tamer_only;
+    /**
+            ModelTamer subsampling time.
+     */
+    int model_tamer_sub;
+
+    /**
+            ModelTamer upsampling time.
+     */
+    int model_tamer_up;
+
+    /**
+            ModelTamer subsampling method.
+     */
+    int model_tamer_method;
+
+    /**
             shape parameter (alpha) of the Gamma distribution for site rates
      */
     double gamma_shape;
@@ -1810,6 +1848,13 @@ public:
      *  Optimization algorithm for q-mixture model
      */
     string optimize_alg_qmix;
+
+    /**
+     *  Multistart strategy for M7/M8 codon mixture models.
+     *  1 = one-phase: run starts sequentially, 2 rounds/start, early stop
+     *  2 = two-phase: cheap LL screen then top-2 full starts with 1 round/start (default)
+     */
+    int multistart_strategy;
 
     /**
      * non-zero if want to estimate the initial frequency vectors for q-mixture model
@@ -2379,6 +2424,10 @@ public:
 
     /** sample size for AICc and BIC */
     int model_test_sample_size;
+
+    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
+     *  Default 4000. Set via --mf-thread-factor. */
+    int mf_thread_factor;
 
     /** root state, for Tina's zoombie domain */
     char *root_state;

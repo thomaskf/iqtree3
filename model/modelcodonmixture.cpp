@@ -206,12 +206,23 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             // class 0: user-controlled omega (default 0.5); class 1: omega = 1
             init_omegas[0] = user_input_param ? resolveValue(specs[1], 0.5) : 0.5;
             init_omegas[1] = 1.0;
+            // Validate: omega_0 must be < 1
+            if (user_input_param && specs[1].has_value && init_omegas[0] >= 1.0)
+                outError("CMIX1a: omega of class 0 must be < 1 (got "
+                         + convertDoubleToString(init_omegas[0]) + ")");
         }
         else if (cmix_type == "2a") {
             // class 0 (omega < 1), class 1 (omega = 1), class 2 (omega > 1)
             init_omegas[0] = user_input_param ? resolveValue(specs[1], 0.5) : 0.5;
             init_omegas[1] = 1.0;
             init_omegas[2] = user_input_param ? resolveValue(specs[3], 2.0) : 2.0;
+            // Validate: omega_0 must be < 1, omega_2 must be > 1
+            if (user_input_param && specs[1].has_value && init_omegas[0] >= 1.0)
+                outError("CMIX2a: omega of class 0 must be < 1 (got "
+                         + convertDoubleToString(init_omegas[0]) + ")");
+            if (user_input_param && specs[3].has_value && init_omegas[2] <= 1.0)
+                outError("CMIX2a: omega of class 2 must be > 1 (got "
+                         + convertDoubleToString(init_omegas[2]) + ")");
         }
         else { // M3
             if (user_input_param) {
@@ -232,6 +243,12 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         if (user_input_param) {
             alpha = resolveValue(specs[0], 1.0);
             beta  = resolveValue(specs[1], 1.0);
+            if (specs[0].has_value && alpha <= 0.0)
+                outError("CMIX7: beta-distribution shape parameter p must be > 0 (got "
+                         + convertDoubleToString(alpha) + ")");
+            if (specs[1].has_value && beta <= 0.0)
+                outError("CMIX7: beta-distribution shape parameter q must be > 0 (got "
+                         + convertDoubleToString(beta) + ")");
         }
         double *o = RateBeta::SampleOmegas(ncat, alpha, beta);
         for (int i = 0; i < ncat; i++) appendClass(o[i]);
@@ -242,6 +259,17 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
             alpha            = resolveValue(specs[0], 1.0);
             beta             = resolveValue(specs[1], 1.0);
             extra_omega_init = resolveValue(specs[3], 2.0);
+            // Validate: extra omega must be > 1
+            if (specs[3].has_value && extra_omega_init <= 1.0)
+                outError("CMIX8: omega of the positive-selection class must be > 1 (got "
+                         + convertDoubleToString(extra_omega_init) + ")");
+            // Validate: alpha and beta must be > 0
+            if (specs[0].has_value && alpha <= 0.0)
+                outError("CMIX8: beta-distribution shape parameter p must be > 0 (got "
+                         + convertDoubleToString(alpha) + ")");
+            if (specs[1].has_value && beta <= 0.0)
+                outError("CMIX8: beta-distribution shape parameter q must be > 0 (got "
+                         + convertDoubleToString(beta) + ")");
         }
         if (ncat < 2)
             outError("M8 requires at least 2 categories");
@@ -428,6 +456,18 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
                 outError("Mixture weight cannot be negative in " + orig_model_name);
         }
 
+        // Validate weight sum when user provides fixed weights
+        if (user_input_param && !any_weight_optimised) {
+            double wsum = 0.0;
+            for (double p : init_props) wsum += p;
+            if (fabs(wsum - 1.0) > 0.1)
+                outError("Sum of mixture weights (" + convertDoubleToString(wsum)
+                         + ") is too far from 1.0 in " + orig_model_name);
+            if (fabs(wsum - 1.0) > 0.01)
+                outWarning("Sum of mixture weights (" + convertDoubleToString(wsum)
+                           + ") is not exactly 1.0; will be normalised.");
+        }
+
         // Normalise: fixed weights keep their exact user values; free
         // weights are scaled to fill the remaining probability mass.
         if (any_weight_fixed && any_weight_optimised) {
@@ -476,18 +516,17 @@ ModelCodonMixture::ModelCodonMixture(string orig_model_name, string model_name,
         fix_prop = true;
     }
     else if (cmix_type == "8") {
-        // p_0 in the PDF table is the weight of the beta-distributed
-        // sub-component (combined over all K-1 classes); the extra
-        // positive-selection category therefore takes weight 1 - p_0.
-        double p_beta_init = 0.9;  // sensible default: most sites neutral/purifying
+        // The third parameter is the weight of the extra positive-selection
+        // class.  The remaining weight (1 - p_extra) is shared equally
+        // among the K-1 beta-distributed classes.
+        double p_extra_init = 0.1;  // sensible default: small fraction under positive selection
         if (user_input_param)
-            p_beta_init = resolveValue(specs[2], 0.9);
-        if (p_beta_init < 0.0 || p_beta_init > 1.0)
-            outError("M8: weight of beta-distributed component must be in [0,1]");
-        double p_extra = 1.0 - p_beta_init;
-        double share   = p_beta_init / (ncat - 1);
+            p_extra_init = resolveValue(specs[2], 0.1);
+        if (p_extra_init < 0.0 || p_extra_init > 1.0)
+            outError("M8: weight of positive-selection class must be in [0,1]");
+        double share = (1.0 - p_extra_init) / (ncat - 1);
         for (int i = 0; i < ncat - 1; i++) prop[i] = share;
-        prop[ncat - 1] = p_extra;
+        prop[ncat - 1] = p_extra_init;
         // Mixture weights for M8 are managed by getVariables/setVariables;
         // the underlying ModelMixture optimisation is bypassed.
         fix_prop = true;
@@ -571,10 +610,7 @@ bool ModelCodonMixture::getVariables(double *variables) {
                 prop[i] = (1.0 - w_extra) / (size() - 1);
             }
             ModelCodon *mlast = (ModelCodon*)at(size() - 1);
-            cout << "alpha: " << alpha << "\tbeta: " << beta
-                 << "\tomega_free: " << mlast->omega
-                 << "\tfree_weight: " << w_extra
-                 << "\tkappa: " << kappa << endl;
+            (void)mlast; // omega already set above via getExtraParams
         }
     }
 
@@ -736,27 +772,48 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
         // The multistart is skipped when the user has *fixed* both alpha
         // and beta via the new "+CMIX7/8{...}" syntax, since in that case
         // there is nothing to search over.
-        bool can_multistart = (cmix_subtype == "7" || cmix_subtype == "8")
+        bool can_multistart_m78 = (cmix_subtype == "7" || cmix_subtype == "8")
                               && !(fix_alpha && fix_beta);
-        if (!multistart_done && can_multistart) {
+        if (!multistart_done && can_multistart_m78) {
             multistart_done = true;
-            // A compact set of starting points that covers the qualitative
-            // shapes of Beta(alpha, beta) on [0,1]: uniform, sharp decay,
-            // moderate decay, broad bell, U-shape. Kept small because each
-            // start runs a full model+BL alternation and we pay 5x this
-            // cost.  The BFGS dimension here is tiny (3 for M7, 5 for M8).
+            // Multistart for M7/M8 beta-distribution models.
+            //
+            // Strategy 1 (one-phase, -mstrategy 1):
+            //   Try starts sequentially in a fixed order. Each start runs
+            //   2 rounds of BFGS+BL. Stop early when two starts agree.
+            //
+            // Strategy 2 (two-phase, -mstrategy 2, DEFAULT):
+            //   Phase 1: cheap LL screen at all 5 starting (alpha, beta)
+            //     points (just one likelihood evaluation each, seconds).
+            //   Phase 2: fully optimise the top-2 starts ranked by
+            //     Phase 1 score (1 round of BFGS+BL each). Stop early
+            //     when two starts agree; extend one-by-one otherwise.
+            //
+            // Strategy 3 (one-phase light, -mstrategy 3):
+            //   Like strategy 1 (sequential fixed order, early stop) but
+            //   each start runs only 1 round of BFGS+BL instead of 2.
+            //   Cheaper per start than strategy 1, without the screening
+            //   overhead of strategy 2.
+            //
+            const int strategy = Params::getInstance().multistart_strategy;
             const std::vector<std::pair<double,double>> start_points = {
                 {1.0, 1.0},   // uniform (historical default)
+                {0.5, 0.5},   // U-shape
                 {0.1, 7.0},   // very sharp decay toward 0
                 {2.0, 5.0},   // moderate decay
                 {4.0, 2.0},   // broad bell peaked > 0.5
-                {0.5, 0.5},   // U-shape
             };
-            // Snapshot the initial state so every start runs BFGS from
-            // identical kappa / prop / free-omega / branch-lengths and only
-            // differs in (alpha, beta). This ensures the starts are
-            // independent samples of the landscape rather than a chained
-            // sequence whose later starts inherit drift from earlier ones.
+            const double MULTISTART_PARAM_REL_TOL = 0.10;
+            const double MULTISTART_LH_TOL        = 2.0;
+            // How many BFGS+BL rounds per start:
+            //   strategy 1 = 2 rounds, strategies 2 & 3 = 1 round.
+            // Strategy 4 ("all"): all 5 starts, 2 rounds each, no early stopping.
+            const int ROUNDS_PER_START = (strategy == 1 || strategy == 4) ? 2 : 1;
+
+            cout << "Multistart strategy " << strategy
+                 << " (" << ROUNDS_PER_START << " round(s)/start)" << endl;
+
+            // Snapshot the initial state.
             double init_kappa = ((ModelCodon*)at(0))->kappa;
             double init_free_omega = (cmix_subtype == "8")
                 ? ((ModelCodon*)at(size()-1))->omega : 0.0;
@@ -764,6 +821,45 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             DoubleVector init_bl;
             phylo_tree->saveBranchLengths(init_bl);
 
+            // ---- Phase 1: cheap LL screen (strategy 2 only) ----
+            // Build a ranked order of starting points. For strategy 1,
+            // just use the fixed order; for strategy 2, rank by initial LL.
+            std::vector<size_t> start_order;
+            if (strategy == 2) {
+                struct ScreenResult { double score; size_t idx; };
+                std::vector<ScreenResult> screen;
+                int n_beta = (cmix_subtype == "7") ? (int)size() : (int)size() - 1;
+                for (size_t s = 0; s < start_points.size(); s++) {
+                    double s_alpha = fix_alpha ? alpha : start_points[s].first;
+                    double s_beta  = fix_beta  ? beta  : start_points[s].second;
+                    double* omega_arr = RateBeta::SampleOmegas(n_beta, s_alpha, s_beta);
+                    for (int k = 0; k < n_beta; k++)
+                        ((ModelCodon*)at(k))->omega = omega_arr[k];
+                    for (int k = 0; k < size(); k++) {
+                        ((ModelCodon*)at(k))->kappa = init_kappa;
+                        prop[k] = init_prop[k];
+                    }
+                    if (cmix_subtype == "8")
+                        ((ModelCodon*)at(size()-1))->omega = init_free_omega;
+                    phylo_tree->restoreBranchLengths(init_bl);
+                    rescale_codon_mix();
+                    double s_score = phylo_tree->computeLikelihood();
+                    cout << "  screen (alpha=" << s_alpha << ", beta=" << s_beta
+                         << ") -> LL = " << s_score << endl;
+                    screen.push_back({s_score, s});
+                }
+                sort(screen.begin(), screen.end(),
+                     [](const ScreenResult &a, const ScreenResult &b){
+                         return a.score > b.score;
+                     });
+                for (auto &sr : screen) start_order.push_back(sr.idx);
+            } else {
+                // Strategies 1 and 3: fixed sequential order.
+                for (size_t s = 0; s < start_points.size(); s++)
+                    start_order.push_back(s);
+            }
+
+            // ---- Full optimization of selected starts ----
             double best_score = -DBL_MAX;
             double best_alpha = alpha, best_beta = beta;
             double best_kappa = init_kappa;
@@ -771,33 +867,39 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
             double best_free_weight = init_prop[size()-1];
             DoubleVector best_prop = init_prop;
             DoubleVector best_bl = init_bl;
-            for (size_t s = 0; s < start_points.size(); s++) {
-                // If the user fixed alpha (or beta), keep the user's value
-                // for that coordinate and only vary the free one.
+
+            struct StartResult { double score, alpha, beta; };
+            std::vector<StartResult> results;
+
+            // For strategy 2 start with top N_FULL=2; for strategies 1
+            // and 3 go through all 5 (early stop will break if two agree).
+            // Strategy 4 ("all"): always try all 5, no early stopping.
+            const int N_FULL = 2;
+            size_t n_to_try = (strategy == 2)
+                ? min((size_t)N_FULL, start_order.size())
+                : start_order.size();
+            bool early_stop = false;
+            for (size_t rank = 0; rank < start_order.size() && !early_stop; rank++) {
+                if (rank >= n_to_try) break;
+
+                size_t s = start_order[rank];
                 alpha = fix_alpha ? alpha : start_points[s].first;
                 beta  = fix_beta  ? beta  : start_points[s].second;
-                // restore kappa / prop / free-omega / BL from the snapshot
-                // so every start begins from the same baseline
                 for (int k = 0; k < size(); k++) {
                     ((ModelCodon*)at(k))->kappa = init_kappa;
                     prop[k] = init_prop[k];
                 }
-                if (cmix_subtype == "8") {
+                if (cmix_subtype == "8")
                     ((ModelCodon*)at(size()-1))->omega = init_free_omega;
-                }
                 phylo_tree->restoreBranchLengths(init_bl);
                 phylo_tree->clearAllPartialLH();
-                // Alternate model + BL optimisation a couple of times so
-                // each start converges fairly. Without the BL refit, the
-                // first start's BL bleeds into all subsequent starts and
-                // BFGS sees a stale tree, "moving" the model away from a
-                // perfectly good (alpha, beta) basin.
+
                 double s_score = 0.0;
-                for (int it = 0; it < 2; it++) {
+                for (int it = 0; it < ROUNDS_PER_START; it++) {
                     s_score = ModelMarkov::optimizeParameters(gradient_epsilon);
-                    s_score = phylo_tree->optimizeAllBranches(1,
-                                                              gradient_epsilon);
+                    s_score = phylo_tree->optimizeAllBranches(1, gradient_epsilon);
                 }
+
                 cout << "  multistart point (alpha=" << start_points[s].first
                      << ", beta=" << start_points[s].second << ") -> score = "
                      << s_score << " (final alpha=" << alpha
@@ -813,6 +915,35 @@ double ModelCodonMixture::optimizeParameters(double gradient_epsilon) {
                     }
                     for (int k = 0; k < size(); k++) best_prop[k] = prop[k];
                     phylo_tree->saveBranchLengths(best_bl);
+                }
+                results.push_back({s_score, alpha, beta});
+
+                // Agreement check (both strategies).
+                if (results.size() >= 2) {
+                    for (size_t prev = 0; prev < results.size() - 1; prev++) {
+                        if (best_score - results[prev].score > MULTISTART_LH_TOL)
+                            continue;
+                        if (best_score - results.back().score > MULTISTART_LH_TOL)
+                            continue;
+                        double a1 = results[prev].alpha, a2 = results.back().alpha;
+                        double b1 = results[prev].beta,  b2 = results.back().beta;
+                        double a_rel = fabs(a1 - a2) / max(max(a1, a2), 1e-6);
+                        double b_rel = fabs(b1 - b2) / max(max(b1, b2), 1e-6);
+                        if (a_rel < MULTISTART_PARAM_REL_TOL &&
+                            b_rel < MULTISTART_PARAM_REL_TOL &&
+                            strategy != 4) {
+                            cout << "  early stop: starts agree"
+                                 << " (alpha rel.diff=" << a_rel
+                                 << ", beta rel.diff=" << b_rel
+                                 << ", LL gap=" << fabs(results[prev].score - results.back().score)
+                                 << ")" << endl;
+                            early_stop = true;
+                            break;
+                        }
+                    }
+                    if (!early_stop && rank + 1 >= n_to_try && n_to_try < start_order.size()) {
+                        n_to_try++;
+                    }
                 }
             }
             // Restore the best start's converged state (model + branch
