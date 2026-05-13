@@ -4942,11 +4942,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
             for (int j = 0; j < n_jobs; j++) {
                 mp[j] = 1;
             }
-            if (cur_pair.score < inf_score)
-                better_pairs.insertPair(cur_pair);
-            if (params->marginal_lh_aic) {
-                sorted_pairs.insertPair(cur_pair);
-            }
         }
     } else {
         // Default (and --parallel-per-partition): each merge gets its full cap
@@ -5109,6 +5104,9 @@ void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, in
         }
         if (cur_pair.score < inf_score)
             better_pairs.insertPair(cur_pair);
+        if (params->marginal_lh_aic) {
+            sorted_pairs.insertPair(cur_pair);
+        }
     }
 }
 
