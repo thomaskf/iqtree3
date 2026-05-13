@@ -1098,6 +1098,7 @@ void IQTree::initializeModel(Params &params, string model_name, ModelsBlock *mod
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
                 } else {
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
+                }
 
                 // When params->user_file has exactly as many trees as partitions,
                 // each partition already holds its own user-supplied tree; calling
