@@ -71,7 +71,7 @@
     #include <omp.h>
 #endif
 
-using namespace std;
+// using namespace std;
 
 inline void separator(ostream &out, int type = 0) {
     switch (type) {
@@ -166,14 +166,14 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
     if(params.eco_dag_file)
         out << "Input food web file name: "<<params.eco_dag_file<<endl;
      out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
-    if (params.initial_file != NULL)
+    if (params.initial_file != nullptr)
         out << "Initial taxa file: " << params.initial_file << endl;
-    if (params.param_file != NULL)
+    if (params.param_file != nullptr)
         out << "Parameter file: " << params.param_file << endl;
     out << endl;
-    out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
+    out << "Type of measure: " << ((params.root != nullptr || params.is_rooted) ? "Rooted": "Unrooted") <<
             (analysis_type== IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
-    if (params.root != NULL) out << " at " << params.root;
+    if (params.root != nullptr) out << " at " << params.root;
     out << endl;
     if (params.run_mode != RunMode::CALC_DIST && params.run_mode != RunMode::PD_USER_SET) {
         out << "Search objective: " << ((params.find_pd_min) ? "Minimum" : "Maximum") << endl;
@@ -258,7 +258,7 @@ void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
 void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
     PDRelatedMeasures &pd_more) {
     string filename;
-    if (params.out_file == NULL) {
+    if (params.out_file == nullptr) {
         filename = params.out_prefix;
         filename += ".pda";
     } else
@@ -405,7 +405,7 @@ void runPDTree(Params &params)
 
         if (params.endemic_pd)
             tree.calcPDEndemism(taxa_set, pd_more.PDEndemism);
-        if (params.complement_area != NULL)
+        if (params.complement_area != nullptr)
             tree.calcPDComplementarity(taxa_set, params.complement_area, pd_more.PDComplementarity);
 
         t_end = getCPUTime();
@@ -429,7 +429,7 @@ void runPDTree(Params &params)
 
     test_greedy.init(params);
 
-    if (params.root == NULL && !params.is_rooted)
+    if (params.root == nullptr && !params.is_rooted)
         cout << endl << "Running PD algorithm on UNROOTED tree..." << endl;
     else
         cout << endl << "Running PD algorithm on ROOTED tree..." << endl;
@@ -545,7 +545,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
     IntVector::iterator inti;
     ranking.clear();
     bool nested = true;
-    Split *cur_sp = NULL;
+    Split *cur_sp = nullptr;
     int id = 1;
     for (it = pd_set.begin(); it != pd_set.end(); it++) {
         if ((*it).empty()) continue;
@@ -654,7 +654,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         printNexusSets(nex_file.c_str(), sg, pd_set);
     }
     string filename;
-    if (params.out_file == NULL) {
+    if (params.out_file == nullptr) {
         filename = params.out_prefix;
         filename += ".pda";
     } else
@@ -1023,7 +1023,7 @@ void runPDSplit(Params &params) {
         if (params.endemic_pd)
             sg.calcPDEndemism(pd_set[0], pd_more.PDEndemism);
 
-        if (params.complement_area != NULL)
+        if (params.complement_area != nullptr)
             sg.calcPDComplementarity(pd_set[0], params.complement_area, pd_more.setName, pd_more.PDComplementarity);
 
     } else {
@@ -1230,7 +1230,7 @@ void scaleBranchLength(Params &params) {
         cout << "Scaling clade support with a factor of " << params.scaling_factor << " ..." << endl;
         tree.scaleCladeSupport(params.scaling_factor, false);
     }
-    if (params.out_file != NULL)
+    if (params.out_file != nullptr)
         tree.printTree(params.out_file);
     else {
         tree.printTree(cout);
@@ -1321,7 +1321,7 @@ void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode
 void computeRFDistExtended(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
     int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = NULL;
+    double *rfdist_raw = nullptr;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1364,7 +1364,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
 void computeRFDistSamePair(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
     int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = NULL;
+    double *rfdist_raw = nullptr;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1431,7 +1431,7 @@ void computeRFDist(Params &params) {
     MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
     int n = trees.size(), m = trees.size();
     double *rfdist;
-    double *incomp_splits = NULL;
+    double *incomp_splits = nullptr;
     string infoname = params.out_prefix;
     infoname += ".rfinfo";
     string treename = params.out_prefix;
@@ -1717,7 +1717,7 @@ outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
             if (!fout.is_open()) {
                 cerr << "ERROR: Could not open " << name << " for logging" << endl;
                 exit(EXIT_FAILURE);
-                return NULL;
+                return nullptr;
             }
             fout_buf = fout.rdbuf();
         }
@@ -1738,7 +1738,7 @@ outstreambuf* outstreambuf::close() {
         fout.close();
         return this;
     }
-    return NULL;
+    return nullptr;
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
@@ -2001,7 +2001,7 @@ extern "C" void getintargv(int *argc, char **argv[])
                     n=1;
                     break;
                 case 'q': 
-                       // tp_exit(0, NULL, FALSE, __FILE__, __LINE__, _exit_wait_optn);
+                       // tp_exit(0, nullptr, FALSE, __FILE__, __LINE__, _exit_wait_optn);
                     if(_exit_wait_optn) {
                         printf("\npress [return] to finish: ");
                         fflush(stdout);
@@ -2187,7 +2187,7 @@ void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
     bool isrooted = false;
     tree.readTree(user_file, isrooted);
     tree.collapseLowBranchSupport(minsup);
-    tree.collapseZeroBranches(NULL, NULL, -1.0);
+    tree.collapseZeroBranches(nullptr, nullptr, -1.0);
     if (verbose_mode >= VB_MED)
         tree.drawTree(cout);
     string outfile = (string)user_file + ".collapsed";
@@ -2242,7 +2242,7 @@ int main(int argc, char *argv[]) {
         int intargc;
         char **intargv;
         intargc = 0;
-        intargv = NULL;
+        intargv = nullptr;
 
         for (n = strlen(argv[0]) - 5;
              (n >= 0) && !found && (argv[0][n] != '/')
@@ -2641,7 +2641,7 @@ int main(int argc, char *argv[]) {
         }
 
 
-        if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == NULL &&
+        if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == nullptr &&
             Params::getInstance().find_pd_min == false && Params::getInstance().calc_pdgain == false &&
             Params::getInstance().run_mode != RunMode::LINEAR_PROGRAMMING && Params::getInstance().multi_tree == false)
             runPDTree(Params::getInstance());
@@ -2712,7 +2712,7 @@ void convertToVectorStr(StringArray& names, StringArray& seqs, vector<string>& n
 }
 
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
-                          int rand_seed, string& prog, input_options* in_options);
+                          int rand_seed, string& prog, input_options* in_options, const char* other_options);
 
 // Calculates the robinson fould distance between two trees
 extern "C" IntegerResult robinson_fould(const char* ctree1, const char* ctree2) {
@@ -2813,7 +2813,7 @@ extern "C" StringResult random_tree(int num_taxa, const char* tree_gen_mode, int
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const char* model, int rand_seed, int bootstrap_rep, int num_thres) {
+extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const char* model, int rand_seed, int bootstrap_rep, int num_thres, const char* other_options) {
     StringResult output;
     output.errorStr = strdup("");
     
@@ -2828,7 +2828,7 @@ extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const 
                 in_options->insert("-nt", convertIntToString(num_thres));
         }
         string prog = "build_tree";
-        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
+        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options, other_options);
         if (in_options != NULL)
             delete in_options;
     } catch (const exception& e) {
@@ -2846,7 +2846,7 @@ extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const 
 // With restriction to the input toplogy
 // blfix -- whether to fix the branch length as those on the given tree, default: false
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix, int rand_seed, int num_thres) {
+extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix, int rand_seed, int num_thres, const char* other_options) {
     StringResult output;
     output.errorStr = strdup("");
     
@@ -2860,7 +2860,7 @@ extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const ch
                 in_options->insert("-blfix", "");
         }
         string prog = "fit_tree";
-        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
+        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options, other_options);
         if (in_options != NULL)
             delete in_options;
     } catch (const exception& e) {
@@ -2880,7 +2880,7 @@ extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const ch
 // freq_set -- a set of frequency types
 // rate_set -- a set of RHAS models
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-extern "C" StringResult modelfinder(StringArray& names, StringArray& seqs, int rand_seed, const char* model_set, const char* freq_set, const char* rate_set, int num_thres) {
+extern "C" StringResult modelfinder(StringArray& names, StringArray& seqs, int rand_seed, const char* model_set, const char* freq_set, const char* rate_set, int num_thres, const char* other_options) {
     StringResult output;
     output.errorStr = strdup("");
     
@@ -2900,7 +2900,7 @@ extern "C" StringResult modelfinder(StringArray& names, StringArray& seqs, int r
         if (num_thres >= 0)
             in_options->insert("-nt", convertIntToString(num_thres));
         string prog = "modelfinder";
-        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
+        output.value = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options, other_options);
         
         delete in_options;
     } catch (const exception& e) {
@@ -3194,8 +3194,8 @@ extern "C" StringResult simulate_alignment(const char* tree, const char* subst_m
         
         params.alisim_active = true;
         params.multi_rstreams_used = true;
-        params.alisim_output_filename = "AliSimAlignment";
-        params.out_prefix = "AliSimTrees.nwk";
+        params.alisim_output_filename = (char*) "AliSimAlignment";
+        params.out_prefix = (char*) "AliSimTrees.nwk";
         params.aln_output_format = IN_FASTA;
         // set the population size, if specified
         if (population_size != -1)
@@ -3207,6 +3207,8 @@ extern "C" StringResult simulate_alignment(const char* tree, const char* subst_m
             // set the scaling factor
             params.alisim_branch_scale = 0.5 / population_size;
         }
+        // make sure seed must be positive
+        seed = abs(seed);
         params.ran_seed = seed;
         init_random(params.ran_seed);
         // initialize multiple random streams if needed
@@ -3221,6 +3223,7 @@ extern "C" StringResult simulate_alignment(const char* tree, const char* subst_m
         _log_file += ".log";
         startLogFile(append_log);
         cout << "Start of the log file:" << endl; // This line seems to be vital...
+        cout << "Seed: " << params.ran_seed << endl;
         
         params.user_file = params.out_prefix;
         ofstream trees_file(params.user_file);
@@ -3247,7 +3250,7 @@ extern "C" StringResult simulate_alignment(const char* tree, const char* subst_m
             }
             else if(strcmp(partition_type, "unlinked") != 0)
                 outError("Partition type can be equal, proportion, or unlinked.");
-            params.partition_file = "AliSimPartitionInfo.nex";
+            params.partition_file = (char*) "AliSimPartitionInfo.nex";
             ofstream partition_info_file(params.partition_file);
             if (!partition_info_file.is_open())
                 outError("Failed to create or open the partition info file for writing.");
@@ -3366,10 +3369,23 @@ extern "C" StringResult simulate_alignment(const char* tree, const char* subst_m
 // function for performing plylogenetic analysis
 // ----------------------------------------------
 
+// split the input string according to space
+void split(const char* s, vector<char*>& out) {
+    char* buf = strdup(s);
+    char* token;
+    
+    out.clear();
+    token = strtok(buf, " ");
+    while (token != nullptr) {
+        out.push_back(token);
+        token = strtok(nullptr, " ");
+    }
+}
+
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
-                          int rand_seed, string& prog, input_options* in_options) {
+                          int rand_seed, string& prog, input_options* in_options, const char* other_options) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -3377,42 +3393,8 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     
     vector<string> names, seqs;
     
-    convertToVectorStr(cnames, cseqs, names, seqs);
-    string model = string(cmodel);
-    string intree = string(cintree);
-    
-    // checking whether all seqs are in the same length
-    if (seqs.size() > 0) {
-        int slen = seqs[0].length();
-        for (int i=1; i<seqs.size(); i++) {
-            if (seqs[i].length() != slen) {
-                outError("The input sequences are not in the same length");
-            }
-        }
-    }
-
     extern VerboseMode verbose_mode;
     progress_display::setProgressDisplay(false);
-    // verbose_mode = VB_MIN;
-    verbose_mode = VB_QUIET; // (quiet mode)
-    Params::getInstance().setDefault();
-    Params::getInstance().num_threads = 1; // default
-    Params::getInstance().aln_file = (char*) "";
-    Params::getInstance().model_name = model;
-    Params::getInstance().ignore_identical_seqs = false; // keep the identical seqs
-    
-    if (intree != "") {
-        // tree exists, then the resulting phylogenetic tree will be restricted to the input topology
-        Params::getInstance().min_iterations = 0;
-        Params::getInstance().stop_condition = SC_FIXED_ITERATION;
-        Params::getInstance().start_tree = STT_USER_TREE;
-        Params::getInstance().intree_str = intree;
-    }
-
-    if (in_options != NULL) {
-        // assign the input options to Params
-        in_options->set_params(Params::getInstance());
-    }
 
     if (rand_seed == 0)
         rand_seed = make_new_seed();
@@ -3464,6 +3446,61 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     _log_file = Params::getInstance().out_prefix;
     _log_file += ".log";
     startLogFile(append_log);
+    
+    char* oprefix = Params::getInstance().out_prefix;
+    
+    convertToVectorStr(cnames, cseqs, names, seqs);
+    string model = string(cmodel);
+    string intree = string(cintree);
+    
+    // checking whether all seqs are in the same length
+    if (seqs.size() > 0) {
+        int slen = seqs[0].length();
+        for (int i=1; i<seqs.size(); i++) {
+            if (seqs[i].length() != slen) {
+                outError("The input sequences are not in the same length");
+            }
+        }
+    }
+
+    if (other_options != NULL && strlen(other_options) > 0) {
+        vector<char*> tokens;
+        split(other_options, tokens);
+        if (tokens.size() > 0) {
+            char** arr = new char*[tokens.size()+3];
+            arr[0] = (char*) "";
+            arr[1] = (char*) "-s";
+            arr[2] = (char*)"dummy";
+            for (size_t i = 0; i < tokens.size(); i++) {
+                arr[i+3] = tokens[i];
+            }
+            parseArg(tokens.size()+3, arr, Params::getInstance());
+            delete[] arr;
+        }
+    } else {
+        Params::getInstance().setDefault();
+    }
+    verbose_mode = VB_QUIET; // (quiet mode)
+
+    Params::getInstance().aln_file = (char*) "";
+    Params::getInstance().model_name = model;
+    Params::getInstance().ignore_identical_seqs = false; // keep the identical seqs
+    
+    if (intree != "") {
+        // tree exists, then the resulting phylogenetic tree will be restricted to the input topology
+        Params::getInstance().min_iterations = 0;
+        Params::getInstance().stop_condition = SC_FIXED_ITERATION;
+        Params::getInstance().start_tree = STT_USER_TREE;
+        Params::getInstance().intree_str = intree;
+    }
+
+    if (in_options != NULL) {
+        // assign the input options to Params
+        in_options->set_params(Params::getInstance());
+    }
+    
+    Params::getInstance().out_prefix = oprefix;
+
     time_t start_time;
 
     if (append_log) {
@@ -3654,6 +3691,14 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     }
 }
 
+/*
+ * free the pointer
+ */
+extern "C" void iqtree_free(void *p) {
+    if (p)
+        free(p);
+}
+
 // --------------------------------------------------
 // Handle the input options of PiQTREE
 // --------------------------------------------------
@@ -3664,11 +3709,9 @@ void input_options::set_params(Params& params) {
     for (int i = 0; i < n; i++) {
         if (flags[i] == "-keep-indent") {
             params.ignore_identical_seqs = false;
-            cout << "params.ignore_identical_seqs = " << params.ignore_identical_seqs << endl;
         }
         else if (flags[i] == "-mset") {
             params.model_set = values[i];
-            cout << "params.model_set = " << params.model_set << endl;
         }
         else if (flags[i] == "-mfreq") {
             int clen = values[i].length();
@@ -3679,7 +3722,6 @@ void input_options::set_params(Params& params) {
         }
         else if (flags[i] == "-mrate") {
             params.ratehet_set = values[i];
-            cout << "params.ratehet_set = " << params.ratehet_set << endl;
         }
         else if (flags[i] == "-bb") {
             params.gbo_replicates = atoi(values[i].c_str());
