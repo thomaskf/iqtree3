@@ -5462,6 +5462,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_freq_str = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "--rootfreq-init") == 0 || strcmp(argv[cnt], "-rootfreq-init") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    outError("Use -rootfreq-init <nucl/aa frequency array>");
+                params.root_freq_init_str = argv[cnt];
+                continue;
+            }
             if (strcmp(argv[cnt], "--norootfreq") == 0 || strcmp(argv[cnt], "-norootfreq") == 0) {
                 params.separate_root_freq = false;
                 continue;
@@ -7438,6 +7445,7 @@ void Params::setDefault() {
     link_alpha = false;
     link_model = false;
     separate_root_freq = true;
+    root_freq_init_str = "";
     model_joint = "";
     ignore_checkpoint = false;
     checkpoint_dump_interval = 60;

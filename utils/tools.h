@@ -2908,7 +2908,14 @@ public:
      root nucl or aa frequency string (for branch model)
      */
     string root_freq_str;
-    
+
+    /**
+     root frequency string used as the optimization starting point
+     (for branch model). Unlike root_freq_str, the values stay flagged as
+     FREQ_ESTIMATE so the optimizer keeps refining them.
+     */
+    string root_freq_init_str;
+
     /**
      separate root frequency (for branch model)
      that means root freqeuncy is different from any of

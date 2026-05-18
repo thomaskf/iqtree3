@@ -208,6 +208,11 @@ void ModelBranch::setRootFrequency(string root_freq) {
     }
 }
 
+void ModelBranch::setRootFrequencyInit(string root_freq) {
+    setRootFrequency(root_freq);
+    if (separate_root_freq) freq_type = FREQ_ESTIMATE;
+}
+
 void ModelBranch::writeInfo(ostream &out) {
     size_t i,j;
     for (i=0; i<size(); i++) {
