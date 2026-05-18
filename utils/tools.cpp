@@ -5522,6 +5522,9 @@ void parseArg(int argc, char *argv[], Params &params) {
         params.optimize_params_use_hmm = false;
     }
     
+    if (params.model_name.empty() && params.model_joint.find("BR{") != string::npos)
+        params.model_name = params.model_joint;
+
     if (params.model_name.find("BR{") != string::npos || params.model_joint.find("BR{") != string::npos || params.model_set.find("BR{") != string::npos) {
         // use BFGS for free-rate model if using branch model
         params.optimize_alg_freerate = "2-BFGS";
@@ -7434,6 +7437,7 @@ void Params::setDefault() {
     num_mixlen = 1;
     link_alpha = false;
     link_model = false;
+    separate_root_freq = true;
     model_joint = "";
     ignore_checkpoint = false;
     checkpoint_dump_interval = 60;
