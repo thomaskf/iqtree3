@@ -14,8 +14,11 @@ concurrency:
 
 jobs:
   build-linux-x86-64:
-    name: Linux x86-64 clang-${{ matrix.clang-version }} cmake-${{ matrix.cmake-version }}
+    name: Linux x86-64 clang cmake-${{ matrix.cmake-version }}
     runs-on: ubuntu-22.04
+    env:
+      # Disable glibc tcache to make peak RSS deterministic across runs.
+      GLIBC_TUNABLES: glibc.malloc.tcache_count=0
     strategy:
       fail-fast: false
       matrix:
