@@ -3590,7 +3590,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree = iqtree_new;
     }
 
-    if (iqtree->aln->model_name.find("BR{") != string::npos && !iqtree->isBranchModel() && !iqtree->isSuperTree()) {
+    if ((iqtree->aln->model_name.find("BR{") != string::npos ||
+         params.model_set.find("BR{") != string::npos) &&
+        !iqtree->isBranchModel() && !iqtree->isSuperTree()) {
         // branch model: replace IQTree with PhyloTreeBranchModel if not already
         IQTree* iqtree_new = new PhyloTreeBranchModel(iqtree->aln);
         iqtree_new->setCheckpoint(iqtree->getCheckpoint());
@@ -4250,7 +4252,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
                 iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
             } else if (pos != string::npos) {
                 iqtree = new PhyloTreeMixlen(alignment, 0);
-            } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos) {
+            } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos || params.model_set.find("BR{") != string::npos) {
                 iqtree = new PhyloTreeBranchModel(alignment);
             } else
                 iqtree = new IQTree(alignment);
@@ -4984,7 +4986,7 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, 0);
         } else if (isTreeMix) {
             tree = new IQTreeMixHmm(params, alignment);
-        } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos) {
+        } else if (params.model_name.find("BR{") != string::npos || alignment->model_name.find("BR{") != string::npos || params.model_set.find("BR{") != string::npos) {
             tree = new PhyloTreeBranchModel(alignment);
         } else
             tree = new IQTree(alignment);

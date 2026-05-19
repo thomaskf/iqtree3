@@ -606,7 +606,10 @@ void PhyloTree::readTreeFile(const string &file_name) {
 string PhyloTree::getTreeString() {
     stringstream tree_stream;
     setRootNode(params->root);
-    printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
+    int btype = WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA;
+    if (isBranchModel())
+        btype |= WT_BR_ATTR;
+    printTree(tree_stream, btype);
     return tree_stream.str();
 }
 

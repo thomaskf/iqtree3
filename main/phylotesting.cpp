@@ -718,6 +718,13 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) 
     return adapter;
 }
 
+static string wrapBRModel(const string &s, const string &r, int n_br) {
+    if (n_br <= 1) return s + r;
+    string out = "BR{" + s;
+    for (int i = 1; i < n_br; i++) out += "," + s;
+    return out + "}" + r;
+}
+
 /**
  compute fast ML tree by stepwise addition MP + ML-NNI
  @return the tree string
@@ -740,6 +747,21 @@ string computeFastMLTree(Params &params, Alignment *aln,
 
     StrVector saved_model_names;
 
+    string br_src = params.model_name.find("BR{") != string::npos ? params.model_name : params.model_set;
+    int n_br = 0;
+    if (br_src.find("BR{") != string::npos) {
+        size_t p1 = br_src.find("BR{") + 3;
+        size_t p2 = br_src.find_last_of("}");
+        if (p2 != string::npos && p2 > p1) {
+            int depth = 0; n_br = 1;
+            for (size_t i = p1; i < p2; i++) {
+                if (br_src[i] == '{') depth++;
+                else if (br_src[i] == '}') depth--;
+                else if (br_src[i] == ',' && depth == 0) n_br++;
+            }
+        }
+    }
+
     if (aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)aln;
         if (params.partition_type == TOPO_UNLINKED)
@@ -750,15 +772,17 @@ string computeFastMLTree(Params &params, Alignment *aln,
             iqtree = new PhyloSuperTreePlen(saln, brlen_type);
         for (int part = 0; part != subst_names.size(); part++) {
             saved_model_names.push_back(saln->partitions[part]->model_name);
-            saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
+            saln->partitions[part]->model_name = wrapBRModel(subst_names[part], rate_names[part], n_br);
         }
     } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
         iqtree = new PhyloTreeMixlen(aln, 0);
-    } else if (params.model_name.find("BR{") != string::npos) {
+    } else if (params.model_name.find("BR{") != string::npos || n_br > 1) {
         iqtree = new PhyloTreeBranchModel(aln);
     } else {
         iqtree = new IQTree(aln);
     }
+    if (n_br > 1 && !aln->isSuperAlignment())
+        usual_model.subst_name = wrapBRModel(usual_model.subst_name, "", n_br);
 
     if (params.constraint_tree_file) {
         iqtree->constraintTree.readConstraint(params.constraint_tree_file, aln->getSeqNames());

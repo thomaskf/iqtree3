@@ -154,6 +154,15 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
     for (iterator it = begin(); it != end(); it++) {
         if (it != begin()) retname += ",";
         retname += (*it)->getNameParams(show_fixed_params);
+        if (!(*it)->fixed_parameters && (*it)->freq_type == FREQ_USER_DEFINED
+            && (*it)->phylo_tree->aln->seq_type == SEQ_PROTEIN) {
+            retname += "+F{";
+            for (int i = 0; i < (*it)->num_states; i++) {
+                if (i) retname += ",";
+                retname += convertDoubleToString((*it)->state_freq[i]);
+            }
+            retname += "}";
+        }
     }
     retname += CLOSE_BRACKET;
     return retname;

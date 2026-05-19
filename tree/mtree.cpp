@@ -139,7 +139,7 @@ void MTree::assignIDs(vector<string>& taxaNames) {
 void MTree::copyTree(MTree *tree) {
     if (root) freeNode();
     stringstream ss;
-    tree->printTree(ss);
+    tree->printTree(ss, WT_BR_LEN | WT_BR_ATTR);
     readTree(ss, tree->rooted);
     rooted = tree->rooted;
 }

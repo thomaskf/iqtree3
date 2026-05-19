@@ -160,36 +160,35 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
                     sum_state_counts[state] += state_counts[state];
                 }
             }
-            cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
-
-            int nstates = mit->second->num_states;
-            double* sum_state_freq = new double[nstates];
-            // convert counts to frequencies
-            for (it = stree->begin(); it != stree->end(); it++) {
-                if ((*it)->getModel()->getName() == mit->second->getName()) {
-                    (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
-                    break;
-                }
-            }
-            
-            cout << "Mean state frequencies:";
-            int prec = cout.precision(8);
-            for (int state = 0; state < mit->second->num_states; state++)
-                cout << " " << sum_state_freq[state];
-            cout << endl;
-            cout.precision(prec);
-            
-            for (it = stree->begin(); it != stree->end(); it++)
-                if ((*it)->getModel()->getName() == mit->second->getName()) {
-                    ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
-                    (*it)->getModel()->decomposeRateMatrix();
-                }
-            
-            delete [] sum_state_freq;
-            
-            if (sum_state_counts != NULL)
-                delete [] sum_state_counts;
         }
+        cout << "Linking " << mit->first << " model across " << num_parts << " partitions" << endl;
+
+        int nstates = mit->second->num_states;
+        double* sum_state_freq = new double[nstates];
+        // convert counts to frequencies
+        for (it = stree->begin(); it != stree->end(); it++) {
+            if ((*it)->getModel()->getName() == mit->second->getName()) {
+                (*it)->aln->convertCountToFreq(sum_state_counts, sum_state_freq);
+                break;
+            }
+        }
+
+        cout << "Mean state frequencies:";
+        int prec = cout.precision(8);
+        for (int state = 0; state < mit->second->num_states; state++)
+            cout << " " << sum_state_freq[state];
+        cout << endl;
+        cout.precision(prec);
+
+        for (it = stree->begin(); it != stree->end(); it++)
+            if ((*it)->getModel()->getName() == mit->second->getName()) {
+                ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(sum_state_freq);
+                (*it)->getModel()->decomposeRateMatrix();
+            }
+
+        delete [] sum_state_freq;
+        if (sum_state_counts != NULL)
+            delete [] sum_state_counts;
    }
 }
 
