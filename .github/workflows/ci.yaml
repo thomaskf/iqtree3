@@ -23,9 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - clang-version: 13
-            cmake-version: 3.14.7
-            upload: false
           - clang-version: 22
             cmake-version: latest
             upload: true
