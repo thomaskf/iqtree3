@@ -160,6 +160,9 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     if (params.root_freq_str != "") {
         model_branch->setRootFrequency(params.root_freq_str);
     }
+    if (params.root_freq_init_str != "") {
+        model_branch->setRootFrequencyInit(params.root_freq_init_str);
+    }
     
     // set checkpoint
     getModelFactory()->setCheckpoint(checkpoint);

@@ -69,6 +69,8 @@ public:
     void setRootFrequency(double* state_freq);
     
     void setRootFrequency(string root_freq);
+
+    void setRootFrequencyInit(string root_freq);
     
     /**
         @return TRUE if model is time-reversible, FALSE otherwise

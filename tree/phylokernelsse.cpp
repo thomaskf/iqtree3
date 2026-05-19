@@ -53,7 +53,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
         outError("Site-specific model is not yet supported for nonreversible models");
     
     setParsimonyKernelSSE();
-    computeLikelihoodDervMixlenPointer = NULL;
+    computeLikelihoodDervMixlenPointer = nullptr;
     
     if (params->model_name.find("BR{") != string::npos || isBranchModel()) {
         // For Branch Model
@@ -85,7 +85,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
                     break;
             }
         }
-        computeLikelihoodFromBufferPointer = NULL;
+        computeLikelihoodFromBufferPointer = nullptr;
         return;
     }
 
@@ -163,8 +163,8 @@ void PhyloTree::setLikelihoodKernelSSE() {
                     break;
             }
         }
-        computeLikelihoodFromBufferPointer = NULL;
-        return;
+        computeLikelihoodFromBufferPointer = nullptr;
+        return;        
     }
 
     if (safe_numeric) {
