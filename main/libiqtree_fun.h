@@ -58,6 +58,7 @@ typedef struct {
   double* gradient;        /* length n_branches */
   double* hessian;         /* length n_branches * n_branches, row-major */
   size_t n_branches;
+  double log_likelihood;
   char* errorStr;
 } HessianResult;
 
@@ -114,6 +115,20 @@ extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const ch
  * and must release each one with iqtree_free.
  */
 extern "C" HessianResult fit_tree_hessian(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix = false, int rand_seed = 0, int num_thres = 1, const char* other_options = NULL);
+
+/*
+ * Open a persistent Hessian session; returned handle is reused by
+ * hessian_session_eval and freed by hessian_session_destroy.
+ */
+extern "C" void* hessian_session_create(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix, int rand_seed, int num_thres, const char* other_options, char** errorStr);
+
+/* Re-evaluate at new branch lengths (length 0 = use current state). */
+extern "C" HessianResult hessian_session_eval(void* handle, DoubleArray& branch_lengths);
+
+/* Log-likelihood only at new branch lengths; skips per-branch derivative work. */
+extern "C" double hessian_session_score(void* handle, DoubleArray& branch_lengths, char** errorStr);
+
+extern "C" void hessian_session_destroy(void* handle);
 
 /*
  * Perform phylogenetic analysis with ModelFinder

@@ -2226,6 +2226,11 @@ public:
 		this->curScore = curScore;
 	}
 
+	void setCurrentBranchNeighbors(PhyloNeighbor* it, PhyloNeighbor* it_back) {
+		current_it = it;
+		current_it_back = it_back;
+	}
+
 	/**
 	 * This will invalidate curScore variable, used whenever reading a tree!
 	 */

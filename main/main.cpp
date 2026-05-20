@@ -2711,9 +2711,14 @@ void convertToVectorStr(StringArray& names, StringArray& seqs, vector<string>& n
     }
 }
 
+struct PiqtreeHessianSessionImpl;
+
+void computeHessian(PhyloTree *tree);
+
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
                           int rand_seed, string& prog, input_options* in_options, const char* other_options,
-                          HessianResult* hessian_out = NULL);
+                          HessianResult* hessian_out = NULL,
+                          PiqtreeHessianSessionImpl** session_out = NULL);
 
 // Calculates the robinson fould distance between two trees
 extern "C" IntegerResult robinson_fould(const char* ctree1, const char* ctree2) {
@@ -2885,6 +2890,7 @@ extern "C" HessianResult fit_tree_hessian(StringArray& names, StringArray& seqs,
     output.gradient = NULL;
     output.hessian = NULL;
     output.n_branches = 0;
+    output.log_likelihood = 0.0;
     output.errorStr = strdup("");
 
     try {
@@ -2928,6 +2934,186 @@ extern "C" HessianResult fit_tree_hessian(StringArray& names, StringArray& seqs,
         funcExit();
     }
     return output;
+}
+
+struct PiqtreeHessianSessionImpl {
+    IQTree* tree;
+    Checkpoint* checkpoint;
+    ModelCheckpoint* model_info;
+    Params* params_snapshot;
+    vector<int> branch_ids;
+    bool leftSingleRoot;
+    size_t n_branches;
+};
+
+static void piqtree_session_root_and_index(IQTree* tree, vector<int>& branch_ids, bool& leftSingleRoot) {
+    leftSingleRoot = false;
+    if (tree->traversal_starting_node) {
+        auto nei = (Neighbor*)(((Node*)tree->traversal_starting_node)->neighbors[0]->node)
+                ->findNeighbor((Node*)tree->traversal_starting_node);
+        tree->root = nei->node;
+        tree->initializeTree();
+        if (nei->node->neighbors.size() == 1) leftSingleRoot = true;
+    }
+    tree->leftSingleRoot = leftSingleRoot;
+    BranchVector branches;
+    tree->getBranches(branches);
+    branch_ids.clear();
+    for (auto& b : branches) {
+        auto n = b.first->findNeighbor(b.second);
+        branch_ids.push_back(n->id);
+    }
+    if (leftSingleRoot) {
+        int first = branch_ids.front();
+        branch_ids.erase(branch_ids.begin());
+        branch_ids.push_back(first);
+    }
+}
+
+extern "C" void* hessian_session_create(StringArray& names, StringArray& seqs, const char* model, const char* intree, bool blfix, int rand_seed, int num_thres, const char* other_options, char** errorStr) {
+    if (errorStr) *errorStr = strdup("");
+    PiqtreeHessianSessionImpl* sess = NULL;
+    try {
+        input_options* in_options = NULL;
+        if (num_thres >= 0 || blfix) {
+            in_options = new input_options();
+            if (num_thres >= 0) in_options->insert("-nt", convertIntToString(num_thres));
+            if (blfix) in_options->insert("-blfix", "");
+        }
+        string forced("--dating mcmctree");
+        string merged = (other_options != NULL && strlen(other_options) > 0)
+            ? string(other_options) + " " + forced
+            : forced;
+        string prog = "hessian_session";
+        char* dummy = build_phylogenetic(names, seqs, model, intree, rand_seed, prog,
+                                         in_options, merged.c_str(), NULL, &sess);
+        if (dummy != NULL && dummy[0] != '\0') delete[] dummy;
+        if (in_options != NULL) delete in_options;
+    } catch (const exception& e) {
+        if (sess) { delete sess; sess = NULL; }
+        if (errorStr) {
+            if (*errorStr) iqtree_free(*errorStr);
+            *errorStr = new char[strlen(e.what())+1];
+            strcpy(*errorStr, e.what());
+        }
+        funcExit();
+    }
+    return sess;
+}
+
+extern "C" HessianResult hessian_session_eval(void* handle, DoubleArray& branch_lengths) {
+    HessianResult output;
+    output.tree = NULL;
+    output.branch_lengths = NULL;
+    output.gradient = NULL;
+    output.hessian = NULL;
+    output.n_branches = 0;
+    output.log_likelihood = 0.0;
+    output.errorStr = strdup("");
+
+    try {
+        PiqtreeHessianSessionImpl* sess = (PiqtreeHessianSessionImpl*) handle;
+        if (!sess || !sess->tree) throw runtime_error("Invalid hessian session handle");
+        IQTree* tree = sess->tree;
+
+        if (branch_lengths.length > 0) {
+            if (branch_lengths.length != sess->n_branches)
+                throw runtime_error("branch_lengths length mismatch");
+            DoubleVector lenvec;
+            tree->saveBranchLengths(lenvec);
+            for (size_t i = 0; i < sess->n_branches; i++)
+                lenvec[sess->branch_ids[i]] = branch_lengths.doubles[i];
+            tree->restoreBranchLengths(lenvec);
+            tree->clearAllPartialLH();
+        }
+        computeHessian(tree);
+        if (branch_lengths.length > 0) {
+            BranchVector branches;
+            tree->getBranches(branches);
+            auto br = branches.back();
+            PhyloNeighbor* nei = (PhyloNeighbor*) br.first->findNeighbor(br.second);
+            PhyloNeighbor* nei_back = (PhyloNeighbor*) br.second->findNeighbor(br.first);
+            tree->setCurrentBranchNeighbors(nei, nei_back);
+            tree->setCurScore(tree->computeLikelihoodFromBuffer());
+        }
+
+        std::vector<double> br_lens, grad, hess;
+        std::string tree_newick;
+        computeMCMCHessian(tree, br_lens, grad, hess, tree_newick);
+
+        size_t n = br_lens.size();
+        output.n_branches = n;
+        output.tree = (char*) malloc(tree_newick.size() + 1);
+        memcpy(output.tree, tree_newick.c_str(), tree_newick.size() + 1);
+        output.branch_lengths = (double*) malloc(n * sizeof(double));
+        memcpy(output.branch_lengths, br_lens.data(), n * sizeof(double));
+        output.gradient = (double*) malloc(n * sizeof(double));
+        memcpy(output.gradient, grad.data(), n * sizeof(double));
+        output.hessian = (double*) malloc(n * n * sizeof(double));
+        memcpy(output.hessian, hess.data(), n * n * sizeof(double));
+        output.log_likelihood = tree->getCurScore();
+    } catch (const exception& e) {
+        if (strlen(e.what()) > 0) {
+            if (output.errorStr) iqtree_free(output.errorStr);
+            output.errorStr = new char[strlen(e.what())+1];
+            strcpy(output.errorStr, e.what());
+        }
+    }
+    return output;
+}
+
+extern "C" double hessian_session_score(void* handle, DoubleArray& branch_lengths, char** errorStr) {
+    if (errorStr) *errorStr = strdup("");
+    try {
+        PiqtreeHessianSessionImpl* sess = (PiqtreeHessianSessionImpl*) handle;
+        if (!sess || !sess->tree) throw runtime_error("Invalid hessian session handle");
+        IQTree* tree = sess->tree;
+        if (branch_lengths.length > 0) {
+            if (branch_lengths.length != sess->n_branches)
+                throw runtime_error("branch_lengths length mismatch");
+            DoubleVector lenvec;
+            tree->saveBranchLengths(lenvec);
+            for (size_t i = 0; i < sess->n_branches; i++)
+                lenvec[sess->branch_ids[i]] = branch_lengths.doubles[i];
+            tree->restoreBranchLengths(lenvec);
+            tree->clearAllPartialLH();
+        }
+        computeHessian(tree);
+        BranchVector branches;
+        tree->getBranches(branches);
+        auto br = branches.back();
+        PhyloNeighbor* nei = (PhyloNeighbor*) br.first->findNeighbor(br.second);
+        PhyloNeighbor* nei_back = (PhyloNeighbor*) br.second->findNeighbor(br.first);
+        tree->setCurrentBranchNeighbors(nei, nei_back);
+        double lnL = tree->computeLikelihoodFromBuffer();
+        tree->setCurScore(lnL);
+        return lnL;
+    } catch (const exception& e) {
+        if (errorStr) {
+            if (*errorStr) iqtree_free(*errorStr);
+            *errorStr = new char[strlen(e.what())+1];
+            strcpy(*errorStr, e.what());
+        }
+        return 0.0;
+    }
+}
+
+extern "C" void hessian_session_destroy(void* handle) {
+    if (!handle) return;
+    PiqtreeHessianSessionImpl* sess = (PiqtreeHessianSessionImpl*) handle;
+    try {
+        if (sess->tree) {
+            Alignment* alignment = sess->tree->aln;
+            delete sess->tree;
+            delete alignment;
+        }
+        if (sess->params_snapshot) cleanup(*sess->params_snapshot);
+        try { if (sess->checkpoint) delete sess->checkpoint; if (sess->model_info) delete sess->model_info; } catch (int) {}
+        if (sess->params_snapshot) delete sess->params_snapshot;
+    } catch (const exception&) {}
+    delete sess;
+    finish_random();
+    funcExit();
 }
 
 // Perform phylogenetic analysis with ModelFinder
@@ -3442,7 +3628,8 @@ void split(const char* s, vector<char*>& out) {
 // if intree exists, then the topology will be restricted to the intree
 char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
                           int rand_seed, string& prog, input_options* in_options, const char* other_options,
-                          HessianResult* hessian_out) {
+                          HessianResult* hessian_out,
+                          PiqtreeHessianSessionImpl** session_out) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -3741,6 +3928,21 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
 
         hessian_out->hessian = (double*) malloc(n * n * sizeof(double));
         memcpy(hessian_out->hessian, hess.data(), n * n * sizeof(double));
+
+        hessian_out->log_likelihood = tree->getCurScore();
+    }
+
+    if (session_out != NULL) {
+        PiqtreeHessianSessionImpl* sess = new PiqtreeHessianSessionImpl;
+        sess->tree = tree;
+        sess->checkpoint = checkpoint;
+        sess->model_info = model_info;
+        sess->params_snapshot = new Params(params);
+        piqtree_session_root_and_index(tree, sess->branch_ids, sess->leftSingleRoot);
+        sess->n_branches = sess->branch_ids.size();
+        *session_out = sess;
+        static char empty[] = "";
+        return empty;
     }
 
     stringstream ss;
