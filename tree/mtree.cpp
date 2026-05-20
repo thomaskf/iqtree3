@@ -485,17 +485,27 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
         out << length;
     }
 
-    if ((brtype & WT_BR_ATTR) && !length_nei->attributes.empty()) {
-        // print branch attributes
-        out << "[&";
-        bool first = true;
-        for (auto attr : length_nei->attributes) {
-            if (!first)
-                out << ",";
-            out << attr.first << "=\"" << attr.second << '"';
-            first = false;
+    if (brtype & WT_BR_ATTR) {
+        bool has_id = (length_nei->branchmodel_id != 0);
+        bool has_other = false;
+        for (map<string,string>::iterator a = length_nei->attributes.begin();
+             a != length_nei->attributes.end(); ++a)
+            if (a->first != "branch" && a->first != "clade") { has_other = true; break; }
+        if (has_id || has_other) {
+            out << "[&";
+            bool first = true;
+            if (has_id) {
+                out << "branch=\"" << length_nei->branchmodel_id << "\"";
+                first = false;
+            }
+            for (map<string,string>::iterator a = length_nei->attributes.begin();
+                 a != length_nei->attributes.end(); ++a) {
+                if (a->first == "branch" || a->first == "clade") continue;
+                if (!first) out << ","; else first = false;
+                out << a->first << "=\"" << a->second << "\"";
+            }
+            out << "]";
         }
-        out << "]";
     }
     
     if ((brtype & WT_BR_MODEL_ID)) {

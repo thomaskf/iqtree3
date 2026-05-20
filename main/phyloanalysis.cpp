@@ -3883,6 +3883,19 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     // prune stable taxa
     pruneTaxa(params, *iqtree, pattern_lh, pruned_taxa, linked_name);
 
+    if (params.min_iterations > 0 && iqtree->isBranchModel() && !iqtree->isSuperTree()
+        && iqtree->constraintTree.empty()) {
+        string br_newick = ((PhyloTreeBranchModel*)iqtree)->buildBranchModelConstraintNewick();
+        if (!br_newick.empty()) {
+            string brfile = string(params.out_prefix) + ".brmodel_constraint.tre";
+            ofstream brout(brfile.c_str());
+            brout << br_newick << endl;
+            brout.close();
+            cout << "INFO: branch-model constraint -> " << brfile << endl;
+            iqtree->constraintTree.readConstraint(brfile.c_str(), iqtree->aln->getSeqNames());
+        }
+    }
+
     /***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
     if (params.min_iterations > 0 && !params.tree_spr) {
         iqtree->doTreeSearch();

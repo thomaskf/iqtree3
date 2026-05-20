@@ -83,6 +83,8 @@ public:
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
     int getNParameters();
+
+    string buildBranchModelConstraintNewick();
     
         /**
      model factories

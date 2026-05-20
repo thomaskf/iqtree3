@@ -437,6 +437,39 @@ string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl
     return IQTree::optimizeModelParameters(printInfo, logl_epsilon);
 }
 
+string PhyloTreeBranchModel::buildBranchModelConstraintNewick() {
+    map<int, vector<string> > tips_by_id;
+    NodeVector leaves;
+    getTaxa(leaves);
+    for (NodeVector::iterator it = leaves.begin(); it != leaves.end(); it++) {
+        Node *leaf = *it;
+        if (leaf->name == ROOT_NAME) continue;
+        if (leaf->neighbors.size() != 1) continue;
+        int id = leaf->neighbors[0]->branchmodel_id;
+        tips_by_id[id].push_back(leaf->name);
+    }
+    int n_useful = 0;
+    for (map<int, vector<string> >::iterator mit = tips_by_id.begin(); mit != tips_by_id.end(); mit++)
+        if (mit->second.size() >= 2) n_useful++;
+    if (n_useful < 2) return "";
+    stringstream ss;
+    ss << "(";
+    bool first = true;
+    for (map<int, vector<string> >::iterator mit = tips_by_id.begin(); mit != tips_by_id.end(); mit++) {
+        if (mit->second.size() < 2) continue;
+        if (!first) ss << ",";
+        ss << "(";
+        for (size_t i = 0; i < mit->second.size(); i++) {
+            if (i > 0) ss << ",";
+            ss << mit->second[i];
+        }
+        ss << ")";
+        first = false;
+    }
+    ss << ");";
+    return ss.str();
+}
+
 int PhyloTreeBranchModel::getNParameters() {
     int df = 0;
     
