@@ -125,6 +125,16 @@ void ModelSet::writeInfo(ostream& out)
 	}
 }
 
+void ModelSet::getStateFrequency(double *state_freq, int mixture) {
+    ASSERT(mixture >= -1);
+    if (mixture >= 0) {
+        at(mixture)->getStateFrequency(state_freq);
+        return;
+    }
+    // default: return the +F freqs across all patterns
+    ModelMarkov::getStateFrequency(state_freq);
+}
+
 void ModelSet::decomposeRateMatrix()
 {
     if (empty()) {
