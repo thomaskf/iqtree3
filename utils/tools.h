@@ -1663,19 +1663,13 @@ public:
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
-    /** each partition gets min(nthreads, size_cap) threads,
-     *  partitions dispatched heavy-first; no round-robin distribution of surplus threads
-     *  across partitions. This is now the DEFAULT strategy. */
+    /** each partition gets min(nthreads, size_cap) threads (default strategy) */
     bool parallel_per_partition;
 
-    /** distribute surplus threads round-robin across partitions (old default).
-     *  Case A (n_jobs <= nthreads): each partition starts with 1 thread, surplus
-     *  distributed evenly up to each partition's size cap.
-     *  Case B (n_jobs > nthreads): 1 thread per partition. */
+    /** distribute surplus threads round-robin across partitions */
     bool parallel_round_robin;
 
-    /** denominator j in maxThreadsForAlignment: max(1, nptn*nstate/j).
-     *  Default 4000. Set via --mf-thread-factor. */
+    /** denominator in maxThreadsForAlignment: max(1, nptn*nstate/j). Default 4000. */
     int mf_thread_factor;
 
     /** force to parall over partition and order by threads(fill the scheduling by threads) **/
@@ -2382,8 +2376,7 @@ public:
     /** maximum number of threads, default: #CPU scores  */
     int num_threads_max;
 
-    /** user's original -nt value, saved before sum(cap) reduction.
-     *  Restored after partition merging for tree search. 0 = not saved yet. */
+    /** user-requested -nt before any sum(cap) reduction; 0 = not saved */
     int num_threads_orig;
     
     /** true to parallel ModelFinder by models instead of sites */

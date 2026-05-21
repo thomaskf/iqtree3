@@ -49,11 +49,8 @@
 #include <condition_variable>
 //#include "vectorclass/vectorclass.h"
 
-// Screen-only output stream (bypasses log file). Defined in main.cpp.
-extern ostream cscreen;
+extern ostream cscreen;  // screen-only stream defined in main.cpp
 
-// Clear the progress line on screen before printing a cout message,
-// so progress text doesn't overlap with the new message.
 static void clearProgressLine() {
     cscreen << "\r" << string(100, ' ') << "\r" << flush;
 }
@@ -661,10 +658,7 @@ string criterionName(ModelTestCriterion mtc) {
 }
 
 
-/**
- * Compute the maximum number of CPU threads appropriate for evaluating a model
- * on the given alignment, based on alignment size (patterns x states).
- */
+/** max useful threads for a partition's model evaluation */
 int maxThreadsForAlignment(Alignment *aln, int factor = 4000) {
     return max(1, (int)(aln->getNPattern() * aln->num_states / factor));
 }
@@ -2463,8 +2457,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         brlen_type = BRLEN_OPTIMIZE;
     }
     bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
-    
-    // Compute per-partition thread caps
+
     int n_parts_local = (int)in_tree->size();
     bool any_multi_local = false;
 #ifdef _OPENMP
@@ -2478,7 +2471,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 #ifdef _OPENMP
     if (params.parallel_over_sites) {
-        // --parallel-over-sites: sequential, all threads per partition
         for (int j = 0; j < n_parts_local; j++) {
             i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
@@ -2502,7 +2494,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             model_info.dump();
         }
     } else if (!any_multi_local) {
-        // All caps <= 1 (or round-robin): flat concurrent dispatch
         parallel_over_partitions = !params.model_test_and_tree && (n_parts_local >= num_threads);
         int part_threads = parallel_over_partitions ? 1 : num_threads;
         int omp_threads = min(num_threads, n_parts_local);
@@ -2541,7 +2532,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     } else
 #endif
     {
-        // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
         for (int j = 0; j < n_parts_local; j++) {
             i = partitionID[j].first;
             PhyloTree *this_tree = in_tree->at(i);
@@ -2579,7 +2569,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
 	clearProgressLine();
-cout << "Full partition model " << criterionName(params.model_test_criterion)
+	cout << "Full partition model " << criterionName(params.model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     pre_inf_score = inf_score;
@@ -2843,13 +2833,12 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
 
-    // After merging, set thread count for tree search.
+    // recompute thread cap over merged partitions
     {
         int orig_threads = (params.num_threads_orig > 0) ? params.num_threads_orig : num_threads;
         int total_cap_merged = 0;
         for (int p = 0; p < (int)in_tree->size(); p++) {
-            total_cap_merged += maxThreadsForAlignment(
-                in_tree->at(p)->aln, params.mf_thread_factor);
+            total_cap_merged += maxThreadsForAlignment(in_tree->at(p)->aln, params.mf_thread_factor);
         }
         int tree_threads = min(orig_threads, total_cap_merged);
         if (tree_threads != num_threads) {
@@ -2888,7 +2877,6 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
             cout << "No. Model        Score       Charset" << endl;
         int partition_id = 0;
 
-        // Check if any partition needs multi-threading for re-test
         bool any_multi_retest = false;
     #ifdef _OPENMP
         if (!params.parallel_round_robin && !params.parallel_over_sites && num_threads > 1) {
@@ -2901,7 +2889,6 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
 
     #ifdef _OPENMP
         if (params.parallel_over_sites) {
-            // --parallel-over-sites: sequential, all threads per partition
             for (int j = 0; j < (int)in_tree->size(); j++) {
                 i = partitionID[j].first;
                 PhyloTree *this_tree = in_tree->at(i);
@@ -2925,7 +2912,6 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
                 model_info.dump();
             }
         } else if (!any_multi_retest) {
-            // All caps <= 1 (or round-robin): flat concurrent dispatch
             parallel_over_partitions = !params.model_test_and_tree && ((int)in_tree->size() >= num_threads);
             int part_threads = parallel_over_partitions ? 1 : num_threads;
             int omp_threads = min(num_threads, (int)in_tree->size());
@@ -2978,7 +2964,6 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
         } else
     #endif
         {
-            // Per-partition budgeting: sequential, each with min(num_threads, cap) threads
             for (int j = 0; j < (int)in_tree->size(); j++) {
                 i = partitionID[j].first;
                 PhyloTree *this_tree = in_tree->at(i);
@@ -3028,8 +3013,7 @@ cout << "Full partition model " << criterionName(params.model_test_criterion)
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
     clearProgressLine();
-    clearProgressLine();
-cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+    cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
@@ -4398,44 +4382,20 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
 
 #endif // _IQTREE_MPI
 
-
-
 /**
  * compute and process the best model for partitions (without MPI)
  * nthreads : the number of threads available for these jobs
  */
 void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<int,double> >& jobs) {
-
     if (jobs.empty())
         return;
 
-    // Precompute per-partition thread budget m_p using a two-case rule.
-    // Jobs are assumed to arrive sorted heavy-to-light (by computational cost).
-    //
-    // Case A — n_jobs <= nthreads (all partitions can run concurrently):
-    //   Assign 1 thread to every partition first, then greedily give the
-    //   remaining threads to the heaviest partitions that can absorb them.
-    //   This ensures all partitions start immediately while large ones get
-    //   the maximum useful parallelism from any leftover capacity.
-    //   Example: 2 partitions (10K sites, 100 sites), 4 threads →
-    //     remaining = 4 - 2 = 2
-    //     large: extra = min(size_cap-1, 2) → mp = 3
-    //     small: extra = min(0, 0)          → mp = 1   (total = 4)
-    //
-    // Case B — n_jobs > nthreads (cannot run all partitions at once):
-    //   Use the size-based cap directly so the heavy-first dispatcher gives
-    //   large partitions as many threads as they can use.
-    //   m_p = min(nthreads, maxThreadsForAlignment)
-    //
-    // In both cases m_p <= nthreads, so "available >= m_p" is always satisfiable.
     int n_jobs = (int)jobs.size();
     vector<int> mp(n_jobs);
     if (params->parallel_round_robin) {
-        // --parallel-round-robin: distribute threads evenly across partitions.
-        // Case A (n_jobs <= nthreads): start with 1 thread each, distribute
-        // surplus round-robin up to each partition's size cap.
-        // Case B (n_jobs > nthreads): 1 thread per partition.
+        // round-robin: spread surplus threads evenly across partitions
         if (n_jobs <= nthreads) {
+            // case A: 1 thread each, then distribute remaining round-robin up to size_cap
             vector<int> size_cap(n_jobs);
             for (int j = 0; j < n_jobs; j++) {
                 int tree_id = jobs[j].first;
@@ -4455,14 +4415,13 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
                 if (!any_added) break;
             }
         } else {
+            // case B: more partitions than threads, 1 thread each
             for (int j = 0; j < n_jobs; j++) {
                 mp[j] = 1;
             }
         }
     } else {
-        // Default (and --parallel-per-partition): each partition gets its full
-        // size-aware cap = min(nthreads, patterns * states / factor).
-        // Partitions are processed sequentially, each with its budgeted threads.
+        // default: each partition gets min(nthreads, size_cap); heavy-first dispatch
         for (int j = 0; j < n_jobs; j++) {
             int tree_id = jobs[j].first;
             mp[j] = min(nthreads, maxThreadsForAlignment(in_tree->at(tree_id)->aln, params->mf_thread_factor));
@@ -4481,88 +4440,22 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 #endif
 
     if (params->model_test_and_tree || nthreads <= 1) {
-        // Sequential fallback: one thread, process partitions one by one
+        // sequential fallback
         for (int j = 0; j < (int)jobs.size(); j++) {
-            int tree_id = jobs[j].first;
-            PhyloTree *this_tree = in_tree->at(tree_id);
-            ModelCheckpoint part_model_info;
-            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-
-            string part_model_name;
-            if (params->model_name.empty())
-                part_model_name = this_tree->aln->model_name;
-            CandidateModel best_model;
-            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                nthreads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
-            bool check = best_model.restoreCheckpoint(&part_model_info);
-            ASSERT(check);
-
-            double score = best_model.computeICScore(this_tree->getAlnNSite());
-            this_tree->aln->model_name = best_model.getName();
-            lhsum += (lhvec[tree_id] = best_model.logl);
-            dfsum += (dfvec[tree_id] = best_model.df);
-            lenvec[tree_id] = best_model.tree_len;
-            num_model++;
-            if (total_num_model > 0) {
-                double finish_percent = (double)num_model * 100.0 / total_num_model;
-                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cscreen << " Finished subset " << num_model << "/" << total_num_model
-                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
-                     << "     " << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)     \r" << flush;
-            }
-            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            model_info->dump();
+            processPartitionJob(j, jobs, nthreads);
         }
         return;
     }
 
 #ifdef _OPENMP
     if (params->parallel_over_sites) {
-        // All threads concentrated on one partition at a time (original --parallel-over-sites mode)
         for (int j = 0; j < (int)jobs.size(); j++) {
-            int tree_id = jobs[j].first;
-            PhyloTree *this_tree = in_tree->at(tree_id);
-            ModelCheckpoint part_model_info;
-            extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-
-            string part_model_name;
-            if (params->model_name.empty())
-                part_model_name = this_tree->aln->model_name;
-            CandidateModel best_model;
-            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                nthreads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
-            bool check = best_model.restoreCheckpoint(&part_model_info);
-            ASSERT(check);
-
-            double score = best_model.computeICScore(this_tree->getAlnNSite());
-            this_tree->aln->model_name = best_model.getName();
-            lhsum += (lhvec[tree_id] = best_model.logl);
-            dfsum += (dfvec[tree_id] = best_model.df);
-            lenvec[tree_id] = best_model.tree_len;
-            num_model++;
-            if (total_num_model > 0) {
-                double finish_percent = (double)num_model * 100.0 / total_num_model;
-                double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                cscreen << " Finished subset " << num_model << "/" << total_num_model
-                     << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
-                     << "     " << convert_time(getRealTime()-start_time) << " ("
-                     << convert_time(remain_time) << " left)     \r" << flush;
-            }
-            replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            model_info->dump();
+            processPartitionJob(j, jobs, nthreads);
         }
         return;
     }
 
-    // -----------------------------------------------------------------------
-    // Fast path: when every partition needs only 1 thread, use a simple
-    // OMP parallel-for with dynamic scheduling.  This avoids the overhead
-    // of creating std::thread workers and atomic spin-waits, which can
-    // dominate wall time for lightweight partitions.
-    // -----------------------------------------------------------------------
+    // fast path: every partition needs only 1 thread
     bool all_single = true;
     for (int j = 0; j < n_jobs; j++) {
         if (mp[j] > 1) { all_single = false; break; }
@@ -4570,68 +4463,19 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     if (all_single) {
         int j;
         int omp_threads = min(nthreads, n_jobs);
-        // Temporarily reduce the global OMP thread count so that inner code
-        // (likelihood kernels, model evaluation) does not spin up excess threads.
         int omp_saved = omp_get_max_threads();
         omp_set_num_threads(omp_threads);
         #pragma omp parallel for private(j) schedule(dynamic) num_threads(omp_threads)
         for (j = 0; j < n_jobs; j++) {
-            int tree_id = jobs[j].first;
-            PhyloTree *this_tree = in_tree->at(tree_id);
-            ModelCheckpoint part_model_info;
-
-            #pragma omp critical
-            {
-                extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            }
-
-            string part_model_name;
-            if (params->model_name.empty())
-                part_model_name = this_tree->aln->model_name;
-            CandidateModel best_model;
-            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                1, brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
-            bool check = best_model.restoreCheckpoint(&part_model_info);
-            ASSERT(check);
-
-            double score = best_model.computeICScore(this_tree->getAlnNSite());
-            this_tree->aln->model_name = best_model.getName();
-
-            #pragma omp critical
-            {
-                lhsum += (lhvec[tree_id] = best_model.logl);
-                dfsum += (dfvec[tree_id] = best_model.df);
-                lenvec[tree_id] = best_model.tree_len;
-                num_model++;
-                if (total_num_model > 0) {
-                    double finish_percent = (double)num_model * 100.0 / total_num_model;
-                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cscreen << " Finished subset " << num_model << "/" << total_num_model
-                         << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
-                         << "     " << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)     \r" << flush;
-                }
-                replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-                model_info->dump();
-                jobdone++;
-            }
+            processPartitionJob(j, jobs, 1);
         }
         omp_set_num_threads(omp_saved);
         return;
     }
 
-    // -----------------------------------------------------------------------
-    // Multi-thread dispatch strategy (OMP nested parallelism):
-    // Group partitions into batches where sum(mp) <= nthreads.
-    // Within each batch, partitions run concurrently using OMP nested
-    // parallel regions — all threads stay in a single OMP pool.
-    // This follows the same pattern used by iqtreemix.cpp.
-    // -----------------------------------------------------------------------
-
+    // nested OMP dispatch: batch partitions so sum(mp) <= nthreads per batch
     int j = 0;
     while (j < n_jobs) {
-        // Build a batch of partitions whose total thread budget <= nthreads
         int batch_start = j;
         int batch_threads = 0;
         int batch_size = 0;
@@ -4641,69 +4485,22 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             j++;
         }
         if (batch_size == 0) {
-            // Single partition needs >= nthreads (mp[j] was capped to nthreads,
-            // so this means mp[j] == nthreads)
             batch_size = 1;
             batch_threads = mp[j];
             j++;
         }
 
-        // Run this batch: partitions execute concurrently with nested OMP
         omp_set_max_active_levels(2);
 
         #pragma omp parallel for schedule(static,1) num_threads(batch_size)
         for (int k = 0; k < batch_size; k++) {
             int idx = batch_start + k;
-            int m_p = mp[idx];
-            int tree_id = jobs[idx].first;
-            PhyloTree *this_tree = in_tree->at(tree_id);
-            ModelCheckpoint part_model_info;
-
-            // Set inner thread budget for this partition's OMP regions
-            omp_set_num_threads(m_p);
-
-            #pragma omp critical
-            {
-                extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
-            }
-
-            string part_model_name;
-            if (params->model_name.empty())
-                part_model_name = this_tree->aln->model_name;
-            CandidateModel best_model;
-            best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
-                m_p, brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
-            bool check = best_model.restoreCheckpoint(&part_model_info);
-            ASSERT(check);
-
-            double score = best_model.computeICScore(this_tree->getAlnNSite());
-            this_tree->aln->model_name = best_model.getName();
-
-            #pragma omp critical
-            {
-                lhsum += (lhvec[tree_id] = best_model.logl);
-                dfsum += (dfvec[tree_id] = best_model.df);
-                lenvec[tree_id] = best_model.tree_len;
-                num_model++;
-                if (total_num_model > 0) {
-                    double finish_percent = (double)num_model * 100.0 / total_num_model;
-                    double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
-                    cscreen << " Finished subset " << num_model << "/" << total_num_model
-                         << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
-                         << "     " << convert_time(getRealTime()-start_time) << " ("
-                         << convert_time(remain_time) << " left)     \r" << flush;
-                }
-                replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
-                model_info->dump();
-                jobdone++;
-            }
+            processPartitionJob(idx, jobs, mp[idx]);
         }
 
         omp_set_max_active_levels(1);
     }
 
-    // Restore original OMP thread count
     omp_set_num_threads(nthreads);
 #endif
 }
@@ -4726,20 +4523,16 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
 
 #ifdef _OPENMP
     if (params->parallel_over_sites) {
-        // All threads on one merge at a time
         for (int j = 0; j < (int)jobs.size(); j++) {
             processMergeJob(j, jobs, nthreads);
         }
         return;
     }
 
-    // Compute per-merge thread budget using the same strategy as partitions.
-    // Estimate each merge's cap from the combined alignment size.
     int n_jobs = (int)jobs.size();
     vector<int> mp(n_jobs);
 
     if (params->parallel_round_robin) {
-        // --parallel-round-robin: distribute threads evenly across merges.
         if (n_jobs <= nthreads) {
             vector<int> size_cap(n_jobs);
             for (int j = 0; j < n_jobs; j++) {
@@ -4776,7 +4569,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
             }
         }
     } else {
-        // Default (and --parallel-per-partition): each merge gets its full cap
         for (int j = 0; j < n_jobs; j++) {
             int pair_idx = jobs[j].first;
             int p1 = closest_pairs[pair_idx].first;
@@ -4795,14 +4587,12 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
         }
     }
 
-    // Check if all merges need only 1 thread
     bool all_single = true;
     for (int j = 0; j < n_jobs; j++) {
         if (mp[j] > 1) { all_single = false; break; }
     }
 
     if (all_single) {
-        // OMP fast path
         int omp_threads = min(nthreads, n_jobs);
         int omp_saved = omp_get_max_threads();
         omp_set_num_threads(omp_threads);
@@ -4813,7 +4603,6 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
         }
         omp_set_num_threads(omp_saved);
     } else {
-        // OMP nested dispatch (batched)
         int j = 0;
         while (j < n_jobs) {
             int batch_start = j;
@@ -4846,10 +4635,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
 #endif
 }
 
-/**
- * Process a single merge job. Factored out so it can be called from
- * sequential, OMP fast path, or OMP nested dispatch contexts.
- */
+/** process a single merge job */
 void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, int m_p) {
     int pair_idx = jobs[j].first;
     ModelPair cur_pair;
@@ -4936,6 +4722,55 @@ void PartitionFinder::processMergeJob(int j, vector<pair<int,double> >& jobs, in
         }
         if (cur_pair.score < inf_score)
             better_pairs.insertPair(cur_pair);
+    }
+}
+
+/** process a single partition model-selection job */
+void PartitionFinder::processPartitionJob(int j, vector<pair<int,double> >& jobs, int m_p) {
+    int tree_id = jobs[j].first;
+    PhyloTree *this_tree = in_tree->at(tree_id);
+    ModelCheckpoint part_model_info;
+
+#ifdef _OPENMP
+    omp_set_num_threads(m_p);
+#pragma omp critical
+#endif
+    {
+        extractModelInfo(this_tree->aln->name, *model_info, part_model_info);
+    }
+
+    string part_model_name;
+    if (params->model_name.empty())
+        part_model_name = this_tree->aln->model_name;
+    CandidateModel best_model;
+    best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
+        m_p, brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+    bool check = best_model.restoreCheckpoint(&part_model_info);
+    ASSERT(check);
+
+    double score = best_model.computeICScore(this_tree->getAlnNSite());
+    this_tree->aln->model_name = best_model.getName();
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+        lhsum += (lhvec[tree_id] = best_model.logl);
+        dfsum += (dfvec[tree_id] = best_model.df);
+        lenvec[tree_id] = best_model.tree_len;
+        num_model++;
+        if (total_num_model > 0) {
+            double finish_percent = (double)num_model * 100.0 / total_num_model;
+            double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+            cscreen << " Finished subset " << num_model << "/" << total_num_model
+                 << "     " << fixed << setprecision(2) << finish_percent << "  percent done"
+                 << "     " << convert_time(getRealTime()-start_time) << " ("
+                 << convert_time(remain_time) << " left)     \r" << flush;
+        }
+        replaceModelInfo(this_tree->aln->name, *model_info, part_model_info);
+        model_info->dump();
+        jobdone++;
     }
 }
 
@@ -5360,8 +5195,7 @@ void PartitionFinder::test_PartitionModel() {
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
     clearProgressLine();
-    clearProgressLine();
-cout << "Full partition model " << criterionName(params->model_test_criterion)
+    cout << "Full partition model " << criterionName(params->model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     string criterion_name = criterionName(params->model_test_criterion);
@@ -5538,7 +5372,6 @@ cout << "Full partition model " << criterionName(params->model_test_criterion)
 #endif
             }
 
-            // Output merge step summary (Rob's format)
             merge_step++;
             string algo_name;
             switch (params->partition_merge) {
@@ -5549,10 +5382,7 @@ cout << "Full partition model " << criterionName(params->model_test_criterion)
                 default:             algo_name = ""; break;
             }
             clearProgressLine();
-            clearProgressLine();
-        clearProgressLine();
-    clearProgressLine();
-cout << "PartitionFinder\t" << algo_name
+            cout << "PartitionFinder\t" << algo_name
                  << "\tStep " << merge_step
                  << "\t" << gene_sets.size() << " Partitions\t"
                  << criterionName(params->model_test_criterion)
@@ -5611,16 +5441,12 @@ cout << "PartitionFinder\t" << algo_name
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    // After merging, set thread count for tree search.
-    // Use min(original_user_threads, sum_of_caps_merged).
-    // This handles all cases including when SuperAlignment reduction didn't fire
-    // (e.g., num_threads == sum_caps before merge but merged cap is smaller).
+    // recompute thread cap over merged partitions
     {
         int orig_threads = (params->num_threads_orig > 0) ? params->num_threads_orig : params->num_threads;
         int total_cap_merged = 0;
         for (int p = 0; p < (int)in_tree->size(); p++) {
-            total_cap_merged += maxThreadsForAlignment(
-                in_tree->at(p)->aln, params->mf_thread_factor);
+            total_cap_merged += maxThreadsForAlignment(in_tree->at(p)->aln, params->mf_thread_factor);
         }
         int tree_threads = min(orig_threads, total_cap_merged);
         if (tree_threads != params->num_threads) {
@@ -5676,7 +5502,6 @@ cout << "PartitionFinder\t" << algo_name
     }
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
-    clearProgressLine();
     clearProgressLine();
     cout << "Best partition model " << criterionName(params->model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params->out_prefix) + ".best_scheme.nex").c_str());

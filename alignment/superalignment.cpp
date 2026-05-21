@@ -69,23 +69,16 @@ SuperAlignment::SuperAlignment(Params &params) : SuperAlignment()
             cout << "Info: multi-threading strategy over alignment sites";
         } else {
             cout << "Info: multi-threading strategy over partitions";
-            // Compute the total thread capacity across all partitions.
-            // Each partition can usefully employ max(1, patterns*states/factor)
-            // threads.  Any threads beyond the sum are guaranteed wasted.
             int total_cap = 0;
             for (auto part : partitions) {
-                total_cap += max(1, (int)(part->getNPattern()
-                             * part->num_states / params.mf_thread_factor));
+                total_cap += max(1, (int)(part->getNPattern() * part->num_states / params.mf_thread_factor));
             }
             if (params.num_threads > total_cap) {
-                // Save user-requested thread count for later phases (tree search)
-                // that can benefit from more threads after partition merging.
                 if (params.num_threads_orig == 0)
                     params.num_threads_orig = params.num_threads;
                 params.num_threads = total_cap;
                 omp_set_num_threads(params.num_threads);
-                cout << " and number of threads is changed to "
-                     << params.num_threads;
+                cout << " and number of threads is changed to " << params.num_threads;
             }
         }
         cout << endl;
