@@ -456,14 +456,14 @@ double PartitionModel::computeMarginalLh() {
                 }
 
                 sub_tree2 = new PhyloTree();
-                if (tree2_seqs.size() != inter_seqs.size()) {
+                // if (tree2_seqs.size() != inter_seqs.size()) {
                     sub_tree2->copyTree(tree2, inter_seqs_set);
                     if (!tree2->getModel()->isReversible()) {
                         sub_tree2->nodeNum = 2 * sub_tree2->leafNum -2;
                     }
-                } else {
-                    sub_tree2->copyTree(tree2);
-                }
+                // } else {
+                //     sub_tree2->copyTree(tree2);
+                // }
 
                 if (inter_seqs_id.size() == 2 && tree2->getModel()->isReversible()) {
                     // if only two seqs in the subset
