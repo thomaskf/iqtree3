@@ -417,6 +417,16 @@ double PartitionModel::computeMarginalLh() {
         for (int k = 0; k < ntrees ; k++) {
             PhyloTree *tree2 = tree->at(k);
 
+            if (k == j) {
+                // diagonal: partition j under its own tree/model = its own pattern log-likelihoods
+                double *ptn_lh = new double[tree1_nptn];
+                tree2->computeLikelihood(ptn_lh);
+                for (int l = 0; l < tree1_nptn; l++)
+                    lh_array[tree1_nptn * k + l] = ptn_lh[l];
+                delete[] ptn_lh;
+                continue;
+            }
+
             // get the intersection of tree1_aln and tree2.
             set<string> inter_seqs;
             IntVector inter_seqs_id, missing_seqs_id;
