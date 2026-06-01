@@ -2732,8 +2732,13 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     NodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);
     
-    double tree_lh = computeLikelihoodBranch((PhyloNeighbor*)nodes[0]->findNeighbor(nodes2[0]), (PhyloNode*)nodes[0]);
-    
+    double tree_lh;
+    if (isBranchModel()) {
+        tree_lh = computeLikelihood();
+    } else {
+        tree_lh = computeLikelihoodBranch((PhyloNeighbor*)nodes[0]->findNeighbor(nodes2[0]), (PhyloNode*)nodes[0]);
+    }
+
     if (verbose_mode >= VB_MAX) {
         cout << "Initial tree log-likelihood: " << tree_lh << endl;
     }
@@ -2776,15 +2781,11 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             clearAllPartialLH();
             restoreBranchLengths(lenvec);
 
-            if (model && !model->isReversible()) {
-                // For non-stationary models, recompute likelihood using the SAME
-                // branch as the initial computation (line 2732) to ensure numerical
-                // consistency. Using computeLikelihood() would pick a different
-                // branch via findFarthestLeaf(), which can give numerically
-                // different results for non-stationary models.
+            if (isBranchModel()) {
+                new_tree_lh = computeLikelihood();
+            } else if (model && !model->isReversible()) {
                 new_tree_lh = computeLikelihoodBranch((PhyloNeighbor*)nodes[0]->findNeighbor(nodes2[0]), (PhyloNode*)nodes[0]);
             } else {
-                // For reversible models, use the original computeLikelihood()
                 new_tree_lh = computeLikelihood();
             }
 
@@ -4303,8 +4304,14 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
     double backupScore = curScore;
 
-    for (cnt = 0; cnt < 2; cnt++) if (constraintTree.isCompatible(nniMoves[cnt])) 
+    for (cnt = 0; cnt < 2; cnt++) if (constraintTree.isCompatible(nniMoves[cnt]))
     {
+        // For non-reversible models, the prior cnt iteration's optimizeOneBranch
+        // writes partial_lh on Neighbors outside the dummy set; clear so cnt=1
+        // doesn't reuse those stale-flagged partials.
+        if (cnt > 0 && model && !model->isReversible())
+            clearAllPartialLH();
+
         // do the NNI swap
         NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
         NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;

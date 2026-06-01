@@ -3434,6 +3434,13 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
         // do non-conflicting positive NNIs
         doNNIs(appliedNNIs);
+        // For non-reversible models: flush stale partial_lh caches left over from NNI eval
+        // and recompute fresh root-anchored partials before BL opt. Without this, the eval's
+        // newloglh and apply's curScore disagree by O(10) logL even on bit-identical state.
+        if (!appliedNNIs.empty() && getModel() && !getModel()->isReversible()) {
+            clearAllPartialLH();
+            computeLikelihood();
+        }
         curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
         if (curScore < appliedNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -3447,6 +3454,10 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
                 // only do the best NNI
                 appliedNNIs.resize(1);
                 doNNIs(appliedNNIs);
+                if (getModel() && !getModel()->isReversible()) {
+                    clearAllPartialLH();
+                    computeLikelihood();
+                }
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
                 ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
             } else {
@@ -4613,7 +4624,11 @@ void IQTree::printResultTree(string suffix) {
     if (suffix.compare("") != 0) {
         tree_file_name += "." + suffix;
     }
-    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+    int br_flags = WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE;
+    // For branch models, also emit per-branch clade IDs so the tree can be read
+    // back with -t and reconstruct full per-branch model assignments.
+    if (isBranchModel()) br_flags |= WT_BR_ATTR;
+    printTree(tree_file_name.c_str(), br_flags);
     if (verbose_mode >= VB_MED) {
         cout << "Best tree printed to " << tree_file_name << endl;
     }

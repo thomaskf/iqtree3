@@ -2695,11 +2695,12 @@ void PhyloTree::computeNonrevLikelihoodDervBrModelGenericSIMD(PhyloNeighbor *dad
 //            IntVector states_dad = dad_model->seq_states[dad->id];
 //            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
+            int s = dad_branch->branchmodel_id * (aln->STATE_UNKNOWN+1) * nstates * model->getNMixtures();
             for (int state = 0; state <= aln->STATE_UNKNOWN; state++) {
                 double *lh_node  = partial_lh_node +state*block;
                 double *lh_derv1 = partial_lh_derv1 +state*block;
                 double *lh_derv2 = partial_lh_derv2 +state*block;
-                double *lh_tip          = tip_partial_lh + state*nstates;
+                double *lh_tip          = tip_partial_lh + state*nstates + s;
                 double *trans_mat_tmp   = trans_mat;
                 double *trans_derv1_tmp = trans_derv1;
                 double *trans_derv2_tmp = trans_derv2;

@@ -3736,6 +3736,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             }
         }
         
+        if (iqtree->isBranchModel() && !iqtree->isSuperTree() && !iqtree->constraintTree.empty())
+            ((PhyloTreeBranchModel*)iqtree)->applyConstraintGrouping(iqtree->constraintTree);
+
         // Optimize model parameters and branch lengths using ML for the initial tree
         iqtree->clearAllPartialLH();
         initTree = iqtree->ensureModelParametersAreSet(initEpsilon);

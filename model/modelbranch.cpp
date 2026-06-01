@@ -83,15 +83,19 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
         setBounds(lower_bound, upper_bound, bound_check);
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
         
-        // scale the frequencies
+        // scale the frequencies, then refresh eigendecomp + partials so subsequent
+        // likelihood calls see the normalized state_freq
         scaleStateFreq(true);
-        
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
+
         delete [] bound_check;
         delete [] lower_bound;
         delete [] upper_bound;
         delete [] variables2;
         delete [] variables;
-        
+
         return score;
         
     } else {
@@ -453,6 +457,7 @@ double ModelBranch::targetFunk(double x[]) {
     
     if (optimizing_root_freq) {
         getVariables(x);
+        phylo_tree->clearAllPartialLH();
         return -phylo_tree->computeLikelihood();
     }
 

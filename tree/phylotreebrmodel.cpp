@@ -406,13 +406,37 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
     }
 }
 
+double PhyloTreeBranchModel::computeLikelihoodFromBuffer() {
+    // Force fresh root-anchored eval; NNI eval's optimizeOneBranch(clearLH=false)
+    // leaves stale partial_lh flags that make buffer reads unreliable for non-stationary models.
+    PhyloNeighbor *saved_it = current_it;
+    PhyloNeighbor *saved_it_back = current_it_back;
+    clearAllPartialLH();
+    current_it = (PhyloNeighbor*)root->neighbors[0];
+    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
+    double lh = PhyloTree::computeLikelihood();
+    if (saved_it) {
+        current_it = saved_it;
+        current_it_back = saved_it_back;
+    }
+    return lh;
+}
+
 double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log_value) {
     ASSERT(root->isLeaf());
-    if (!current_it) {
-        current_it = (PhyloNeighbor*)root->neighbors[0];
-        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
+    // Force root-edge anchor; tree-scalar lh is anchor-dependent for non-stationary models.
+    PhyloNeighbor *saved_it = current_it;
+    PhyloNeighbor *saved_it_back = current_it_back;
+    current_it = (PhyloNeighbor*)root->neighbors[0];
+    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
+    double lh = PhyloTree::computeLikelihood(pattern_lh, save_log_value);
+    // Only restore if there was a previously valid value; leaving current_it at root
+    // when it was null lets post-analysis routines (e.g. computeLogLVariance) work.
+    if (saved_it) {
+        current_it = saved_it;
+        current_it_back = saved_it_back;
     }
-    return PhyloTree::computeLikelihood(pattern_lh, save_log_value);
+    return lh;
 }
 
 void PhyloTreeBranchModel::computePtnInvar() {
@@ -437,17 +461,95 @@ string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl
     return IQTree::optimizeModelParameters(printInfo, logl_epsilon);
 }
 
+static set<int> applyConstraintWalk(Node *node, Node *dad, map<string,int> &tip_clade) {
+    set<int> combined;
+    if (node->isLeaf()) {
+        map<string,int>::iterator it = tip_clade.find(node->name);
+        if (it != tip_clade.end()) combined.insert(it->second);
+        return combined;
+    }
+    FOR_NEIGHBOR_IT(node, dad, nei_it) {
+        set<int> sub = applyConstraintWalk((*nei_it)->node, node, tip_clade);
+        if (sub.size() == 1) {
+            int id = *sub.begin();
+            (*nei_it)->branchmodel_id = id;
+            (*nei_it)->node->findNeighbor(node)->branchmodel_id = id;
+        }
+        combined.insert(sub.begin(), sub.end());
+    }
+    return combined;
+}
+
+void PhyloTreeBranchModel::applyConstraintGrouping(MTree &ct) {
+    if (ct.leafNum == 0) return;
+    map<string,int> tip_clade;
+    NodeVector ct_leaves;
+    ct.getTaxa(ct_leaves);
+    for (NodeVector::iterator it = ct_leaves.begin(); it != ct_leaves.end(); ++it) {
+        Node *leaf = *it;
+        if (leaf->neighbors.empty()) continue;
+        // include all leaves (id 0 inclusive), so the walk can distinguish
+        // pure-id-0 subtree from no-info; the post-order check `sub.size()==1`
+        // already prevents mixed-clade branches from being mis-assigned.
+        tip_clade[leaf->name] = leaf->neighbors[0]->branchmodel_id;
+    }
+    if (tip_clade.empty()) return;
+    // root is a leaf in IQ-TREE's rooted-tree representation; start the walk at the
+    // adjacent internal node (root->neighbors[0]->node) with root as dad.
+    if (root && !root->neighbors.empty()) {
+        applyConstraintWalk(root->neighbors[0]->node, root, tip_clade);
+    }
+}
+
+// Collect every branchmodel_id appearing on edges going DOWN from `node` (away from `dad`).
+// Also append tip names in the subtree to `tips_out`.
+static set<int> collectSubtreeIds(Node *node, Node *dad, vector<string> &tips_out) {
+    set<int> ids;
+    if (node->isLeaf()) {
+        if (node->name != ROOT_NAME) tips_out.push_back(node->name);
+        return ids;
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        ids.insert((*it)->branchmodel_id);
+        set<int> sub = collectSubtreeIds((*it)->node, node, tips_out);
+        ids.insert(sub.begin(), sub.end());
+    }
+    return ids;
+}
+
+// Walk top-down from (node, dad). At each internal node, if its subtree is monophyletic in
+// branchmodel_id (i.e. every edge from this node down to all leaves carries the same id),
+// emit that subtree's tips into the corresponding clade group. Else recurse into children.
+static void findMonoClades(Node *node, Node *dad, map<int, vector<string> > &tips_by_id) {
+    if (node->isLeaf()) {
+        if (dad && node->name != ROOT_NAME) {
+            int id = ((PhyloNeighbor*) node->findNeighbor(dad))->branchmodel_id;
+            tips_by_id[id].push_back(node->name);
+        }
+        return;
+    }
+    vector<string> subtree_tips;
+    set<int> subtree_ids = collectSubtreeIds(node, dad, subtree_tips);
+    if (subtree_ids.size() == 1 && !subtree_tips.empty()) {
+        // Maximal monophyletic clade — group all its tips
+        int id = *subtree_ids.begin();
+        for (size_t i = 0; i < subtree_tips.size(); i++)
+            tips_by_id[id].push_back(subtree_tips[i]);
+    } else {
+        // Mixed: recurse into children
+        FOR_NEIGHBOR_IT(node, dad, it)
+            findMonoClades((*it)->node, node, tips_by_id);
+    }
+}
+
 string PhyloTreeBranchModel::buildBranchModelConstraintNewick() {
     map<int, vector<string> > tips_by_id;
-    NodeVector leaves;
-    getTaxa(leaves);
-    for (NodeVector::iterator it = leaves.begin(); it != leaves.end(); it++) {
-        Node *leaf = *it;
-        if (leaf->name == ROOT_NAME) continue;
-        if (leaf->neighbors.size() != 1) continue;
-        int id = leaf->neighbors[0]->branchmodel_id;
-        tips_by_id[id].push_back(leaf->name);
-    }
+    // Start walk from the internal node adjacent to root (root is a leaf in IQ-TREE's rooted format).
+    if (root && !root->neighbors.empty())
+        findMonoClades(root->neighbors[0]->node, root, tips_by_id);
+    else
+        findMonoClades(root, NULL, tips_by_id);
+
     int n_useful = 0;
     for (map<int, vector<string> >::iterator mit = tips_by_id.begin(); mit != tips_by_id.end(); mit++)
         if (mit->second.size() >= 2) n_useful++;

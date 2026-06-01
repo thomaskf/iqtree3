@@ -871,6 +871,9 @@ public:
      */
     Node *root;
 
+    std::set<Neighbor*> mono_boundary_neis;
+    void markMonoCladeBoundaries(Node *node, Node *dad);
+
     /**
             number of leaves
      */

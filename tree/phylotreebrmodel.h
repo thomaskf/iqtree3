@@ -80,11 +80,15 @@ public:
     
     virtual void computePtnInvar();
 
+    virtual double computeLikelihoodFromBuffer();
+
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
     int getNParameters();
 
     string buildBranchModelConstraintNewick();
+
+    void applyConstraintGrouping(MTree &constraint);
     
         /**
      model factories

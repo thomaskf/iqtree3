@@ -417,6 +417,13 @@ void MTree::printNexus(string ofile, int brtype, string nexus_comment)
 }
 
 void MTree::printTree(ostream &out, int brtype) {
+    if (brtype & WT_BR_ATTR) {
+        mono_boundary_neis.clear();
+        if (root && !root->neighbors.empty())
+            markMonoCladeBoundaries(root->neighbors[0]->node, root);
+        else if (root)
+            markMonoCladeBoundaries(root, nullptr);
+    }
     if (root->isLeaf()) {
         if (root->neighbors[0]->node->isLeaf()) {
             // tree has only 2 taxa!
@@ -485,27 +492,9 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
         out << length;
     }
 
-    if (brtype & WT_BR_ATTR) {
-        bool has_id = (length_nei->branchmodel_id != 0);
-        bool has_other = false;
-        for (map<string,string>::iterator a = length_nei->attributes.begin();
-             a != length_nei->attributes.end(); ++a)
-            if (a->first != "branch" && a->first != "clade") { has_other = true; break; }
-        if (has_id || has_other) {
-            out << "[&";
-            bool first = true;
-            if (has_id) {
-                out << "branch=\"" << length_nei->branchmodel_id << "\"";
-                first = false;
-            }
-            for (map<string,string>::iterator a = length_nei->attributes.begin();
-                 a != length_nei->attributes.end(); ++a) {
-                if (a->first == "branch" || a->first == "clade") continue;
-                if (!first) out << ","; else first = false;
-                out << a->first << "=\"" << a->second << "\"";
-            }
-            out << "]";
-        }
+    if ((brtype & WT_BR_ATTR) && mono_boundary_neis.count(length_nei)) {
+        out << "[&branch=" << length_nei->branchmodel_id
+            << ",clade=" << length_nei->branchmodel_id << "]";
     }
     
     if ((brtype & WT_BR_MODEL_ID)) {
@@ -529,6 +518,35 @@ void MTree::printBranchModelinfo(ostream &out, Neighbor *length_nei) {
     string s = ss.str();
     if (s.length() > 0)
         out << "[&" << s << "]";
+}
+
+static set<int> collectSubtreeBranchIds(Node *node, Node *dad) {
+    set<int> ids;
+    if (node->isLeaf()) return ids;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        ids.insert((*it)->branchmodel_id);
+        set<int> sub = collectSubtreeBranchIds((*it)->node, node);
+        ids.insert(sub.begin(), sub.end());
+    }
+    return ids;
+}
+
+void MTree::markMonoCladeBoundaries(Node *node, Node *dad) {
+    if (node->isLeaf()) return;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        Neighbor *edge = *it;
+        Node *child = edge->node;
+        // Skip leaf children: reader rejects `clade=N` on leaf edges.
+        if (child->isLeaf()) continue;
+        set<int> ids = collectSubtreeBranchIds(child, node);
+        ids.insert(edge->branchmodel_id);
+        if (ids.size() == 1) {
+            mono_boundary_neis.insert(edge);
+            mono_boundary_neis.insert(child->findNeighbor(node));
+        } else {
+            markMonoCladeBoundaries(child, node);
+        }
+    }
 }
 
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
