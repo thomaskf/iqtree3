@@ -3623,6 +3623,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
+    // initializeModel() counts branch models on the tree, so propagate first.
+    if (iqtree->isBranchModel() && !iqtree->isSuperTree() && !iqtree->constraintTree.empty())
+        ((PhyloTreeBranchModel*)iqtree)->applyConstraintGrouping(iqtree->constraintTree);
 
     if (!iqtree->getModelFactory()) {
         iqtree->initializeModel(params, iqtree->aln->model_name, models_block);

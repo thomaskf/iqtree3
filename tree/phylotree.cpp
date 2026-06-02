@@ -5901,11 +5901,118 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 }
 */
 
-void PhyloTree::convertToRooted() {
+static int collectSubtreeTaxa_cb(Node *node, Node *dad, std::set<int> &out) {
+    int n = 0;
+    if (node->isLeaf()) {
+        if (node->id >= 0) {
+            out.insert(node->id);
+            n = 1;
+        }
+        return n;
+    }
+    for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); ++it) {
+        if ((*it)->node != dad)
+            n += collectSubtreeTaxa_cb((*it)->node, node, out);
+    }
+    return n;
+}
+
+static bool findCladeBoundaryEdge(Node *start_node, std::set<int> &clade_a_ids,
+                                  std::set<int> &clade_b_ids,
+                                  Node *&out_node, Node *&out_dad) {
+    std::vector<std::pair<Node*, Node*> > stack;
+    stack.push_back(std::make_pair(start_node, (Node*)NULL));
+    while (!stack.empty()) {
+        std::pair<Node*, Node*> cur = stack.back();
+        stack.pop_back();
+        Node *u = cur.first;
+        Node *parent = cur.second;
+        for (NeighborVec::iterator it = u->neighbors.begin(); it != u->neighbors.end(); ++it) {
+            Node *v = (*it)->node;
+            if (v == parent) continue;
+            std::set<int> sub;
+            collectSubtreeTaxa_cb(v, u, sub);
+            int a_in = 0, a_out = 0, b_in = 0, b_out = 0;
+            for (std::set<int>::iterator ait = clade_a_ids.begin(); ait != clade_a_ids.end(); ++ait)
+                if (sub.count(*ait)) a_in++; else a_out++;
+            for (std::set<int>::iterator bit = clade_b_ids.begin(); bit != clade_b_ids.end(); ++bit)
+                if (sub.count(*bit)) b_in++; else b_out++;
+            if ((a_out == 0 && b_in == 0) || (a_in == 0 && b_out == 0)) {
+                out_node = v;
+                out_dad = u;
+                return true;
+            }
+            stack.push_back(std::make_pair(v, u));
+        }
+    }
+    return false;
+}
+
+void PhyloTree::convertToRooted(bool use_clade_boundary) {
     ASSERT(leafNum == aln->getNSeq());
     Node *node, *dad;
     double node_len, dad_len;
-    if (params->root) {
+    bool placed = false;
+
+    if (use_clade_boundary && !constraintTree.empty()) {
+        NodeVector ct_leaves;
+        constraintTree.getTaxa(ct_leaves);
+        std::map<int, std::vector<std::string> > tips_by_id;
+        for (NodeVector::iterator it = ct_leaves.begin(); it != ct_leaves.end(); ++it) {
+            Node *lf = *it;
+            if (lf->neighbors.empty()) continue;
+            int id = lf->neighbors[0]->branchmodel_id;
+            tips_by_id[id].push_back(lf->name);
+        }
+        // pick the two largest groups by tip count
+        int id_a = -1, id_b = -1;
+        size_t sz_a = 0, sz_b = 0;
+        for (std::map<int, std::vector<std::string> >::iterator mit = tips_by_id.begin();
+             mit != tips_by_id.end(); ++mit) {
+            if (mit->second.size() >= sz_a) {
+                id_b = id_a; sz_b = sz_a;
+                id_a = mit->first; sz_a = mit->second.size();
+            } else if (mit->second.size() > sz_b) {
+                id_b = mit->first; sz_b = mit->second.size();
+            }
+        }
+        if (id_a >= 0 && id_b >= 0 && sz_a > 0 && sz_b > 0 && id_a != id_b) {
+            // map tip names to *this tree's leaf ids
+            std::map<std::string, Node*> name2leaf;
+            NodeVector tree_leaves;
+            getTaxa(tree_leaves);
+            for (NodeVector::iterator it = tree_leaves.begin(); it != tree_leaves.end(); ++it)
+                name2leaf[(*it)->name] = *it;
+            std::set<int> a_ids, b_ids;
+            for (size_t i = 0; i < tips_by_id[id_a].size(); ++i) {
+                std::map<std::string, Node*>::iterator f = name2leaf.find(tips_by_id[id_a][i]);
+                if (f != name2leaf.end()) a_ids.insert(f->second->id);
+            }
+            for (size_t i = 0; i < tips_by_id[id_b].size(); ++i) {
+                std::map<std::string, Node*>::iterator f = name2leaf.find(tips_by_id[id_b][i]);
+                if (f != name2leaf.end()) b_ids.insert(f->second->id);
+            }
+            if (!a_ids.empty() && !b_ids.empty()) {
+                Node *n = NULL, *d = NULL;
+                if (findCladeBoundaryEdge(root, a_ids, b_ids, n, d)) {
+                    node = n;
+                    dad = d;
+                    double edge_len = node->findNeighbor(dad)->length;
+                    if (edge_len < 0) edge_len = 0.0;
+                    node_len = dad_len = edge_len * 0.5;
+                    placed = true;
+                    if (verbose_mode >= VB_MED)
+                        cout << "Rooting parsimony tree at clade-boundary edge "
+                             << "(clade " << id_a << " vs " << id_b << ")" << endl;
+                } else if (verbose_mode >= VB_MED) {
+                    cout << "Note: no clade-boundary edge found in parsimony tree; "
+                         << "falling back to midpoint rooting." << endl;
+                }
+            }
+        }
+    }
+
+    if (!placed && params->root) {
         string name = params->root;
         node = findNodeName(name);
         if (!node)
@@ -5913,7 +6020,10 @@ void PhyloTree::convertToRooted() {
         ASSERT(node->isLeaf());
         dad = node->neighbors[0]->node;
         node_len = dad_len = node->neighbors[0]->length*0.5;
-    } else {
+        placed = true;
+    }
+
+    if (!placed) {
         //midpoint rooting
         Node *node1, *node2;
         double longest = root->longestPath2(node1, node2);
@@ -5953,6 +6063,8 @@ void PhyloTree::convertToRooted() {
     dad->updateNeighbor(node, root_int, dad_len);
     root_int->addNeighbor(dad, dad_len);
     initializeTree();
+    // clear stale directions left by extractBifurcatingSubTree before recomputing.
+    clearBranchDirection();
     computeBranchDirection();
     current_it = current_it_back = nullptr;
 }

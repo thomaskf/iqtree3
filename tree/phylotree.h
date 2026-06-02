@@ -2313,8 +2313,10 @@ public:
 
     /**
         convert from unrooted to rooted tree
+        @param use_clade_boundary if true, root at the constraint-clade boundary
+            instead of midpoint (requires constraintTree with clade IDs).
     */
-    void convertToRooted();
+    void convertToRooted(bool use_clade_boundary = false);
 
     /**
         convert from rooted to unrooted tree

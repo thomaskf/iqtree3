@@ -1247,8 +1247,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     nodeNum = 2 * leafNum - 2;
     initializeTree();
-    // parsimony tree is always unrooted
-    bool orig_rooted = rooted;
+    // copyConstraintTree resets rooted=false during the build; preserve user -rooted.
+    bool orig_rooted = rooted || (params && params->is_rooted);
     rooted = false;
     setAlignment(alignment);
 //    initializeAllPartialPars();
@@ -1256,7 +1256,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     fixNegativeBranch(true);
     // convert to rooted tree if originally so
     if (orig_rooted)
-        convertToRooted();
+        convertToRooted(isBranchModel() && !constraintTree.empty());
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";

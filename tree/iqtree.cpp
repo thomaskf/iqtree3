@@ -707,6 +707,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
                 cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
     //            aln->orderPatternByNumChars();
                 start = getRealTime();
+                if (params->is_rooted)
+                    rooted = true;
                 score = computeParsimonyTree(params->out_prefix, aln, randstream);
                 cout << getRealTime() - start << " seconds, parsimony score: " << score
                     << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
@@ -847,7 +849,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
-            tree.rooted = rooted;
+            tree.rooted = false;
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(nullptr, aln, rstream);
