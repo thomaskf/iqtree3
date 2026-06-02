@@ -406,22 +406,6 @@ void PhyloTreeBranchModel::computeTipPartialLikelihood() {
     }
 }
 
-double PhyloTreeBranchModel::computeLikelihoodFromBuffer() {
-    // Force fresh root-anchored eval; NNI eval's optimizeOneBranch(clearLH=false)
-    // leaves stale partial_lh flags that make buffer reads unreliable for non-stationary models.
-    PhyloNeighbor *saved_it = current_it;
-    PhyloNeighbor *saved_it_back = current_it_back;
-    clearAllPartialLH();
-    current_it = (PhyloNeighbor*)root->neighbors[0];
-    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
-    double lh = PhyloTree::computeLikelihood();
-    if (saved_it) {
-        current_it = saved_it;
-        current_it_back = saved_it_back;
-    }
-    return lh;
-}
-
 double PhyloTreeBranchModel::computeLikelihood(double *pattern_lh, bool save_log_value) {
     ASSERT(root->isLeaf());
     // Force root-edge anchor; tree-scalar lh is anchor-dependent for non-stationary models.
