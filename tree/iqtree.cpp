@@ -3312,7 +3312,9 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
         }
             // 2018-01-09: additional optimize root position
             // TODO: does not work with SuperTree yet
-            if (rooted && !isSuperTree() && params->root_move_dist > 0)
+            // Skip for branch model: root sits on the clade boundary by
+            // construction, moving it breaks per-edge component dispatch.
+            if (rooted && !isSuperTree() && !isBranchModel() && params->root_move_dist > 0)
             {
                 optimizeRootPosition(params->root_move_dist, true, params->modelEps * 10);
             }
