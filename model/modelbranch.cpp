@@ -457,16 +457,24 @@ double ModelBranch::targetFunk(double x[]) {
     
     if (optimizing_root_freq) {
         getVariables(x);
-        phylo_tree->clearAllPartialLH();
+        // root freq affects only the root-edge contraction, not the partials
         return -phylo_tree->computeLikelihood();
     }
 
     bool changed = getVariables(x);
 
     if (changed) {
-        decomposeRateMatrix();
-        ASSERT(phylo_tree);
-        phylo_tree->clearAllPartialLH();
+        // re-decompose/clear only if a rate-matrix parameter is free;
+        // a root-freq-only change needs neither
+        int subst_ndim = 0;
+        for (iterator it = begin(); it != end(); it++)
+            if (!(*it)->fixed_parameters)
+                subst_ndim += (*it)->getNDim();
+        if (subst_ndim > 0) {
+            decomposeRateMatrix();
+            ASSERT(phylo_tree);
+            phylo_tree->clearAllPartialLH();
+        }
     }
     
     return -phylo_tree->computeLikelihood();
