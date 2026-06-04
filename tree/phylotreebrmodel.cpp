@@ -445,43 +445,168 @@ string PhyloTreeBranchModel::optimizeModelParameters(bool printInfo, double logl
     return IQTree::optimizeModelParameters(printInfo, logl_epsilon);
 }
 
-static set<int> applyConstraintWalk(Node *node, Node *dad, map<string,int> &tip_clade) {
-    set<int> combined;
+// Collect the set of tip names below (node, away from dad) into out.
+static void collectTipNames(Node *node, Node *dad, set<string> &out) {
     if (node->isLeaf()) {
-        map<string,int>::iterator it = tip_clade.find(node->name);
-        if (it != tip_clade.end()) combined.insert(it->second);
-        return combined;
+        if (node->name != ROOT_NAME) out.insert(node->name);
+        return;
     }
-    FOR_NEIGHBOR_IT(node, dad, nei_it) {
-        set<int> sub = applyConstraintWalk((*nei_it)->node, node, tip_clade);
-        if (sub.size() == 1) {
-            int id = *sub.begin();
-            (*nei_it)->branchmodel_id = id;
-            (*nei_it)->node->findNeighbor(node)->branchmodel_id = id;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        collectTipNames((*it)->node, node, out);
+    }
+}
+
+// Find the search-tree edge whose bipartition matches `target`. Returns
+// (out_start, out_dad) such that assignBranchModelid walks away from out_dad
+// into the target subtree. Prefers child-side match; falls back to complement.
+static void findEdgeByBipartition(Node *root,
+                                  const set<string> &target,
+                                  Node *&out_start, Node *&out_dad) {
+    out_start = NULL; out_dad = NULL;
+    if (!root || root->neighbors.empty()) return;
+    Node *top = root->neighbors[0]->node;
+    set<string> all_tips;
+    collectTipNames(top, root, all_tips);
+    if (root->isLeaf() && root->name != ROOT_NAME)
+        all_tips.insert(root->name);
+
+    std::vector<std::pair<Node*, Node*> > stack;
+    stack.push_back(std::make_pair(top, root));
+    while (!stack.empty()) {
+        std::pair<Node*, Node*> cur = stack.back();
+        stack.pop_back();
+        Node *u = cur.first;
+        Node *dad = cur.second;
+        FOR_NEIGHBOR_IT(u, dad, it) {
+            Node *v = (*it)->node;
+            set<string> sub;
+            collectTipNames(v, u, sub);
+            if (sub == target) {
+                out_start = v; out_dad = u;
+                return;
+            }
+            stack.push_back(std::make_pair(v, u));
         }
-        combined.insert(sub.begin(), sub.end());
     }
-    return combined;
+    stack.clear();
+    stack.push_back(std::make_pair(top, root));
+    while (!stack.empty()) {
+        std::pair<Node*, Node*> cur = stack.back();
+        stack.pop_back();
+        Node *u = cur.first;
+        Node *dad = cur.second;
+        FOR_NEIGHBOR_IT(u, dad, it) {
+            Node *v = (*it)->node;
+            set<string> sub;
+            collectTipNames(v, u, sub);
+            if (sub.size() != all_tips.size()) {
+                set<string> rest;
+                std::set_difference(all_tips.begin(), all_tips.end(),
+                                    sub.begin(), sub.end(),
+                                    std::inserter(rest, rest.end()));
+                if (rest == target) {
+                    out_start = u; out_dad = v;
+                    return;
+                }
+            }
+            stack.push_back(std::make_pair(v, u));
+        }
+    }
+}
+
+// Walk the rooted input tree post-order. At each (ct_dad -> ct_node) edge,
+// read its [&clade=X] / [&branch=X] attributes and apply them to the matching
+// search-tree edge (matched by child-side tip-name set).
+static void applyConstraintWalkV2(PhyloTreeBranchModel *pst,
+                                  Node *ct_node, Node *ct_dad,
+                                  Node *st_root) {
+    FOR_NEIGHBOR_IT(ct_node, ct_dad, ct_nei) {
+        Node *ct_child = (*ct_nei)->node;
+        if (ct_child->isLeaf()) continue;
+        applyConstraintWalkV2(pst, ct_child, ct_node, st_root);
+    }
+    if (ct_dad == NULL) return;
+    Neighbor *ct_edge = ct_node->findNeighbor(ct_dad);
+    if (ct_edge == NULL) return;
+
+    int clade_val = -1, branch_val = -1;
+    for (auto &attr : ct_edge->attributes) {
+        if (attr.first == "clade")  clade_val  = atoi(attr.second.c_str());
+        if (attr.first == "branch") branch_val = atoi(attr.second.c_str());
+    }
+    if (clade_val < 0 && branch_val < 0) return;
+
+    set<string> child_tips;
+    collectTipNames(ct_node, ct_dad, child_tips);
+    Node *st_start = NULL, *st_dad = NULL;
+    findEdgeByBipartition(st_root, child_tips, st_start, st_dad);
+    if (!st_start || !st_dad) return;
+
+    if (clade_val >= 0)
+        pst->assignBranchModelid(st_start, st_dad, clade_val);
+    if (branch_val >= 0) {
+        st_start->findNeighbor(st_dad)->branchmodel_id = branch_val;
+        st_dad->findNeighbor(st_start)->branchmodel_id = branch_val;
+    }
 }
 
 void PhyloTreeBranchModel::applyConstraintGrouping(MTree &ct) {
     if (ct.leafNum == 0) return;
-    map<string,int> tip_clade;
-    NodeVector ct_leaves;
-    ct.getTaxa(ct_leaves);
-    for (NodeVector::iterator it = ct_leaves.begin(); it != ct_leaves.end(); ++it) {
-        Node *leaf = *it;
-        if (leaf->neighbors.empty()) continue;
-        // include all leaves (id 0 inclusive), so the walk can distinguish
-        // pure-id-0 subtree from no-info; the post-order check `sub.size()==1`
-        // already prevents mixed-clade branches from being mis-assigned.
-        tip_clade[leaf->name] = leaf->neighbors[0]->branchmodel_id;
+    if (!root || root->neighbors.empty()) return;
+    if (!params || !params->constraint_tree_file) return;
+
+    // Re-read the constraint file as a rooted MTree; the in-memory
+    // constraintTree has been converted to unrooted so its root is not the
+    // structural top we need for the walk.
+    MTree input_rooted;
+    bool input_rooted_flag = true;
+    try {
+        input_rooted.readTree(params->constraint_tree_file, input_rooted_flag);
+    } catch (...) {
+        input_rooted.freeNode();
+        return;
     }
-    if (tip_clade.empty()) return;
-    // root is a leaf in IQ-TREE's rooted-tree representation; start the walk at the
-    // adjacent internal node (root->neighbors[0]->node) with root as dad.
-    if (root && !root->neighbors.empty()) {
-        applyConstraintWalk(root->neighbors[0]->node, root, tip_clade);
+    if (!input_rooted.root || input_rooted.root->neighbors.empty()) return;
+
+    Node *ct_top = input_rooted.root->neighbors[0]->node;
+    applyConstraintWalkV2(this, ct_top, input_rooted.root, root);
+
+    // Outer root-level [&clade=X] (matches MTree parser's outer-fills-rest).
+    Neighbor *ct_outer = input_rooted.root->neighbors[0];
+    if (ct_outer != NULL) {
+        int outer_clade = -1;
+        for (auto &attr : ct_outer->attributes) {
+            if (attr.first == "clade") outer_clade = atoi(attr.second.c_str());
+        }
+        if (outer_clade >= 0)
+            this->assignBranchModelid(root->neighbors[0]->node, root, outer_clade);
+    }
+
+    // Branchmodel_id changes invalidate cached tip & partial likelihoods.
+    tip_partial_lh_computed = 0;
+    clearAllPartialLH();
+
+    if (verbose_mode >= VB_MED || getenv("IQTREE_DUMP_BRANCH_IDS") != NULL) {
+        std::map<int,int> id_counts;
+        std::vector<std::pair<Node*,Node*> > stack;
+        stack.push_back(std::make_pair(root->neighbors[0]->node, root));
+        cout << "[applyConstraintGrouping] branchmodel_id dump:" << endl;
+        while (!stack.empty()) {
+            std::pair<Node*,Node*> cur = stack.back(); stack.pop_back();
+            Node *u = cur.first;
+            Node *dad = cur.second;
+            FOR_NEIGHBOR_IT(u, dad, it) {
+                int id = (*it)->branchmodel_id;
+                id_counts[id]++;
+                cout << "  edge " << u->id << "->" << (*it)->node->id
+                     << "  (parent_name=" << u->name << ", child_name=" << (*it)->node->name << ")"
+                     << "  brmodel_id=" << id << endl;
+                stack.push_back(std::make_pair((*it)->node, u));
+            }
+        }
+        cout << "[applyConstraintGrouping] counts per id:";
+        for (auto &p : id_counts) cout << "  id=" << p.first << ":" << p.second;
+        cout << endl;
     }
 }
 

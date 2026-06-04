@@ -85,11 +85,12 @@ public:
 
     // value of logl_epsilson
     double logl_epsilon;
-    
-    // whether the root frequencies are separated, by default yes
-    // if not, then the root frequencies are same as the frequencies of the base class
-    bool separate_root_freq;
-    
+
+    // -1: optimise root frequency independently. k >= 0: tie to component k.
+    int tied_root_clade_id;
+
+    void computeRootTie();
+
     // scale the state frequencies
     void scaleStateFreq(bool sum_one);
     

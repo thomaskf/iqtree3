@@ -4,13 +4,82 @@
 ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, true, false) {
     logl_epsilon = 0.01;
     optimizing_root_freq = false;
-    
-    // whether the root frequencies are separated, by default yes
-    // if not, then the root frequencies are same as the frequencies of the base class
-    separate_root_freq = Params::getInstance().separate_root_freq;
-    
+
+    tied_root_clade_id = -1;
+
     // only stores the root frequency, the other classe information are stored in the array
     num_params = 0;
+}
+
+void ModelBranch::computeRootTie() {
+    tied_root_clade_id = -1;
+    if (!phylo_tree || !phylo_tree->root || phylo_tree->root->neighbors.empty())
+        return;
+
+    Node *root_node = phylo_tree->root;
+    int root_degree = (int)root_node->neighbors.size();
+    const char *trace = (getenv("IQTREE_DUMP_BRANCH_IDS") != NULL || verbose_mode >= VB_MED) ? "Y" : NULL;
+
+    if (root_degree >= 2) {
+        // Case 1: root has multiple neighbours; tie if all incident edges share an id.
+        int common = -1;
+        bool unanimous = true;
+        std::vector<int> seen;
+        for (NeighborVec::iterator it = root_node->neighbors.begin();
+             it != root_node->neighbors.end(); ++it) {
+            int id = (*it)->branchmodel_id;
+            seen.push_back(id);
+            if (common == -1) common = id;
+            else if (common != id) { unanimous = false; break; }
+        }
+        if (unanimous && common >= 0 && common < (int)size())
+            tied_root_clade_id = common;
+        if (trace) {
+            cout << "[computeRootTie] CASE 1 (root degree=" << root_degree
+                 << ") root_ids=[";
+            for (size_t i = 0; i < seen.size(); ++i) cout << (i?",":"") << seen[i];
+            cout << "] unanimous=" << (unanimous?"YES":"NO")
+                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
+        }
+        return;
+    }
+
+    // root_degree == 1
+    bool root_is_synthetic = (root_node->name == ROOT_NAME);
+    Node *adj = root_node->neighbors[0]->node;
+    if (adj == NULL) return;
+
+    if (root_is_synthetic) {
+        // Case 2: synthetic root edge; tie if all of adj's other edges share an id.
+        int common = -1;
+        bool unanimous = true;
+        std::vector<int> seen;
+        FOR_NEIGHBOR_DECLARE(adj, root_node, nei_it) {
+            int id = (*nei_it)->branchmodel_id;
+            seen.push_back(id);
+            if (common == -1) common = id;
+            else if (common != id) { unanimous = false; break; }
+        }
+        if (unanimous && common >= 0 && common < (int)size())
+            tied_root_clade_id = common;
+        if (trace) {
+            cout << "[computeRootTie] CASE 2 (synthetic root_leaf name='" << root_node->name
+                 << "') adj_ids=[";
+            for (size_t i = 0; i < seen.size(); ++i) cout << (i?",":"") << seen[i];
+            cout << "] unanimous=" << (unanimous?"YES":"NO")
+                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
+        }
+    } else {
+        // Case 3: real-leaf root; tie to the id of the root-A edge.
+        int id = root_node->neighbors[0]->branchmodel_id;
+        if (id >= 0 && id < (int)size())
+            tied_root_clade_id = id;
+        if (trace) {
+            cout << "[computeRootTie] CASE 3 (real-leaf root name='" << root_node->name
+                 << "') root-A edge id=" << id
+                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
+        }
+    }
 }
 
 // destructor
@@ -119,8 +188,8 @@ double ModelBranch::optimizeParameters(double gradient_epsilon) {
                     }
                 }
             }
-            // optimize the root frequency if necessary
-            if (separate_root_freq) {
+            // optimize the root frequency if it is NOT tied to a BR component
+            if (tied_root_clade_id < 0) {
                 optimizing_root_freq = true;
                 score = ModelMarkov::optimizeParameters(gradient_epsilon);
                 optimizing_root_freq = false;
@@ -173,21 +242,21 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
 }
 
 void ModelBranch::getRootFrequency(double* sfreq) {
-    if (separate_root_freq) {
+    if (tied_root_clade_id < 0) {
         ModelMarkov::getStateFrequency(sfreq);
     } else {
-        at(0)->ModelMarkov::getStateFrequency(sfreq);
+        at(tied_root_clade_id)->ModelMarkov::getStateFrequency(sfreq);
     }
 }
 
 void ModelBranch::setRootFrequency(double* state_freq) {
-    if (separate_root_freq) {
+    if (tied_root_clade_id < 0) {
         ModelMarkov::setStateFrequency(state_freq);
     }
 }
 
 void ModelBranch::setRootFrequency(string root_freq) {
-    if (separate_root_freq) {
+    if (tied_root_clade_id < 0) {
         double* state_freq = new double[num_states];
         // check the format of rootfreq
         size_t i = 0;
@@ -223,7 +292,7 @@ void ModelBranch::setRootFrequency(string root_freq) {
 
 void ModelBranch::setRootFrequencyInit(string root_freq) {
     setRootFrequency(root_freq);
-    if (separate_root_freq) freq_type = FREQ_ESTIMATE;
+    if (tied_root_clade_id < 0) freq_type = FREQ_ESTIMATE;
 }
 
 void ModelBranch::writeInfo(ostream &out) {
@@ -278,26 +347,26 @@ void ModelBranch::writeInfo(ostream &out) {
  @return the number of dimensions
  */
 int ModelBranch::getNDim() {
-    
+
     if (optimizing_root_freq) {
-        if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+        if (tied_root_clade_id < 0 && freq_type == FREQ_ESTIMATE) {
             return ModelMarkov::num_states-1;
         } else {
             return 0;
         }
     }
-    
+
     int totndim = 0;
     for (iterator it = begin(); it != end(); it++) {
         if (!(*it)->fixed_parameters) {
             totndim += (*it)->getNDim();
         }
     }
-    
-    if (separate_root_freq && freq_type == FREQ_ESTIMATE && !fixed_parameters) {
+
+    if (tied_root_clade_id < 0 && freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         totndim += ModelMarkov::num_states-1;
     }
-    
+
     return totndim;
 }
 
@@ -330,8 +399,8 @@ int ModelBranch::getNDimFreq() {
         }
     }
     
-    if (separate_root_freq) {
-        // consider the root frequency
+    if (tied_root_clade_id < 0) {
+        // consider the (independent) root frequency
         switch (freq_type) {
         case FREQ_EMPIRICAL:
             num_empirical++;
@@ -361,13 +430,13 @@ void ModelBranch::setVariables(double *variables) {
         return;
     
     if (optimizing_root_freq) {
-        if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+        if (tied_root_clade_id < 0 && ModelMarkov::freq_type == FREQ_ESTIMATE) {
             double* var = &variables[1];
             memcpy(var, ModelMarkov::state_freq, (ModelMarkov::num_states-1)*sizeof(double));
         }
         return;
     }
-    
+
     int dim = 0;
     for (iterator it = begin(); it != end(); it++) {
         if (!(*it)->fixed_parameters) {
@@ -375,7 +444,7 @@ void ModelBranch::setVariables(double *variables) {
             dim += (*it)->ModelMarkov::getNDim();
         }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
+    if (tied_root_clade_id < 0 && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         double* var = &variables[dim+1];
         memcpy(var, ModelMarkov::state_freq, (ModelMarkov::num_states-1)*sizeof(double));
         dim += (ModelMarkov::num_states-1);
@@ -387,7 +456,7 @@ bool ModelBranch::getVariables(double *variables) {
         return false;
     
     if (optimizing_root_freq) {
-        if (separate_root_freq && freq_type == FREQ_ESTIMATE) {
+        if (tied_root_clade_id < 0 && freq_type == FREQ_ESTIMATE) {
             double* var = &variables[1];
             bool changed = false;
             for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
@@ -406,7 +475,7 @@ bool ModelBranch::getVariables(double *variables) {
             dim += (*it)->ModelMarkov::getNDim();
         }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE&& !fixed_parameters) {
+    if (tied_root_clade_id < 0 && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         double* var = &variables[dim+1];
         for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
             changed |= (ModelMarkov::state_freq[i] != var[i]);
@@ -421,7 +490,7 @@ void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *boun
         return;
     
     if (optimizing_root_freq) {
-        if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE) {
+        if (tied_root_clade_id < 0 && ModelMarkov::freq_type == FREQ_ESTIMATE) {
             for (size_t i = 1; i <= ModelMarkov::num_states-1; i++) {
                 lower_bound[i] = Params::getInstance().min_state_freq;;
                 upper_bound[i] = 1.0;
@@ -438,7 +507,7 @@ void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *boun
             dim += (*it)->ModelMarkov::getNDim();
         }
     }
-    if (separate_root_freq && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
+    if (tied_root_clade_id < 0 && ModelMarkov::freq_type == FREQ_ESTIMATE && !fixed_parameters) {
         for (size_t i = 1; i <= ModelMarkov::num_states-1; i++) {
             lower_bound[dim+i] = Params::getInstance().min_state_freq;;
             upper_bound[dim+i] = 1.0;
@@ -484,7 +553,7 @@ void ModelBranch::scaleStateFreq(bool sum_one) {
     for (iterator it = begin(); it != end(); it++) {
         (*it)->scaleStateFreq(sum_one);
     }
-    if (separate_root_freq) {
+    if (tied_root_clade_id < 0) {
         ModelMarkov::scaleStateFreq(sum_one);
     }
 }

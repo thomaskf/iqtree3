@@ -2917,14 +2917,6 @@ public:
     string root_freq_init_str;
 
     /**
-     separate root frequency (for branch model)
-     that means root freqeuncy is different from any of
-     the class in the branch model
-     (default: true)
-     */
-    bool separate_root_freq;
-
-    /**
     * Whether to output a MrBayes Block File
     */
     bool mr_bayes_output;

@@ -5469,10 +5469,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_freq_init_str = argv[cnt];
                 continue;
             }
-            if (strcmp(argv[cnt], "--norootfreq") == 0 || strcmp(argv[cnt], "-norootfreq") == 0) {
-                params.separate_root_freq = false;
-                continue;
-            }
             if (strcmp(argv[cnt], "-mrbayes") == 0) {
                 params.mr_bayes_output = true;
                 continue;
@@ -7444,7 +7440,6 @@ void Params::setDefault() {
     num_mixlen = 1;
     link_alpha = false;
     link_model = false;
-    separate_root_freq = true;
     root_freq_init_str = "";
     model_joint = "";
     ignore_checkpoint = false;
