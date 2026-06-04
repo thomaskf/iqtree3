@@ -67,8 +67,13 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
     size_t p1 = model_name.find("BR{");
     size_t p2;
     if (p1 != string::npos) {
-        p2 = model_name.find_last_of("}");
-        ASSERT(p2 != string::npos && p2 > p1 + 3);
+        // match BR{...}'s close brace; the rate model after it may have braces too, e.g. +R7{...}
+        int depth = 0;
+        for (p2 = p1 + 2; p2 < model_name.length(); p2++) {
+            if (model_name[p2] == '{') depth++;
+            else if (model_name[p2] == '}' && --depth == 0) break;
+        }
+        ASSERT(p2 < model_name.length() && p2 > p1 + 3);
         shared_rate = model_name.substr(p2+1);
         model_name = model_name.substr(0, p2+1);
     } else {
