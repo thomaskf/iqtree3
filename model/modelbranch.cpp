@@ -5,81 +5,10 @@ ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, true, false) {
     logl_epsilon = 0.01;
     optimizing_root_freq = false;
 
-    tied_root_clade_id = -1;
+    tied_root_clade_id = Params::getInstance().root_tie_model_id;
 
     // only stores the root frequency, the other classe information are stored in the array
     num_params = 0;
-}
-
-void ModelBranch::computeRootTie() {
-    tied_root_clade_id = -1;
-    if (!phylo_tree || !phylo_tree->root || phylo_tree->root->neighbors.empty())
-        return;
-
-    Node *root_node = phylo_tree->root;
-    int root_degree = (int)root_node->neighbors.size();
-    const char *trace = (getenv("IQTREE_DUMP_BRANCH_IDS") != NULL || verbose_mode >= VB_MED) ? "Y" : NULL;
-
-    if (root_degree >= 2) {
-        // Case 1: root has multiple neighbours; tie if all incident edges share an id.
-        int common = -1;
-        bool unanimous = true;
-        std::vector<int> seen;
-        for (NeighborVec::iterator it = root_node->neighbors.begin();
-             it != root_node->neighbors.end(); ++it) {
-            int id = (*it)->branchmodel_id;
-            seen.push_back(id);
-            if (common == -1) common = id;
-            else if (common != id) { unanimous = false; break; }
-        }
-        if (unanimous && common >= 0 && common < (int)size())
-            tied_root_clade_id = common;
-        if (trace) {
-            cout << "[computeRootTie] CASE 1 (root degree=" << root_degree
-                 << ") root_ids=[";
-            for (size_t i = 0; i < seen.size(); ++i) cout << (i?",":"") << seen[i];
-            cout << "] unanimous=" << (unanimous?"YES":"NO")
-                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
-        }
-        return;
-    }
-
-    // root_degree == 1
-    bool root_is_synthetic = (root_node->name == ROOT_NAME);
-    Node *adj = root_node->neighbors[0]->node;
-    if (adj == NULL) return;
-
-    if (root_is_synthetic) {
-        // Case 2: synthetic root edge; tie if all of adj's other edges share an id.
-        int common = -1;
-        bool unanimous = true;
-        std::vector<int> seen;
-        FOR_NEIGHBOR_DECLARE(adj, root_node, nei_it) {
-            int id = (*nei_it)->branchmodel_id;
-            seen.push_back(id);
-            if (common == -1) common = id;
-            else if (common != id) { unanimous = false; break; }
-        }
-        if (unanimous && common >= 0 && common < (int)size())
-            tied_root_clade_id = common;
-        if (trace) {
-            cout << "[computeRootTie] CASE 2 (synthetic root_leaf name='" << root_node->name
-                 << "') adj_ids=[";
-            for (size_t i = 0; i < seen.size(); ++i) cout << (i?",":"") << seen[i];
-            cout << "] unanimous=" << (unanimous?"YES":"NO")
-                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
-        }
-    } else {
-        // Case 3: real-leaf root; tie to the id of the root-A edge.
-        int id = root_node->neighbors[0]->branchmodel_id;
-        if (id >= 0 && id < (int)size())
-            tied_root_clade_id = id;
-        if (trace) {
-            cout << "[computeRootTie] CASE 3 (real-leaf root name='" << root_node->name
-                 << "') root-A edge id=" << id
-                 << " → tied_root_clade_id=" << tied_root_clade_id << endl;
-        }
-    }
 }
 
 // destructor

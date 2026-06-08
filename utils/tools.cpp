@@ -5469,6 +5469,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_freq_init_str = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "--root-tie") == 0 || strcmp(argv[cnt], "-root-tie") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    outError("Use --root-tie <component index k>");
+                params.root_tie_model_id = atoi(argv[cnt]);
+                if (params.root_tie_model_id < 0)
+                    outError("--root-tie expects a non-negative integer");
+                continue;
+            }
             if (strcmp(argv[cnt], "-mrbayes") == 0) {
                 params.mr_bayes_output = true;
                 continue;
@@ -7441,6 +7450,7 @@ void Params::setDefault() {
     link_alpha = false;
     link_model = false;
     root_freq_init_str = "";
+    root_tie_model_id = -1;
     model_joint = "";
     ignore_checkpoint = false;
     checkpoint_dump_interval = 60;

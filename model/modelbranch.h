@@ -89,8 +89,6 @@ public:
     // -1: optimise root frequency independently. k >= 0: tie to component k.
     int tied_root_clade_id;
 
-    void computeRootTie();
-
     // scale the state frequencies
     void scaleStateFreq(bool sum_one);
     

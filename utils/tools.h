@@ -2917,6 +2917,12 @@ public:
     string root_freq_init_str;
 
     /**
+     For branch models: tie root frequency to component k's frequency (-1 = independent).
+     Set via --root-tie K.
+     */
+    int root_tie_model_id;
+
+    /**
     * Whether to output a MrBayes Block File
     */
     bool mr_bayes_output;

@@ -37,7 +37,6 @@
 #include "tree/iqtreemix.h"
 #include "tree/iqtreemixhmm.h"
 #include "tree/phylotreebrmodel.h"
-#include "model/modelbranch.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -3632,8 +3631,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->initializeModel(params, iqtree->aln->model_name, models_block);
     }
 
-    if (iqtree->isBranchModel() && !iqtree->isSuperTree() && iqtree->getModel() != NULL)
-        dynamic_cast<ModelBranch*>(iqtree->getModel())->computeRootTie();
     if (iqtree->getRate()->isHeterotachy() && !iqtree->isMixlen()) {
         ASSERT(0 && "Heterotachy tree not properly created");
     }
@@ -3743,11 +3740,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             }
         }
         
-        if (iqtree->isBranchModel() && !iqtree->isSuperTree() && !iqtree->constraintTree.empty()) {
+        if (iqtree->isBranchModel() && !iqtree->isSuperTree() && !iqtree->constraintTree.empty())
             ((PhyloTreeBranchModel*)iqtree)->applyConstraintGrouping(iqtree->constraintTree);
-            if (iqtree->getModel() != NULL)
-                dynamic_cast<ModelBranch*>(iqtree->getModel())->computeRootTie();
-        }
 
         // Optimize model parameters and branch lengths using ML for the initial tree
         iqtree->clearAllPartialLH();
