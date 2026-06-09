@@ -208,6 +208,34 @@ int PhyloTreeBranchModel::getNumBrModel() {
     return br_models->size();
 }
 
+// drop every branch in 'branches' incident to 'center'
+static void removeBranchesAt(Branches &branches, Node *center) {
+    for (Branches::iterator it = branches.begin(); it != branches.end(); ) {
+        if (it->second.first == center || it->second.second == center)
+            branches.erase(it++);
+        else
+            ++it;
+    }
+}
+
+void PhyloTreeBranchModel::getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candSplits, Branches &nonNNIBranches, Branches &nniBranches, Node *node, Node *dad) {
+    IQTree::getNNIBranches(tabuSplits, candSplits, nonNNIBranches, nniBranches, node, dad);
+    if (!node && rooted)  // only at the top-level call, after the full recursive fill
+        removeBranchesAt(nniBranches, root->neighbors[0]->node);
+}
+
+void PhyloTreeBranchModel::getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &stableBranches, Node *node, Node *dad) {
+    IQTree::getStableBranches(candSplits, supportValue, stableBranches, node, dad);
+    if (!node && rooted)
+        removeBranchesAt(stableBranches, root->neighbors[0]->node);
+}
+
+void PhyloTreeBranchModel::filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &nniBranches) {
+    IQTree::filterNNIBranches(appliedNNIs, nniBranches);
+    if (rooted)
+        removeBranchesAt(nniBranches, root->neighbors[0]->node);
+}
+
 /*
  * check how many different branch models
  */

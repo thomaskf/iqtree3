@@ -74,6 +74,11 @@ public:
     */
     virtual int getNumBrModel();
 
+    // exclude NNI on edges incident to the root-neighbour node, else NNI relocates the root off the clade boundary
+    virtual void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
+    virtual void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
+    virtual void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
+
     virtual void computeTipPartialLikelihood();
 
     virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);

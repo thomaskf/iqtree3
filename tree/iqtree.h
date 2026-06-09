@@ -369,7 +369,7 @@ public:
      *      node[IN] for navigation
      * @return A list of branches for evaluating NNIs
      */
-    void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
+    virtual void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
     /**
      *  Return internal branches that appear in \a candidateSplitHash
@@ -385,7 +385,7 @@ public:
      *  @return
      *      A list of branches fufilling the aforementioned conditions.
      */
-    void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
+    virtual void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = nullptr, Node *node = nullptr);
 
 
     /**
@@ -409,7 +409,7 @@ public:
      *  @return
      *      List of branches to be evaluated
      */
-    void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
+    virtual void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
 
     
     /**
