@@ -903,7 +903,6 @@ size_t PhyloTree::getBufferPartialLhSize() {
 }
 
 void PhyloTree::initializeAllPartialLh() {
-    int index, indexlh;
     int numStates = model->num_states;
     // Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
@@ -946,17 +945,19 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_freq_pars = aligned_alloc<UINT>(mem_size);
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
+    if (max_lh_slots == 0) {
+        getMemoryRequired();
+    }
+    int index, indexlh;
     initializeAllPartialLh(index, indexlh);
-    if (params->lh_mem_save == LM_MEM_SAVE)
+    if (params->lh_mem_save == LM_MEM_SAVE) {
         mem_slots.init(this, max_lh_slots);
-        
+    }
     ASSERT(index == (nodeNum - 1) * 2);
     if (params->lh_mem_save == LM_PER_NODE) {
-        ASSERT(indexlh == nodeNum-leafNum);
+        ASSERT(indexlh == nodeNum - leafNum);
     }
-
     clearAllPartialLH();
-
 }
 
 void PhyloTree::deleteAllPartialLh() {
@@ -1104,9 +1105,6 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures());
             if (model->isSiteSpecificModel())
                 tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
-
-            if (max_lh_slots == 0)
-                getMemoryRequired();
 
             uint64_t mem_size = ((uint64_t)max_lh_slots * block_size) + 4 + tip_partial_lh_size;
 
