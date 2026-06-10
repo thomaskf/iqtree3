@@ -2623,7 +2623,7 @@ void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
 
 /**
  * Smoothed Bootstrap Aggregation (SBA) for codon mixture models.
- * Lu & Goldman, MBE 33(11):2976-2986, 2016.
+ * Mingrone, Susko & Bielawski, MBE 33(11):2976-2989, 2016 (doi:10.1093/molbev/msw160).
  *
  * For each of B bootstrap replicates:
  *   1. Resample site patterns with replacement.
@@ -2889,7 +2889,7 @@ void printCodonMixtureRst(const char *filename, IQTree &iqtree,
         if (sba_mean_pw1 && sba_median_pw1 && !sba_mean_pw1->empty()) {
             out << endl << endl;
             out << "Smoothed Bootstrap Aggregation (SBA) analysis" << endl;
-            out << "(Lu & Goldman, MBE 33:2976-2986, 2016)" << endl << endl;
+            out << "(Mingrone, Susko & Bielawski, MBE 33(11):2976-2989, 2016)" << endl << endl;
 
             out << setw(6) << right << "Site" << " AA"
                 << "   NEB P(w>1)"
