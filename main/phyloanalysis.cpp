@@ -2634,6 +2634,53 @@ void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
  *
  * Returns per-site mean and median of the B posteriors.
  */
+// Draw smoothed mixture weights (Mingrone et al. 2016 / codeml_sba): uniform in [p +/- h] on the
+// simplex, keeping the replicate omegas. M2a/M3: classes 0..ncat-2 are free and the last absorbs the
+// remainder; a draw off the simplex is rejected (returns false). M8: only the omega>1 class is
+// smoothed, the tied Beta block shares the rest equally (always valid).
+static bool drawSmoothedWeights(const vector<double> &boot_weights,
+                                const vector<double> &boot_omegas,
+                                double h, int ncat, bool is_m8, vector<double> &w) {
+    if (is_m8) {
+        int ext = ncat - 1;
+        for (int c = 0; c < ncat; c++)
+            if (boot_omegas[c] > 1.0) { ext = c; break; }
+        double lo = boot_weights[ext] - h; if (lo < 0.0) lo = 0.0;
+        double hi = boot_weights[ext] + h; if (hi > 1.0) hi = 1.0;
+        double we = lo + random_double() * (hi - lo);
+        double share = (ncat > 1) ? (1.0 - we) / (ncat - 1) : 0.0;
+        for (int c = 0; c < ncat; c++) w[c] = (c == ext) ? we : share;
+        return true;
+    }
+    double sf = 0.0;
+    for (int c = 0; c < ncat - 1; c++) {
+        double lo = boot_weights[c] - h; if (lo < 0.0) lo = 0.0;
+        double hi = boot_weights[c] + h; if (hi > 1.0) hi = 1.0;
+        w[c] = lo + random_double() * (hi - lo);
+        sf += w[c];
+    }
+    if (sf > 1.0) return false;
+    w[ncat - 1] = 1.0 - sf;
+    return true;
+}
+
+// Accumulate per-pattern Pr(omega > 1) under weights w into acc[], using per-class likelihoods
+// lhcat[ptn*ncat + c] precomputed at uniform weights.
+static void addPosteriorOmegaGt1(const vector<double> &lhcat, const vector<double> &boot_omegas,
+                                 const vector<double> &w, int ncat, size_t nptn,
+                                 vector<double> &acc) {
+    for (size_t p = 0; p < nptn; p++) {
+        const double *lh0 = lhcat.data() + p * (size_t)ncat;
+        double num = 0.0, den = 0.0;
+        for (int c = 0; c < ncat; c++) {
+            double wlh = w[c] * lh0[c];
+            den += wlh;
+            if (boot_omegas[c] > 1.0) num += wlh;
+        }
+        acc[p] += (den > 0.0) ? num / den : 0.0;
+    }
+}
+
 void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
                                      ModelCodonMixture *codonMix,
                                      vector<double> &sba_mean_pw1,
@@ -2665,9 +2712,32 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     double orig_alpha = codonMix->alpha;
     double orig_beta = codonMix->beta;
 
-    // --- Allocate storage: B posteriors per site ---
-    // sba_pw1[b][s] = Pr(omega > 1 | x_s, theta_b)
+    // posteriors per replicate per site: sba_pw1[b][s] = Pr(omega > 1 | x_s, smoothed theta_b)
     vector<vector<double>> sba_pw1(B, vector<double>(nsite, 0.0));
+
+    double h = params.sba_bandwidth;
+    int    D = params.sba_smoothing_draws;
+    bool   is_m8 = (codonMix->cmix_subtype == "8");
+    vector<double> boot_omegas(ncat), boot_weights(ncat), wsm(ncat);
+    vector<double> lhcat(nptn * (size_t)ncat), ptn_acc(nptn);
+
+    // per-replicate parameter dump
+    string sba_param_file = string(params.out_prefix) + ".sba_params.tsv";
+    ofstream sba_param_out(sba_param_file.c_str());
+    sba_param_out << "replicate\tlogL\tkappa\talpha\tbeta";
+    for (int c = 0; c < ncat; c++) sba_param_out << "\tomega_" << c;
+    for (int c = 0; c < ncat; c++) sba_param_out << "\tweight_" << c;
+    sba_param_out << endl;
+    sba_param_out << setprecision(10);
+    // after-smoothing draws (one row per accepted draw)
+    string sba_sm_file = string(params.out_prefix) + ".sba_params_smoothed.tsv";
+    ofstream sba_sm_out(sba_sm_file.c_str());
+    sba_sm_out << "draw\torig_replicate\tlogL\tkappa\talpha\tbeta";
+    for (int c = 0; c < ncat; c++) sba_sm_out << "\tomega_" << c;
+    for (int c = 0; c < ncat; c++) sba_sm_out << "\tweight_" << c;
+    sba_sm_out << endl;
+    sba_sm_out << setprecision(10);
+    long sba_draw_id = 0;
 
     // --- SBA loop ---
     for (int b = 0; b < B; b++) {
@@ -2695,38 +2765,59 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
         iqtree.clearAllPartialLH();
 
         // (d) Re-estimate model params + branch lengths (fixed topology)
-        iqtree.getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, 0.1, 0.001);
+        double boot_logl = iqtree.getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, 0.1, 0.001);
 
-        // (e) Collect bootstrap MLEs (omegas may have changed)
-        vector<double> boot_omegas(ncat);
-        for (int c = 0; c < ncat; c++)
-            boot_omegas[c] = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
+        // bootstrap MLEs (omega + weight per class)
+        for (int c = 0; c < ncat; c++) {
+            boot_omegas[c]  = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
+            boot_weights[c] = codonMix->getMixtureWeight(c);
+        }
 
-        // (f) Restore original pattern frequencies (keep bootstrap model params)
+        // dump fitted parameters for this replicate
+        sba_param_out << (b+1) << '\t' << boot_logl << '\t'
+                      << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << '\t'
+                      << codonMix->alpha << '\t' << codonMix->beta;
+        for (int c = 0; c < ncat; c++) sba_param_out << '\t' << boot_omegas[c];
+        for (int c = 0; c < ncat; c++) sba_param_out << '\t' << boot_weights[c];
+        sba_param_out << endl;
+
+        // restore original pattern frequencies (keep bootstrap model params)
         for (size_t p = 0; p < nptn; p++)
             aln->at(p).frequency = orig_freq[p];
         iqtree.ptn_freq_computed = false;
         iqtree.clearAllPartialLH();
 
-        // (g) Compute per-pattern posteriors on original data using bootstrap MLEs
-        double *ptn_post = new double[nptn * (size_t)ncat];
-        iqtree.computePatternProbabilityCategory(ptn_post, WSL_MIXTURE);
+        // per-class likelihoods f(ptn|c) at uniform weights (weight-independent; 1/ncat cancels in the ratio)
+        for (int c = 0; c < ncat; c++) codonMix->setMixtureWeight(c, 1.0/ncat);
+        iqtree.computePatternLhCat(WSL_MIXTURE);
+        double *lhc = iqtree.getPatternLhCatPointer();
+        for (size_t k = 0; k < nptn*(size_t)ncat; k++) lhcat[k] = lhc[k];
 
-        // (h) Compute P(omega > 1) for each site
-        for (size_t s = 0; s < nsite; s++) {
-            int pid = aln->getPatternID(s);
-            double *pp = ptn_post + (size_t)pid * ncat;
-            double pw1 = 0.0;
-            for (int c = 0; c < ncat; c++) {
-                if (boot_omegas[c] > 1.0)
-                    pw1 += pp[c];
+        // average Pr(omega>1) over D smoothed-weight draws (draws off the simplex are skipped)
+        fill(ptn_acc.begin(), ptn_acc.end(), 0.0);
+        int naccept = 0;
+        for (int d = 0; d < D; d++)
+            if (drawSmoothedWeights(boot_weights, boot_omegas, h, ncat, is_m8, wsm)) {
+                addPosteriorOmegaGt1(lhcat, boot_omegas, wsm, ncat, nptn, ptn_acc);
+                naccept++;
+                sba_sm_out << (++sba_draw_id) << "\t" << (b+1) << "\t" << boot_logl << "\t"
+                           << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << "\t"
+                           << codonMix->alpha << "\t" << codonMix->beta;
+                for (int c = 0; c < ncat; c++) sba_sm_out << "\t" << boot_omegas[c];
+                for (int c = 0; c < ncat; c++) sba_sm_out << "\t" << wsm[c];
+                sba_sm_out << endl;
             }
-            sba_pw1[b][s] = pw1;
+        if (naccept == 0) {       // nothing landed on the simplex: use the unperturbed weights
+            addPosteriorOmegaGt1(lhcat, boot_omegas, boot_weights, ncat, nptn, ptn_acc);
+            naccept = 1;
         }
-        delete[] ptn_post;
+        for (size_t s = 0; s < nsite; s++)
+            sba_pw1[b][s] = ptn_acc[aln->getPatternID(s)] / naccept;
 
         cout << " done." << endl;
     }
+    sba_param_out.close();
+    sba_sm_out.close();
 
     // --- Restore original state completely ---
     for (size_t p = 0; p < nptn; p++)

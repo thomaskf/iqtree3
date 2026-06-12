@@ -3566,6 +3566,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of SBA replicates";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-sba_h") == 0 || strcmp(argv[cnt], "--sba_h") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --sba_h <bandwidth>";
+				params.sba_bandwidth = convert_double(argv[cnt]);
+				if (params.sba_bandwidth < 0 || params.sba_bandwidth > 1)
+					throw "SBA bandwidth must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-sba_draws") == 0 || strcmp(argv[cnt], "--sba_draws") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --sba_draws <num_draws>";
+				params.sba_smoothing_draws = convert_int(argv[cnt]);
+				if (params.sba_smoothing_draws < 1)
+					throw "Number of SBA smoothing draws must be at least 1";
+				continue;
+			}
 			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0 || strcmp(argv[cnt], "--sampling") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -7196,6 +7214,8 @@ void Params::setDefault() {
     gurobi_threads = 1;
     num_bootstrap_samples = 0;
     sba_replicates = 0;
+	sba_bandwidth = 0.4;
+	sba_smoothing_draws = 100;
     bootstrap_spec = nullptr;
     transfer_bootstrap = 0;
 
