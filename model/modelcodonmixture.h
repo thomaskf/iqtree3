@@ -31,6 +31,12 @@ public:
      */
     virtual ~ModelCodonMixture();
 
+    // accessors so the SBA driver can mirror the fitted model's optimisation state
+    bool getMultistartDone() const { return multistart_done; }
+    void setMultistartDone(bool v) { multistart_done = v; }
+    int getIterationNum() const { return iteration_num; }
+    void setIterationNum(int v) { iteration_num = v; }
+
     //shape parameters for the beta distribution (M7 and M8 model)
     double alpha;
     double beta;

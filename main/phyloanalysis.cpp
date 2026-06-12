@@ -59,6 +59,9 @@
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
 #include "model/modelcodonmixture.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include "model/modelfactorymixlen.h"
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
@@ -2640,14 +2643,15 @@ void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
 // smoothed, the tied Beta block shares the rest equally (always valid).
 static bool drawSmoothedWeights(const vector<double> &boot_weights,
                                 const vector<double> &boot_omegas,
-                                double h, int ncat, bool is_m8, vector<double> &w) {
+                                double h, int ncat, bool is_m8, vector<double> &w,
+                                int *rstream) {
     if (is_m8) {
         int ext = ncat - 1;
         for (int c = 0; c < ncat; c++)
             if (boot_omegas[c] > 1.0) { ext = c; break; }
         double lo = boot_weights[ext] - h; if (lo < 0.0) lo = 0.0;
         double hi = boot_weights[ext] + h; if (hi > 1.0) hi = 1.0;
-        double we = lo + random_double() * (hi - lo);
+        double we = lo + random_double(rstream) * (hi - lo);
         double share = (ncat > 1) ? (1.0 - we) / (ncat - 1) : 0.0;
         for (int c = 0; c < ncat; c++) w[c] = (c == ext) ? we : share;
         return true;
@@ -2656,7 +2660,7 @@ static bool drawSmoothedWeights(const vector<double> &boot_weights,
     for (int c = 0; c < ncat - 1; c++) {
         double lo = boot_weights[c] - h; if (lo < 0.0) lo = 0.0;
         double hi = boot_weights[c] + h; if (hi > 1.0) hi = 1.0;
-        w[c] = lo + random_double() * (hi - lo);
+        w[c] = lo + random_double(rstream) * (hi - lo);
         sf += w[c];
     }
     if (sf > 1.0) return false;
@@ -2681,8 +2685,118 @@ static void addPosteriorOmegaGt1(const vector<double> &lhcat, const vector<doubl
     }
 }
 
+// Independent per-thread worker (own alignment + tree/model) so replicates can't race.
+struct SBAWorker {
+    Alignment *aln;
+    IQTree *tree;
+    ModelCodonMixture *codonMix;
+    Checkpoint *checkpoint;
+};
+
+// Run SBA replicate b on worker w; per-replicate RNG seeded from ran_seed+2000000+b so
+// the result matches the serial path regardless of scheduling.
+static void runSBAReplicate(SBAWorker &w, int b, Params &params,
+                            const vector<int> &orig_freq, const DoubleVector &orig_bl,
+                            double orig_kappa, const vector<double> &orig_omegas,
+                            const vector<double> &orig_props, double orig_alpha, double orig_beta,
+                            double h, int D, int ncat, bool is_m8, size_t nptn, size_t nsite,
+                            vector<double> &out_pw1, string &param_row, string &sm_rows) {
+    Alignment *aln = w.aln;
+    IQTree *tree = w.tree;
+    ModelCodonMixture *codonMix = w.codonMix;
+
+    // (a) Restore original model params + branch lengths as starting point
+    tree->restoreBranchLengths(const_cast<DoubleVector&>(orig_bl));
+    for (int c = 0; c < ncat; c++) {
+        ((ModelCodon*)codonMix->getMixtureClass(c))->omega = orig_omegas[c];
+        ((ModelCodon*)codonMix->getMixtureClass(c))->kappa = orig_kappa;
+        codonMix->setMixtureWeight(c, orig_props[c]);
+    }
+    codonMix->alpha = orig_alpha;
+    codonMix->beta = orig_beta;
+    // rescale from the restored MLEs so each replicate starts identical (clears stale
+    // total_num_subst left by the previous replicate on this worker).
+    codonMix->rescale_codon_mix();
+
+    // per-replicate RNG stream (bootstrap + smoothing draws share it), matching serial
+    int *rstream;
+    init_random(params.ran_seed + 2000000 + b, false, &rstream);
+
+    // (b) Generate bootstrap pattern frequencies
+    int *boot_freq = new int[nptn];
+    aln->createBootstrapAlignment(boot_freq, nullptr, rstream);
+
+    // (c) Set bootstrap frequencies on the alignment
+    for (size_t p = 0; p < nptn; p++)
+        aln->at(p).frequency = boot_freq[p];
+    delete[] boot_freq;
+    tree->ptn_freq_computed = false;
+    tree->clearAllPartialLH();
+
+    // (d) Re-estimate model params + branch lengths (fixed topology)
+    double boot_logl = tree->getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, 0.1, 0.001);
+
+    vector<double> boot_omegas(ncat), boot_weights(ncat), wsm(ncat);
+    for (int c = 0; c < ncat; c++) {
+        boot_omegas[c]  = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
+        boot_weights[c] = codonMix->getMixtureWeight(c);
+    }
+
+    // dump fitted parameters for this replicate
+    {
+        ostringstream os; os << setprecision(10);
+        os << (b+1) << '\t' << boot_logl << '\t'
+           << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << '\t'
+           << codonMix->alpha << '\t' << codonMix->beta;
+        for (int c = 0; c < ncat; c++) os << '\t' << boot_omegas[c];
+        for (int c = 0; c < ncat; c++) os << '\t' << boot_weights[c];
+        os << endl;
+        param_row = os.str();
+    }
+
+    // restore original pattern frequencies (keep bootstrap model params)
+    for (size_t p = 0; p < nptn; p++)
+        aln->at(p).frequency = orig_freq[p];
+    tree->ptn_freq_computed = false;
+    tree->clearAllPartialLH();
+
+    // per-class likelihoods f(ptn|c) at uniform weights
+    for (int c = 0; c < ncat; c++) codonMix->setMixtureWeight(c, 1.0/ncat);
+    tree->computePatternLhCat(WSL_MIXTURE);
+    double *lhc = tree->getPatternLhCatPointer();
+    vector<double> lhcat(nptn * (size_t)ncat);
+    for (size_t k = 0; k < nptn*(size_t)ncat; k++) lhcat[k] = lhc[k];
+
+    // average Pr(omega>1) over D smoothed-weight draws (draws off the simplex are skipped)
+    vector<double> ptn_acc(nptn, 0.0);
+    int naccept = 0;
+    long local_draw = 0;
+    ostringstream sm; sm << setprecision(10);
+    for (int d = 0; d < D; d++)
+        if (drawSmoothedWeights(boot_weights, boot_omegas, h, ncat, is_m8, wsm, rstream)) {
+            addPosteriorOmegaGt1(lhcat, boot_omegas, wsm, ncat, nptn, ptn_acc);
+            naccept++;
+            sm << (++local_draw) << "\t" << (b+1) << "\t" << boot_logl << "\t"
+               << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << "\t"
+               << codonMix->alpha << "\t" << codonMix->beta;
+            for (int c = 0; c < ncat; c++) sm << "\t" << boot_omegas[c];
+            for (int c = 0; c < ncat; c++) sm << "\t" << wsm[c];
+            sm << endl;
+        }
+    sm_rows = sm.str();
+    if (naccept == 0) {       // nothing landed on the simplex: use the unperturbed weights
+        addPosteriorOmegaGt1(lhcat, boot_omegas, boot_weights, ncat, nptn, ptn_acc);
+        naccept = 1;
+    }
+    for (size_t s = 0; s < nsite; s++)
+        out_pw1[s] = ptn_acc[aln->getPatternID(s)] / naccept;
+
+    finish_random(rstream);
+}
+
 void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
                                      ModelCodonMixture *codonMix,
+                                     ModelsBlock *models_block,
                                      vector<double> &sba_mean_pw1,
                                      vector<double> &sba_median_pw1) {
     Alignment *aln = iqtree.aln;
@@ -2694,15 +2808,12 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     cout << endl << "Performing Smoothed Bootstrap Aggregation (SBA) with "
          << B << " replicates..." << endl;
 
-    // --- Save original state ---
-    // Pattern frequencies
+    // --- Save original state (the fitted MLEs from the main analysis) ---
     vector<int> orig_freq(nptn);
     for (size_t p = 0; p < nptn; p++)
         orig_freq[p] = aln->at(p).frequency;
-    // Branch lengths
     DoubleVector orig_bl;
     iqtree.saveBranchLengths(orig_bl);
-    // Model parameters: kappa, per-class omega, weights, alpha/beta
     double orig_kappa = ((ModelCodon*)codonMix->getMixtureClass(0))->kappa;
     vector<double> orig_omegas(ncat), orig_props(ncat);
     for (int c = 0; c < ncat; c++) {
@@ -2712,126 +2823,130 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     double orig_alpha = codonMix->alpha;
     double orig_beta = codonMix->beta;
 
-    // posteriors per replicate per site: sba_pw1[b][s] = Pr(omega > 1 | x_s, smoothed theta_b)
-    vector<vector<double>> sba_pw1(B, vector<double>(nsite, 0.0));
-
     double h = params.sba_bandwidth;
     int    D = params.sba_smoothing_draws;
     bool   is_m8 = (codonMix->cmix_subtype == "8");
-    vector<double> boot_omegas(ncat), boot_weights(ncat), wsm(ncat);
-    vector<double> lhcat(nptn * (size_t)ncat), ptn_acc(nptn);
 
-    // per-replicate parameter dump
+    // per-replicate result + output buffers (written out in b order after the loop)
+    vector<vector<double>> sba_pw1(B, vector<double>(nsite, 0.0));
+    vector<string> param_rows(B), sm_rows(B);
+
+    // Decide path: parallelize over replicates only when B > nthreads.
+    int nthreads = params.num_threads;
+    if (nthreads < 1) nthreads = 1;
+    bool parallel = (B > nthreads);
+    int npool = parallel ? min(nthreads, B) : 1;
+
+    string contree = iqtree.getTreeString();
+
+    // --- Build a pool of independent workers (own alignment + own tree/model) ---
+    vector<SBAWorker> pool(npool);
+    for (int t = 0; t < npool; t++) {
+        Alignment *acopy = new Alignment;
+        acopy->copyAlignment(aln);
+        IQTree *wt = new IQTree(acopy);
+        wt->setParams(&params);
+        Checkpoint *cp = new Checkpoint;
+        wt->setCheckpoint(cp);
+        wt->num_precision = iqtree.num_precision;
+        wt->readTreeString(contree);
+        wt->setRootNode(params.root);
+        wt->setModelFactory(new ModelFactory(params, acopy->model_name, wt, models_block));
+        wt->setModel(wt->getModelFactory()->model);
+        wt->setRate(wt->getModelFactory()->site_rate);
+        wt->getModelFactory()->setCheckpoint(cp);
+        wt->setLikelihoodKernel(params.SSE);
+        wt->setNumThreads(parallel ? 1 : nthreads);
+        wt->initializeAllPartialLh();
+        ModelCodonMixture *wm = dynamic_cast<ModelCodonMixture*>(wt->getModel());
+        ASSERT(wm != NULL);
+        // mirror the fitted model's flags so each replicate does a single local
+        // optimisation from the MLE (a fresh worker would re-run the multistart).
+        wm->setMultistartDone(codonMix->getMultistartDone());
+        wm->setIterationNum(codonMix->getIterationNum());
+        wm->fix_alpha = codonMix->fix_alpha;
+        wm->fix_beta = codonMix->fix_beta;
+        pool[t].aln = acopy;
+        pool[t].tree = wt;
+        pool[t].codonMix = wm;
+        pool[t].checkpoint = cp;
+    }
+
+    if (parallel) {
+#ifdef _OPENMP
+        // inner likelihood single-threaded, no nested parallelism (deterministic reductions)
+        int saved_levels = omp_get_max_active_levels();
+        int saved_dynamic = omp_get_dynamic();
+        omp_set_max_active_levels(1);
+        omp_set_dynamic(0);
+        #pragma omp parallel for schedule(static) num_threads(npool)
+#endif
+        for (int b = 0; b < B; b++) {
+            int t = 0;
+#ifdef _OPENMP
+            t = omp_get_thread_num();
+#endif
+            runSBAReplicate(pool[t], b, params, orig_freq, orig_bl, orig_kappa,
+                            orig_omegas, orig_props, orig_alpha, orig_beta,
+                            h, D, ncat, is_m8, nptn, nsite,
+                            sba_pw1[b], param_rows[b], sm_rows[b]);
+#ifdef _OPENMP
+            #pragma omp critical (sba_progress)
+#endif
+            { cout << "  SBA replicate " << (b+1) << "/" << B << " done." << endl; }
+        }
+#ifdef _OPENMP
+        omp_set_max_active_levels(saved_levels);
+        omp_set_dynamic(saved_dynamic);
+        omp_set_num_threads(nthreads);
+#endif
+    } else {
+        for (int b = 0; b < B; b++) {
+            cout << "  SBA replicate " << (b+1) << "/" << B << "..." << flush;
+            runSBAReplicate(pool[0], b, params, orig_freq, orig_bl, orig_kappa,
+                            orig_omegas, orig_props, orig_alpha, orig_beta,
+                            h, D, ncat, is_m8, nptn, nsite,
+                            sba_pw1[b], param_rows[b], sm_rows[b]);
+            cout << " done." << endl;
+        }
+    }
+
+    // --- Write per-replicate dumps in b order ---
     string sba_param_file = string(params.out_prefix) + ".sba_params.tsv";
     ofstream sba_param_out(sba_param_file.c_str());
     sba_param_out << "replicate\tlogL\tkappa\talpha\tbeta";
     for (int c = 0; c < ncat; c++) sba_param_out << "\tomega_" << c;
     for (int c = 0; c < ncat; c++) sba_param_out << "\tweight_" << c;
     sba_param_out << endl;
-    sba_param_out << setprecision(10);
-    // after-smoothing draws (one row per accepted draw)
+    for (int b = 0; b < B; b++) sba_param_out << param_rows[b];
+    sba_param_out.close();
+
     string sba_sm_file = string(params.out_prefix) + ".sba_params_smoothed.tsv";
     ofstream sba_sm_out(sba_sm_file.c_str());
     sba_sm_out << "draw\torig_replicate\tlogL\tkappa\talpha\tbeta";
     for (int c = 0; c < ncat; c++) sba_sm_out << "\tomega_" << c;
     for (int c = 0; c < ncat; c++) sba_sm_out << "\tweight_" << c;
     sba_sm_out << endl;
-    sba_sm_out << setprecision(10);
     long sba_draw_id = 0;
-
-    // --- SBA loop ---
     for (int b = 0; b < B; b++) {
-        cout << "  SBA replicate " << (b+1) << "/" << B << "..." << flush;
-
-        // (a) Restore original model params + branch lengths as starting point
-        iqtree.restoreBranchLengths(orig_bl);
-        for (int c = 0; c < ncat; c++) {
-            ((ModelCodon*)codonMix->getMixtureClass(c))->omega = orig_omegas[c];
-            ((ModelCodon*)codonMix->getMixtureClass(c))->kappa = orig_kappa;
-            codonMix->setMixtureWeight(c, orig_props[c]);
+        // re-number the global draw id column in b order to match the serial output
+        istringstream is(sm_rows[b]);
+        string line;
+        while (getline(is, line)) {
+            size_t tab = line.find('\t');
+            sba_sm_out << (++sba_draw_id) << line.substr(tab) << endl;
         }
-        codonMix->alpha = orig_alpha;
-        codonMix->beta = orig_beta;
-
-        // (b) Generate bootstrap pattern frequencies
-        IntVector boot_freq;
-        init_random(params.ran_seed + 2000000 + b);
-        aln->createBootstrapAlignment(boot_freq, nullptr);
-
-        // (c) Set bootstrap frequencies on the alignment
-        for (size_t p = 0; p < nptn; p++)
-            aln->at(p).frequency = boot_freq[p];
-        iqtree.ptn_freq_computed = false;
-        iqtree.clearAllPartialLH();
-
-        // (d) Re-estimate model params + branch lengths (fixed topology)
-        double boot_logl = iqtree.getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, 0.1, 0.001);
-
-        // bootstrap MLEs (omega + weight per class)
-        for (int c = 0; c < ncat; c++) {
-            boot_omegas[c]  = ((ModelCodon*)codonMix->getMixtureClass(c))->omega;
-            boot_weights[c] = codonMix->getMixtureWeight(c);
-        }
-
-        // dump fitted parameters for this replicate
-        sba_param_out << (b+1) << '\t' << boot_logl << '\t'
-                      << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << '\t'
-                      << codonMix->alpha << '\t' << codonMix->beta;
-        for (int c = 0; c < ncat; c++) sba_param_out << '\t' << boot_omegas[c];
-        for (int c = 0; c < ncat; c++) sba_param_out << '\t' << boot_weights[c];
-        sba_param_out << endl;
-
-        // restore original pattern frequencies (keep bootstrap model params)
-        for (size_t p = 0; p < nptn; p++)
-            aln->at(p).frequency = orig_freq[p];
-        iqtree.ptn_freq_computed = false;
-        iqtree.clearAllPartialLH();
-
-        // per-class likelihoods f(ptn|c) at uniform weights (weight-independent; 1/ncat cancels in the ratio)
-        for (int c = 0; c < ncat; c++) codonMix->setMixtureWeight(c, 1.0/ncat);
-        iqtree.computePatternLhCat(WSL_MIXTURE);
-        double *lhc = iqtree.getPatternLhCatPointer();
-        for (size_t k = 0; k < nptn*(size_t)ncat; k++) lhcat[k] = lhc[k];
-
-        // average Pr(omega>1) over D smoothed-weight draws (draws off the simplex are skipped)
-        fill(ptn_acc.begin(), ptn_acc.end(), 0.0);
-        int naccept = 0;
-        for (int d = 0; d < D; d++)
-            if (drawSmoothedWeights(boot_weights, boot_omegas, h, ncat, is_m8, wsm)) {
-                addPosteriorOmegaGt1(lhcat, boot_omegas, wsm, ncat, nptn, ptn_acc);
-                naccept++;
-                sba_sm_out << (++sba_draw_id) << "\t" << (b+1) << "\t" << boot_logl << "\t"
-                           << ((ModelCodon*)codonMix->getMixtureClass(0))->kappa << "\t"
-                           << codonMix->alpha << "\t" << codonMix->beta;
-                for (int c = 0; c < ncat; c++) sba_sm_out << "\t" << boot_omegas[c];
-                for (int c = 0; c < ncat; c++) sba_sm_out << "\t" << wsm[c];
-                sba_sm_out << endl;
-            }
-        if (naccept == 0) {       // nothing landed on the simplex: use the unperturbed weights
-            addPosteriorOmegaGt1(lhcat, boot_omegas, boot_weights, ncat, nptn, ptn_acc);
-            naccept = 1;
-        }
-        for (size_t s = 0; s < nsite; s++)
-            sba_pw1[b][s] = ptn_acc[aln->getPatternID(s)] / naccept;
-
-        cout << " done." << endl;
     }
-    sba_param_out.close();
     sba_sm_out.close();
 
-    // --- Restore original state completely ---
-    for (size_t p = 0; p < nptn; p++)
-        aln->at(p).frequency = orig_freq[p];
-    iqtree.ptn_freq_computed = false;
-    iqtree.restoreBranchLengths(orig_bl);
-    for (int c = 0; c < ncat; c++) {
-        ((ModelCodon*)codonMix->getMixtureClass(c))->omega = orig_omegas[c];
-        ((ModelCodon*)codonMix->getMixtureClass(c))->kappa = orig_kappa;
-        codonMix->setMixtureWeight(c, orig_props[c]);
+    // --- Tear down workers ---
+    for (int t = 0; t < npool; t++) {
+        Alignment *acopy = pool[t].aln;
+        Checkpoint *cp = pool[t].checkpoint;
+        delete pool[t].tree;
+        delete acopy;
+        delete cp;
     }
-    codonMix->alpha = orig_alpha;
-    codonMix->beta = orig_beta;
-    iqtree.clearAllPartialLH();
 
     // --- Aggregate: compute mean and median per site ---
     sba_mean_pw1.resize(nsite);
@@ -3130,8 +3245,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
                 }
             }
             if (run_sba) {
+                ModelsBlock *sba_models_block = readModelsDefinition(params);
                 runSmoothedBootstrapAggregation(params, iqtree, codonMix,
-                                               sba_mean, sba_median);
+                                               sba_models_block, sba_mean, sba_median);
+                delete sba_models_block;
             }
             string rst_file = (string)params.out_prefix + ".rst";
             printCodonMixtureRst(rst_file.c_str(), iqtree, codonMix,
