@@ -714,7 +714,7 @@ Alignment *Alignment::removeAndFillUpGappySites() const {
     return aln;
 }
 
-Alignment *Alignment::removeGappySeq() {
+Alignment *Alignment::removeGappySeq(bool showMsg) {
     size_t nseq = getNSeq();
     IntVector kept_seqs;
     for (size_t seq = 0; seq < nseq; ++seq) {
@@ -733,7 +733,8 @@ Alignment *Alignment::removeGappySeq() {
             }
         }
     }
-    Alignment *aln = extractSubAlignment(kept_seqs, 0);
+    sort(kept_seqs.begin(), kept_seqs.end());
+    Alignment *aln = extractSubAlignment(kept_seqs, 0, 0, nullptr, showMsg);
     return aln;
 }
 
@@ -3637,7 +3638,7 @@ Alignment *Alignment::initAlignmentCopy() const {
 
 Alignment* Alignment::extractSubAlignment(const IntVector &seq_id,
                                           int min_true_chars, int,
-                                          IntVector *kept_partitions) const {
+                                          IntVector *kept_partitions, bool showMsg) const {
     Alignment* aln = initAlignmentCopy();
     aln->seq_names.clear();
     for (IntVector::const_iterator it = seq_id.begin(); it != seq_id.end(); ++it) {
@@ -3677,7 +3678,7 @@ Alignment* Alignment::extractSubAlignment(const IntVector &seq_id,
             siteMod = 0;
         }
     }
-    progress.done();
+    progress.done(showMsg);
     aln->updateConstPatterns();
     aln->countConstSites();
     ASSERT(aln->size() <= size());

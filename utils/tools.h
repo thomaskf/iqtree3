@@ -1041,6 +1041,9 @@ public:
 
     /** use logarithm of rates for clustering algorithm */
     bool partfinder_log_rate;
+
+    /** use mAIC as partition merging criterion */
+    bool marginal_lh_aic;
     
     /************************************************/
     /******* variables for Terrace analysis *********/

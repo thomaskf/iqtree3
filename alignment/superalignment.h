@@ -57,10 +57,12 @@ public:
     void readFromParams(Params &params);
     
     /**
-     initialize seq_names, taxon_index, buildPattern
+    * initialize seq_names, taxon_index, buildPattern
+    * @ param sequence_names vector of sequence names
+    * @param keep_order true to keep sequence order to original aln, false to use sequence_names order
      */
-    virtual void init(StrVector *sequence_names = nullptr);
-
+    virtual void init(StrVector *sequence_names = nullptr, bool keep_order = false);
+    
     /** return that this is a super-alignment structure */
     virtual bool isSuperAlignment() const { return true; }
 

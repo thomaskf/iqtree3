@@ -4539,13 +4539,21 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -merit AIC|AICC|BIC";
-                if (strcmp(argv[cnt], "AIC") == 0)
+                if (strcmp(argv[cnt], "AIC") == 0) {
                     params.model_test_criterion = MTC_AIC;
-                else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
+                } else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0) {
                     params.model_test_criterion = MTC_AICC;
-                else if (strcmp(argv[cnt], "BIC") == 0)
+                } else if (strcmp(argv[cnt], "BIC") == 0) {
                     params.model_test_criterion = MTC_BIC;
-                else throw "Use -merit AIC|AICC|BIC";
+                } else if (strcmp(argv[cnt], "mAIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_AIC;
+                } else if (strcmp(argv[cnt], "mAIC+BIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_BIC;
+                } else {
+                    throw "Use -merit AIC|AICC|BIC";
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ms") == 0) {
@@ -7238,7 +7246,7 @@ void Params::setDefault() {
     iqp_assess_quartet = IQP_DISTANCE;
     iqp = false;
     write_intermediate_trees = 0;
-//    avoid_duplicated_trees = false;
+    //    avoid_duplicated_trees = false;
     writeDistImdTrees = false;
     rf_dist_mode = 0;
     rf_same_pair = false;
@@ -7347,7 +7355,7 @@ void Params::setDefault() {
     reinsert_par = false;
     bestStart = true;
     snni = true; // turn on sNNI default now
-//    autostop = true; // turn on auto stopping rule by default now
+    //    autostop = true; // turn on auto stopping rule by default now
     unsuccess_iteration = 100;
     speednni = true; // turn on reduced hill-climbing NNI by default now
     numInitTrees = 100;
@@ -7358,7 +7366,7 @@ void Params::setDefault() {
     tabu = false;
     adaptPertubation = false;
     numSupportTrees = 20;
-//    sprDist = 20;
+    //    sprDist = 20;
     sprDist = 6;
     sankoff_cost_file = nullptr;
     numNNITrees = 20;
@@ -7371,7 +7379,7 @@ void Params::setDefault() {
     num_threads_max = 10000;
     openmp_by_model = false;
     model_test_criterion = MTC_BIC;
-//    model_test_stop_rule = MTC_ALL;
+    //    model_test_stop_rule = MTC_ALL;
     model_test_sample_size = 0;
     root_state = nullptr;
     print_bootaln = false;
@@ -7540,7 +7548,7 @@ void Params::setDefault() {
     mutation_file = "";
     site_starting_index = 0;
     mr_bayes_output = false; //merged from 19b1fdc
-    
+
     // ----------- SPRTA ----------
     compute_SPRTA = false;
     SPRTA_zero_branches = false;
