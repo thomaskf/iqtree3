@@ -2911,6 +2911,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.contain_nonrev = true;
                 continue;
             }
+            if (strcmp(argv[cnt], "--no-mAIC") == 0 || strcmp(argv[cnt], "-no-mAIC") == 0) {
+                params.skip_marginal_lh = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--models") == 0 || strcmp(argv[cnt], "-mexchange") == 0 || strcmp(argv[cnt], "--mexchange") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
@@ -7217,6 +7221,7 @@ void Params::setDefault() {
     num_runs = 1;
     model_name = "";
     contain_nonrev = false;
+    skip_marginal_lh = false;
     model_name_init = nullptr;
     model_opt_steps = 10;
     model_set = "ALL";

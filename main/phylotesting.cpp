@@ -1501,7 +1501,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
             "option --use-nn-model is set to " << params.use_nn_model << endl;
-            Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+            Alignment *alignment;
+            Alignment *trimmed_aln = iqtree.aln->removeAndFillUpGappySites();
+            alignment = trimmed_aln->replaceAmbiguousChars();
+            delete trimmed_aln;
             NeuralNetwork nn(alignment);
             iqtree.aln->model_name = nn.doModelInference();
             best_subst_name = iqtree.aln->model_name;
@@ -2946,7 +2949,10 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 cout << "Using NN" << endl;
                 // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
                 // determine substitution model using neural network
-                Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars(); // todo: here
+                Alignment *alignment;
+                Alignment *trimmed_aln = in_tree->aln->removeAndFillUpGappySites();
+                alignment = trimmed_aln->replaceAmbiguousChars(); // todo: here
+                delete trimmed_aln;
                 NeuralNetwork nn(alignment);
                 string model_name = nn.doModelInference(); // todo: here
                 string rate_name = "";
@@ -6822,7 +6828,6 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
     double best_score_AIC, best_score_AICc, best_score_BIC;
     // Store the information of (k-1)-class models. Once (k-1)-class is better then k-class, the (k-1)-class models will be printed out as the global best.
     string best_model_AIC_pre, best_model_AICc_pre, best_model_BIC_pre, best_model_list_pre;
-    string best_score_AIC_pre, best_score_AICc_pre, best_score_BIC_pre, best_tree_AIC_pre, best_tree_AICc_pre, best_tree_BIC_pre;
 
     Checkpoint *checkpoint;
     int ssize;
@@ -6890,17 +6895,10 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
 
-    ASSERT(model_info.getString("best_model_AIC", best_model_AIC_pre));
-    ASSERT(model_info.getString("best_model_AICc", best_model_AICc_pre));
-    ASSERT(model_info.getString("best_model_BIC", best_model_BIC_pre));
-    ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_list_pre));
-    ASSERT(model_info.getString("best_score_AIC", best_score_AIC_pre));
-    ASSERT(model_info.getString("best_score_AICc", best_score_AICc_pre));
-    ASSERT(model_info.getString("best_score_BIC", best_score_BIC_pre));
-    ASSERT(model_info.getString("best_tree_AIC", best_tree_AIC_pre));
-    ASSERT(model_info.getString("best_tree_AICc", best_tree_AICc_pre));
-    ASSERT(model_info.getString("best_tree_BIC", best_tree_BIC_pre));
-
+    model_info.getString("best_model_AIC", best_model_AIC_pre);
+    model_info.getString("best_model_AICc", best_model_AICc_pre);
+    model_info.getString("best_model_BIC", best_model_BIC_pre);
+    model_info.getString("best_model_list_" + criteria_str, best_model_list_pre);
 
     // Step 3: keep adding a new class until no further improvement
     if (params.opt_qmix_criteria == 1) {
@@ -6932,16 +6930,10 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
             curr_score = best_model.getScore();
             model_str = best_subst_name;
 
-            ASSERT(model_info.getString("best_model_AIC", best_model_AIC_pre));
-            ASSERT(model_info.getString("best_model_AICc", best_model_AICc_pre));
-            ASSERT(model_info.getString("best_model_BIC", best_model_BIC_pre));
-            ASSERT(model_info.getString("best_model_list_" + criteria_str, best_model_list_pre));
-            ASSERT(model_info.getString("best_score_AIC", best_score_AIC_pre));
-            ASSERT(model_info.getString("best_score_AICc", best_score_AICc_pre));
-            ASSERT(model_info.getString("best_score_BIC", best_score_BIC_pre));
-            ASSERT(model_info.getString("best_tree_AIC", best_tree_AIC_pre));
-            ASSERT(model_info.getString("best_tree_AICc", best_tree_AICc_pre));
-            ASSERT(model_info.getString("best_tree_BIC", best_tree_BIC_pre));
+            model_info.getString("best_model_AIC", best_model_AIC_pre);
+            model_info.getString("best_model_AICc", best_model_AICc_pre);
+            model_info.getString("best_model_BIC", best_model_BIC_pre);
+            model_info.getString("best_model_list_" + criteria_str, best_model_list_pre);
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
 
@@ -6949,12 +6941,6 @@ double runMixtureFinderMain(Params &params, IQTree* &iqtree, ModelCheckpoint &mo
     model_info.put("best_model_AICc", best_model_AICc_pre);
     model_info.put("best_model_BIC", best_model_BIC_pre);
     model_info.put("best_model_list_" + criteria_str, best_model_list_pre);
-    model_info.put("best_score_AIC", best_score_AIC_pre);
-    model_info.put("best_score_AICc", best_score_AICc_pre);
-    model_info.put("best_score_BIC", best_score_BIC_pre);
-    model_info.put("best_tree_AIC", best_tree_AIC_pre);
-    model_info.put("best_tree_AICc", best_tree_AICc_pre);
-    model_info.put("best_tree_BIC", best_tree_BIC_pre);
     
     best_subst_name = model_str;
     if (params.optimize_from_given_params == false)

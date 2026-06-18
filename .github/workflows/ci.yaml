@@ -14,24 +14,31 @@ concurrency:
 
 jobs:
   build-linux-x86-64:
-    name: Linux x86-64 clang-${{ matrix.clang-version }} cmake-${{ matrix.cmake-version }}
+    name: Linux x86-64
     runs-on: ubuntu-22.04
+    env:
+      # Disable glibc tcache to make peak RSS deterministic across runs.
+      GLIBC_TUNABLES: glibc.malloc.tcache_count=0
     strategy:
       fail-fast: false
       matrix:
         include:
-          - clang-version: 13
-            cmake-version: 3.14.7
-            upload: true
-          - clang-version: 15
+          - clang-version: 22
             cmake-version: latest
-            upload: false
+            upload: true
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: "recursive"
+
+      - name: Add LLVM apt repository
+        if: matrix.clang-version >= 16
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.clang-version }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -q -y
 
       - name: Install dependencies
         run: |
