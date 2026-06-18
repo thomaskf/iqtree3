@@ -2685,6 +2685,21 @@ static void addPosteriorOmegaGt1(const vector<double> &lhcat, const vector<doubl
     }
 }
 
+// per-site per-class posterior w[k]*lh[k]/sum_j w[j]*lh[j], one row per site
+static void writePerSitePosterior(ostringstream &os, const string &keycols, Alignment *aln,
+                                  const vector<double> &lhcat, const vector<double> &w,
+                                  int ncat, size_t nsite) {
+    for (size_t s = 0; s < nsite; s++) {
+        const double *lh0 = lhcat.data() + (size_t)aln->getPatternID(s) * (size_t)ncat;
+        double den = 0.0;
+        for (int c = 0; c < ncat; c++) den += w[c] * lh0[c];
+        os << keycols << (s+1);
+        for (int c = 0; c < ncat; c++)
+            os << '\t' << ((den > 0.0) ? w[c] * lh0[c] / den : 0.0);
+        os << endl;
+    }
+}
+
 // Independent per-thread worker (own alignment + tree/model) so replicates can't race.
 struct SBAWorker {
     Alignment *aln;
@@ -2700,7 +2715,8 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
                             double orig_kappa, const vector<double> &orig_omegas,
                             const vector<double> &orig_props, double orig_alpha, double orig_beta,
                             double h, int D, int ncat, bool is_m8, size_t nptn, size_t nsite,
-                            vector<double> &out_pw1, string &param_row, string &sm_rows) {
+                            vector<double> &out_pw1, string &param_row, string &sm_rows,
+                            string &persite_row, string &persite_sm_rows) {
     Alignment *aln = w.aln;
     IQTree *tree = w.tree;
     ModelCodonMixture *codonMix = w.codonMix;
@@ -2767,11 +2783,20 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
     vector<double> lhcat(nptn * (size_t)ncat);
     for (size_t k = 0; k < nptn*(size_t)ncat; k++) lhcat[k] = lhc[k];
 
+    // before-smoothing per-site posteriors (replicate MLE weights)
+    {
+        ostringstream ps; ps << setprecision(10);
+        ostringstream key; key << (b+1) << '\t';
+        writePerSitePosterior(ps, key.str(), aln, lhcat, boot_weights, ncat, nsite);
+        persite_row = ps.str();
+    }
+
     // average Pr(omega>1) over D smoothed-weight draws (draws off the simplex are skipped)
     vector<double> ptn_acc(nptn, 0.0);
     int naccept = 0;
     long local_draw = 0;
     ostringstream sm; sm << setprecision(10);
+    ostringstream pssm; pssm << setprecision(10);   // after-smoothing per-site posteriors
     for (int d = 0; d < D; d++)
         if (drawSmoothedWeights(boot_weights, boot_omegas, h, ncat, is_m8, wsm, rstream)) {
             addPosteriorOmegaGt1(lhcat, boot_omegas, wsm, ncat, nptn, ptn_acc);
@@ -2782,8 +2807,11 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
             for (int c = 0; c < ncat; c++) sm << "\t" << boot_omegas[c];
             for (int c = 0; c < ncat; c++) sm << "\t" << wsm[c];
             sm << endl;
+            ostringstream key; key << local_draw << '\t' << (b+1) << '\t';
+            writePerSitePosterior(pssm, key.str(), aln, lhcat, wsm, ncat, nsite);
         }
     sm_rows = sm.str();
+    persite_sm_rows = pssm.str();
     if (naccept == 0) {       // nothing landed on the simplex: use the unperturbed weights
         addPosteriorOmegaGt1(lhcat, boot_omegas, boot_weights, ncat, nptn, ptn_acc);
         naccept = 1;
@@ -2830,6 +2858,7 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     // per-replicate result + output buffers (written out in b order after the loop)
     vector<vector<double>> sba_pw1(B, vector<double>(nsite, 0.0));
     vector<string> param_rows(B), sm_rows(B);
+    vector<string> persite_rows(B), persite_sm_rows(B);
 
     // Decide path: parallelize over replicates only when B > nthreads.
     int nthreads = params.num_threads;
@@ -2889,7 +2918,8 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
             runSBAReplicate(pool[t], b, params, orig_freq, orig_bl, orig_kappa,
                             orig_omegas, orig_props, orig_alpha, orig_beta,
                             h, D, ncat, is_m8, nptn, nsite,
-                            sba_pw1[b], param_rows[b], sm_rows[b]);
+                            sba_pw1[b], param_rows[b], sm_rows[b],
+                            persite_rows[b], persite_sm_rows[b]);
 #ifdef _OPENMP
             #pragma omp critical (sba_progress)
 #endif
@@ -2906,7 +2936,8 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
             runSBAReplicate(pool[0], b, params, orig_freq, orig_bl, orig_kappa,
                             orig_omegas, orig_props, orig_alpha, orig_beta,
                             h, D, ncat, is_m8, nptn, nsite,
-                            sba_pw1[b], param_rows[b], sm_rows[b]);
+                            sba_pw1[b], param_rows[b], sm_rows[b],
+                            persite_rows[b], persite_sm_rows[b]);
             cout << " done." << endl;
         }
     }
@@ -2938,6 +2969,34 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
         }
     }
     sba_sm_out.close();
+
+    // before-smoothing per-site per-class posteriors
+    string sba_ps_file = string(params.out_prefix) + ".sba_persite.tsv";
+    ofstream sba_ps_out(sba_ps_file.c_str());
+    sba_ps_out << "replicate\tsite";
+    for (int c = 0; c < ncat; c++) sba_ps_out << "\tP_class_" << c;
+    sba_ps_out << endl;
+    for (int b = 0; b < B; b++) sba_ps_out << persite_rows[b];
+    sba_ps_out.close();
+
+    // after-smoothing per-site posteriors (draw id renumbered like smoothed params)
+    string sba_pssm_file = string(params.out_prefix) + ".sba_persite_smoothed.tsv";
+    ofstream sba_pssm_out(sba_pssm_file.c_str());
+    sba_pssm_out << "draw\torig_replicate\tsite";
+    for (int c = 0; c < ncat; c++) sba_pssm_out << "\tP_class_" << c;
+    sba_pssm_out << endl;
+    long sba_ps_draw_id = 0;
+    for (int b = 0; b < B; b++) {
+        istringstream is(persite_sm_rows[b]);
+        string line, prev_local;
+        while (getline(is, line)) {
+            size_t t1 = line.find('\t');
+            string local_id = line.substr(0, t1);   // local draw id within this replicate
+            if (local_id != prev_local) { sba_ps_draw_id++; prev_local = local_id; }
+            sba_pssm_out << sba_ps_draw_id << line.substr(t1) << endl;
+        }
+    }
+    sba_pssm_out.close();
 
     // --- Tear down workers ---
     for (int t = 0; t < npool; t++) {
