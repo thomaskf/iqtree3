@@ -6288,8 +6288,3 @@ void runRootstrap(Params &params) {
     cout << getRealTime() - start_time << " sec" << endl;
 
 }
-
-void runModelTamerAnalysis(Params &params, Checkpoint *checkpoint) {
-    // TODO: implement ModelTamer analysis
-    outError("ModelTamer analysis is not yet implemented");
-}
