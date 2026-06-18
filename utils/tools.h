@@ -1769,31 +1769,6 @@ public:
     bool check_combin_q_mat;
 
     /**
-            % of distinct site pattern required in a sample.
-            if model_tamer < 100, do ModelTamer subsample-upsampling.
-     */
-    double model_tamer;
-
-    /**
-        Only do ModelTamer, without downstream analyses.
-    */
-    int model_tamer_only;
-    /**
-            ModelTamer subsampling time.
-     */
-    int model_tamer_sub;
-
-    /**
-            ModelTamer upsampling time.
-     */
-    int model_tamer_up;
-
-    /**
-            ModelTamer subsampling method.
-     */
-    int model_tamer_method;
-
-    /**
             shape parameter (alpha) of the Gamma distribution for site rates
      */
     double gamma_shape;

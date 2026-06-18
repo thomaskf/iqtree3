@@ -2584,8 +2584,6 @@ int main(int argc, char *argv[]) {
         tree->gen_all_nni_trees();
     } else if (Params::getInstance().terrace_analysis) { /**Olga: Terrace analysis*/
         runterraceanalysis(Params::getInstance());
-    } else if (Params::getInstance().model_tamer < 100) {
-        createSUAlignment(Params::getInstance());
     } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
                Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
     {

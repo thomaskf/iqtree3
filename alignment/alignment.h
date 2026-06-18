@@ -1122,7 +1122,4 @@ private:
  */
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
 
-/***/
-void createSUAlignment(Params &params);
-
 #endif
