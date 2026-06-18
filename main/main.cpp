@@ -64,6 +64,7 @@
 #include "utils/operatingsystem.h" //for getOSName()
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
+#include "alignment/alignment.h"
 
 #include "utils/MPIHelper.h"
 

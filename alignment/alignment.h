@@ -541,9 +541,10 @@ public:
      *  Extract sequences that are not gap-only into a new alignment.
      *  Metadata are copied.
      *  Site order is preserved
+     * @param showMsg show extracting information in log file
      *  @return this if no gap-only sequences found or the new alignment
      */
-    Alignment *removeGappySeq();
+    Alignment *removeGappySeq(bool showMsg = true);
 
     /**
      *  @param seq Sequence index
@@ -568,10 +569,11 @@ public:
      *  @param min_taxa (for SuperAlignment only)
      *  @param[out] kept_partitions Zero id only if a simple alignment is kept,
      *                              ids of kept partitions for a superalignment
+     *  @param showMsg show extracting information in log file
      *  @return The new alignment or nullptr if no sequences extracted
      */
     virtual Alignment *extractSubAlignment(const IntVector &seq_id,
-        int min_true_chars, int min_taxa = 0, IntVector *kept_partitions = nullptr) const;
+        int min_true_chars, int min_taxa = 0, IntVector *kept_partitions = nullptr, bool showMsg = true) const;
 
     /**
      *  Extract given patterns with original frequencies into a new alignment.
@@ -1119,6 +1121,5 @@ private:
  @param model_name model name
  */
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
-
 
 #endif
