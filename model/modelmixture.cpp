@@ -4177,6 +4177,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (step = 0; step < optimize_steps; step++) {
         // first compute _pattern_lh_cat
+        phylo_tree->clearAllPartialLH();
         score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
 
         if (score < prev_score + gradient_epsilon)
@@ -4254,6 +4255,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
 
             if (c>0 && !Params::getInstance().optimize_linked_gtr) {
                 // compute _pattern_lh_cat
+                phylo_tree->clearAllPartialLH();
                 phylo_tree->computePatternLhCat(WSL_MIXTURE);
                 // update the posterior probabilities of each category
                 for (ptn = 0; ptn < nptn; ptn++) {
