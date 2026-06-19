@@ -4607,11 +4607,11 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 #ifdef _OPENMP
     if (!params->model_test_and_tree) {
         if (params->parallel_over_sites)
-            cout << "In ModelFinder: parallelization over sites" << endl;
+            cout << "ModelFinder will parallelize likelihood calculation over sites" << endl;
         else if (params->parallel_round_robin)
-            cout << "In ModelFinder: round-robin thread distribution across partitions" << endl;
+            cout << "ModelFinder will allocate partition-specific threads based on partition sizes" << endl;
         else
-            cout << "In ModelFinder: assigning threads per partition" << endl;
+            cout << "ModelFinder will allocate partition-specific threads based on partition sizes" << endl;
     }
 #endif
 
