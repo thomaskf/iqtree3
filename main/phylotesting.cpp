@@ -201,6 +201,9 @@ const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV", "FLAVI"};
 /* Additional names/alias for Protein models (provided by Robert McArthur)*/
 const char *aa_model_names_additional[] = {"EAL", "ELM", "Poisson"};
 
+/* 3Di structural-alphabet models (SEQ_3DI) */
+const char* di3_model_names[] = {"FOLDSEEK", "GH3DI_AF", "GH3DI_LLM"};
+
 /* Protein frequency set */
 const char* aa_freq_names[] = {"", "+F"}; // default
 const char* aa_freq_names_complete[] = {"", "+F", "C10", "C20", "C30", "C40", "C50", "C60"}; // complete
@@ -238,6 +241,7 @@ string getSeqTypeName(SeqType seq_type) {
         case SEQ_BINARY: return "binary";
         case SEQ_DNA: return "DNA";
         case SEQ_PROTEIN: return "protein";
+        case SEQ_3DI: return "3Di";
         case SEQ_CODON: return "codon";
         case SEQ_MORPH: return "morphological";
         case SEQ_POMO: return "PoMo";
@@ -263,6 +267,7 @@ string getUsualModelSubst(SeqType seq_type) {
         case SEQ_BINARY: return bin_usual_model;
         case SEQ_MORPH: return morph_usual_model;
         case SEQ_POMO: return pomo_usual_model;
+        case SEQ_3DI: return "FOLDSEEK";
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
@@ -579,7 +584,14 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             if (std_genetic_code[i]) empirical_model = true;
             break;
         }
-    
+    copyCString(di3_model_names, sizeof(di3_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_3DI;
+            empirical_model = true;
+            break;
+        }
+
     // Consider other model alias
     // Currently only apply when running AliSim to avoid causing bugs to other features
     if (Params::getInstance().alisim_active)
@@ -617,6 +629,7 @@ string convertSeqTypeToSeqTypeName(SeqType seq_type)
     case SEQ_MORPH: return "MORPH"; break;
     case SEQ_DNA: return "DNA"; break;
     case SEQ_PROTEIN: return "AA"; break;
+    case SEQ_3DI: return "3DI"; break;
     case SEQ_CODON: return "CODON"; break;
     default: break;
     }
@@ -1123,6 +1136,15 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             }
         }
 
+    } else if (seq_type == SEQ_3DI) {
+        if (model_set.empty()) {
+            copyCString(di3_model_names, sizeof(di3_model_names) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(di3_model_names, sizeof(di3_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
     } else if (seq_type == SEQ_CODON) {
         if (model_set.empty()) {
             if (standard_code)
@@ -1205,6 +1227,7 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
 				copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
 				break;
 			case SEQ_PROTEIN:
+			case SEQ_3DI:
 				copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
 				break;
 			case SEQ_CODON:

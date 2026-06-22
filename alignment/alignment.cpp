@@ -32,6 +32,7 @@
 using namespace Eigen;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
+char symbols_3di[]     = "ACDEFGHIKLMNPQRSTVWYX"; // 3Di structural alphabet, X for unknown
 char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
 //char symbols_binary[]  = "01";
@@ -1044,6 +1045,9 @@ void Alignment::computeUnknownState() {
     case SEQ_PROTEIN:
         STATE_UNKNOWN = 23;
         return;
+    case SEQ_3DI:
+        STATE_UNKNOWN = 20; // no ambiguous states in 3Di
+        return;
     case SEQ_POMO:
         if (pomo_sampling_method != SAMPLING_SAMPLED) {
             STATE_UNKNOWN = 0xffffffff; // only dummy, will be initialized later
@@ -1716,6 +1720,12 @@ void Alignment::buildStateMap(char *map) const {
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
         map[(unsigned char)'O'] = STATE_UNKNOWN; // 22nd amino acid
         return;
+    case SEQ_3DI:
+        for (int i = 0; i < 20; ++i) {
+            map[(int)symbols_3di[i]] = i;
+        }
+        map[(int)symbols_3di[20]] = STATE_UNKNOWN; // X
+        return;
     case SEQ_MULTISTATE:
         for (int i = 0; i < STATE_UNKNOWN; ++i) {
             map[i] = i;
@@ -1828,6 +1838,17 @@ StateType Alignment::convertState(char state, SeqType seq_type) {
         } else {
             return STATE_UNKNOWN;
         }
+    case SEQ_3DI: // 3Di structural alphabet
+        loc = strchr(symbols_3di, state);
+        if (!loc) {
+            return STATE_INVALID; // unrecognize character
+        }
+        state = loc - symbols_3di;
+        if (state < 20) {
+            return state;
+        } else {
+            return STATE_UNKNOWN;
+        }
     case SEQ_MORPH: // Standard morphological character
         loc = strchr(symbols_morph, state);
 
@@ -1911,6 +1932,12 @@ char Alignment::convertStateBack(char state) {
                 return 'J';
             //		else if (state == 4+8+19) return 'B';
             //		else if (state == 32+64+19) return 'Z';
+            } else {
+                return '-';
+            }
+        case SEQ_3DI: // 3Di structural alphabet
+            if (state < 20) {
+                return symbols_3di[(int)state];
             } else {
                 return '-';
             }
@@ -2059,6 +2086,8 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
         user_seq_type = SEQ_PROTEIN;
     } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
         user_seq_type = SEQ_PROTEIN;
+    } else if (strcmp(sequence_type, "3DI") == 0 || strcmp(sequence_type, "3di") == 0) {
+        user_seq_type = SEQ_3DI;
     } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
         user_seq_type = SEQ_MORPH;
     } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
@@ -2079,6 +2108,9 @@ string Alignment::getSeqTypeStr(SeqType sequence_type) {
         break;
     case SEQ_PROTEIN:
         return "PROT";
+        break;
+    case SEQ_3DI:
+        return "3DI";
         break;
     case SEQ_MORPH:
         return "MORPH";
@@ -2166,6 +2198,9 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
             num_states = 20;
             user_seq_type = SEQ_PROTEIN;
+        } else if (strcmp(sequence_type, "3DI") == 0 || strcmp(sequence_type, "3di") == 0) {
+            num_states = 20;
+            user_seq_type = SEQ_3DI;
         } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
             num_states = getMorphStates(sequences);
             user_seq_type = SEQ_MORPH;
@@ -3521,6 +3556,7 @@ void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
         case SEQ_MULTISTATE:
             out << "standard"; break;
         case SEQ_PROTEIN:
+        case SEQ_3DI:
             out << "protein"; break;
         default:
             outError("Unspported datatype for NEXUS file");
