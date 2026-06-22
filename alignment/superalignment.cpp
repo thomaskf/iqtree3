@@ -27,6 +27,13 @@
 #include "utils/timeutil.h" //for getRealTime()
 
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name) {
+    // a 3Di model implies the 3Di data type
+    if ((!sequence_type || sequence_type[0] == 0) && !model_name.empty()) {
+        SeqType detected;
+        detectSeqType(model_name.substr(0, model_name.find('+')).c_str(), detected);
+        if (detected == SEQ_3DI)
+            sequence_type = "3DI";
+    }
     bool is_dir = isDirectory(aln_file.c_str());
     bool is_list = strchr(aln_file.c_str(), ',');
     if (!is_dir && !is_list) {
