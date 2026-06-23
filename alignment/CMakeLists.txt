@@ -4,6 +4,7 @@ substitution.cpp
 pattern.cpp
 pattern.h
 alignment.cpp
+alphabet_classifier.cpp alphabet_classifier.h
 alignment.h
 alignmentpairwise.cpp
 alignmentpairwise.h

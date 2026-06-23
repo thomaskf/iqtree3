@@ -11,6 +11,7 @@
 //
 #include "utils/tools.h"
 #include "alignment.h"
+#include "alphabet_classifier.h"
 #include "nclextra/myreader.h"
 #include <numeric>
 #include <sstream>
@@ -2193,6 +2194,9 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     }
     /* now check data type */
     seq_type = detectSequenceType(sequences);
+    // classify protein-letter data as protein / 3Di / TEA
+    if (seq_type == SEQ_PROTEIN)
+        seq_type = classifyProteinLikeAlphabet(sequences);
     switch (seq_type) {
     case SEQ_BINARY:
         num_states = 2;
@@ -2205,6 +2209,14 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     case SEQ_PROTEIN:
         num_states = 20;
         cout << "Alignment most likely contains protein sequences" << endl;
+        break;
+    case SEQ_3DI:
+        num_states = 20;
+        cout << "Alignment classified as 3Di structural data" << endl;
+        break;
+    case SEQ_TEA:
+        num_states = 20;
+        cout << "Alignment classified as TEA structural data" << endl;
         break;
     case SEQ_MORPH:
         num_states = getMorphStates(sequences);
