@@ -2373,6 +2373,9 @@ public:
     */
     char *tree_freq_file;
 
+    /** classify amino-acid-letter data as protein/3Di/TEA, print the type, and exit */
+    bool classify_protein;
+
     /** number of threads for OpenMP version     */
     int num_threads;
 

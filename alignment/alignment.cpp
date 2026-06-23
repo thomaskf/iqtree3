@@ -2230,6 +2230,10 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             throw "Unknown sequence type";
         }
     }
+    if (Params::getInstance().classify_protein) {
+        cout << "Data type: " << getSeqTypeStr(seq_type) << endl;
+        exit(EXIT_SUCCESS);
+    }
     bool nt2aa = false;
     if (sequence_type && strcmp(sequence_type,"") != 0) {
         SeqType user_seq_type;

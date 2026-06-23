@@ -3747,6 +3747,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "--classify-protein") == 0) {
+				params.classify_protein = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-asr-min") == 0 || strcmp(argv[cnt], "--asr-min") == 0) {
                 cnt++;
 				if (cnt >= argc)
@@ -7299,6 +7304,7 @@ void Params::setDefault() {
     print_site_rate = 0;
     print_trees_site_posterior = 0;
     print_ancestral_sequence = AST_NONE;
+    classify_protein = false;
     min_ancestral_prob = 0.0;
     print_tree_lh = false;
     lambda = 1;
