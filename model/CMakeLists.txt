@@ -6,6 +6,7 @@ modeldnaerror.cpp modeldnaerror.h
 modelfactory.cpp modelfactory.h
 modelprotein.cpp modelprotein.h
 model3di.cpp model3di.h
+modeltea.cpp modeltea.h
 modelset.cpp modelset.h
 modelsubst.cpp modelsubst.h
 partitionmodel.cpp partitionmodel.h

@@ -10,6 +10,7 @@
 #include "modeldnaerror.h"
 #include "modelprotein.h"
 #include "model3di.h"
+#include "modeltea.h"
 #include "modelbin.h"
 #include "modelcodon.h"
 #include "modelmorphology.h"
@@ -3258,6 +3259,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 		model = new ModelProtein(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
 	} else if (tree->aln->seq_type == SEQ_3DI) {
 		model = new Model3Di(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
+	} else if (tree->aln->seq_type == SEQ_TEA) {
+		model = new ModelTea(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
 	} else if (tree->aln->seq_type == SEQ_CODON) {
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else if (tree->aln->seq_type == SEQ_MORPH) {

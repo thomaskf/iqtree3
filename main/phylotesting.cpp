@@ -204,6 +204,9 @@ const char *aa_model_names_additional[] = {"EAL", "ELM", "Poisson"};
 /* 3Di structural-alphabet models (SEQ_3DI) */
 const char* di3_model_names[] = {"FOLDSEEK", "GH3DI_AF", "GH3DI_LLM"};
 
+/* TEA structural-alphabet models (SEQ_TEA) */
+const char* tea_model_names[] = {"TEA"};
+
 /* Protein frequency set */
 const char* aa_freq_names[] = {"", "+F"}; // default
 const char* aa_freq_names_complete[] = {"", "+F", "C10", "C20", "C30", "C40", "C50", "C60"}; // complete
@@ -242,6 +245,7 @@ string getSeqTypeName(SeqType seq_type) {
         case SEQ_DNA: return "DNA";
         case SEQ_PROTEIN: return "protein";
         case SEQ_3DI: return "3Di";
+        case SEQ_TEA: return "TEA";
         case SEQ_CODON: return "codon";
         case SEQ_MORPH: return "morphological";
         case SEQ_POMO: return "PoMo";
@@ -268,6 +272,7 @@ string getUsualModelSubst(SeqType seq_type) {
         case SEQ_MORPH: return morph_usual_model;
         case SEQ_POMO: return pomo_usual_model;
         case SEQ_3DI: return "FOLDSEEK";
+        case SEQ_TEA: return "TEA";
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
@@ -591,6 +596,13 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             empirical_model = true;
             break;
         }
+    copyCString(tea_model_names, sizeof(tea_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_TEA;
+            empirical_model = true;
+            break;
+        }
 
     // Consider other model alias
     // Currently only apply when running AliSim to avoid causing bugs to other features
@@ -630,6 +642,7 @@ string convertSeqTypeToSeqTypeName(SeqType seq_type)
     case SEQ_DNA: return "DNA"; break;
     case SEQ_PROTEIN: return "AA"; break;
     case SEQ_3DI: return "3DI"; break;
+    case SEQ_TEA: return "TEA"; break;
     case SEQ_CODON: return "CODON"; break;
     default: break;
     }
@@ -1145,6 +1158,15 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         } else {
             convert_string_vec(model_set.c_str(), model_names);
         }
+    } else if (seq_type == SEQ_TEA) {
+        if (model_set.empty()) {
+            copyCString(tea_model_names, sizeof(tea_model_names) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(tea_model_names, sizeof(tea_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
     } else if (seq_type == SEQ_CODON) {
         if (model_set.empty()) {
             if (standard_code)
@@ -1228,6 +1250,7 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
 				break;
 			case SEQ_PROTEIN:
 			case SEQ_3DI:
+			case SEQ_TEA:
 				copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
 				break;
 			case SEQ_CODON:

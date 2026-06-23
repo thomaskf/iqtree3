@@ -26,6 +26,7 @@
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "model3di.h"
+#include "modeltea.h"
 #include "modelbin.h"
 #include "modelcodon.h"
 #include "modelmorphology.h"
@@ -128,6 +129,19 @@ ModelsBlock *readModelsDefinition(Params &params) {
         ASSERT(0 && "predefined 3Di models not initialized");
     }
 
+    try
+    {
+        // loading internal TEA model definitions
+        stringstream in(builtin_tea_models);
+        ASSERT(in && "stringstream is OK");
+        NxsReader nexus;
+        nexus.Add(models_block);
+        MyToken token(in);
+        nexus.Execute(token);
+    } catch (...) {
+        ASSERT(0 && "predefined TEA models not initialized");
+    }
+
     if (params.model_def_file) {
         cout << "Reading model definition file " << params.model_def_file << " ... ";
         MyReader nexus(params.model_def_file);
@@ -181,6 +195,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
         else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
         else if (tree->aln->seq_type == SEQ_3DI) model_str = "FOLDSEEK";
+        else if (tree->aln->seq_type == SEQ_TEA) model_str = "TEA";
         else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
         else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
         else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
@@ -452,6 +467,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
         case SEQ_PROTEIN: break; // let ModelProtein decide by itself
         case SEQ_3DI: break; // let Model3Di decide by itself
+        case SEQ_TEA: break; // let ModelTea decide by itself
         case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
         case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
             break;

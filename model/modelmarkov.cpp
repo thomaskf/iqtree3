@@ -202,7 +202,7 @@ string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str) 
     switch(freq_type) {
     case FREQ_UNKNOWN:    return("");
     case FREQ_USER_DEFINED:
-        if (seq_type == SEQ_PROTEIN || seq_type == SEQ_3DI)
+        if (seq_type == SEQ_PROTEIN || seq_type == SEQ_3DI || seq_type == SEQ_TEA)
             return "";
         else
             return "+FU";

@@ -272,6 +272,7 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
     case SEQ_DNA: out << "nucleotide"; break;
     case SEQ_PROTEIN: out << "amino-acid"; break;
     case SEQ_3DI: out << "3Di structural"; break;
+    case SEQ_TEA: out << "TEA structural"; break;
     case SEQ_CODON: out << "codon"; break;
     case SEQ_MORPH: out << "morphological"; break;
     case SEQ_POMO: out << "PoMo"; break;
@@ -1505,6 +1506,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 case SEQ_MULTISTATE: out << "MULTI"; break;
                 case SEQ_PROTEIN: out << "AA"; break;
                 case SEQ_3DI: out << "3DI"; break;
+                case SEQ_TEA: out << "TEA"; break;
                 case SEQ_POMO: out << "POMO"; break;
                 case SEQ_UNKNOWN: out << "???"; break;
                 }
