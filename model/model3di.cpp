@@ -1,7 +1,8 @@
 #include "model3di.h"
 
-/* 3Di empirical models (NEXUS block), in Foldseek/FoldBeast symbol order:
-   A C D E F G H I K L M N P Q R S T V W Y */
+/* 3Di empirical models (NEXUS block), verbatim from FoldBeast / Garg-Hochberg
+   (FoldSeek, GHMatrixAF, GHMatrixLLM) in amino-acid order ARNDCQEGHILKMFPSTWYV
+   -- symbols_3di follows the same order. */
 const char* builtin_3di_models = R"(
 #nexus;
 

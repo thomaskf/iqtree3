@@ -32,7 +32,7 @@
 using namespace Eigen;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
-char symbols_3di[]     = "ACDEFGHIKLMNPQRSTVWYX"; // 3Di structural alphabet, X for unknown
+char symbols_3di[]     = "ARNDCQEGHILKMFPSTWYVX"; // 3Di structural alphabet (amino-acid order, matches the matrices), X for unknown
 char symbols_dna[]     = "ACGT";
 char symbols_rna[]     = "ACGU";
 //char symbols_binary[]  = "01";
