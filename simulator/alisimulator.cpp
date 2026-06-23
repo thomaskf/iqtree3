@@ -402,6 +402,8 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
         tree->aln->num_states = 4;
         break;
     case SEQ_PROTEIN:
+    case SEQ_3DI:
+    case SEQ_TEA:
         tree->aln->num_states = 20;
         break;
     case SEQ_MORPH:
