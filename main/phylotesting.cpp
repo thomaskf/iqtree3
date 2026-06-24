@@ -205,7 +205,7 @@ const char *aa_model_names_additional[] = {"EAL", "ELM", "Poisson"};
 const char* di3_model_names[] = {"FOLDSEEK", "GH3DI_AF", "GH3DI_LLM"};
 
 /* TEA structural-alphabet models (SEQ_TEA) */
-const char* tea_model_names[] = {"TEA"};
+const char* tea_model_names[] = {"TEA", "TEAv2", "TEAv3"};
 
 /* Protein frequency set */
 const char* aa_freq_names[] = {"", "+F"}; // default
