@@ -2862,7 +2862,7 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
     int ori_seq_length = node_seq_chunk.size();
     Insertion* insertion_before_simulation = latest_insertion;
     
-    double branch_length = (*it)->length * params->alisim_branch_scale;
+    double branch_length = (*it)->length * params->alisim_branch_scale * partition_rate;
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
