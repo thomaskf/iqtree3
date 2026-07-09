@@ -150,7 +150,11 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             pat.resize(current_tree->aln->getNSeq(), current_tree->aln->STATE_UNKNOWN);
             pat.frequency = expected_num_states_current_tree;
             current_tree->aln->addPattern(pat);
-            
+            // update num_variant_sites/num_informative_sites to match the fake pattern just added;
+            // orderPatternByNumChars() (called inside initializeModel() below) sizes its internal
+            // buffer off these counts, and a mismatch here overflows that buffer
+            current_tree->aln->countConstSites();
+
             // initialize the model for the current partition
             initializeModel(current_tree, current_tree->aln->model_name);
             
