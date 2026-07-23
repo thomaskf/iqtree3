@@ -1948,6 +1948,7 @@ public:
     int sba_replicates;
     double sba_bandwidth;
     int sba_smoothing_draws;
+    bool sba_persite;   // output the per-site per-class posterior files (off by default)
 
     /** bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
         to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk

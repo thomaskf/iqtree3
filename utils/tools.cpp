@@ -3584,6 +3584,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Number of SBA smoothing draws must be at least 1";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-sba_persite") == 0 || strcmp(argv[cnt], "--sba_persite") == 0) {
+				params.sba_persite = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "--bsam") == 0 || strcmp(argv[cnt], "-bsam") == 0 || strcmp(argv[cnt], "--sampling") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -7216,6 +7220,7 @@ void Params::setDefault() {
     sba_replicates = 0;
 	sba_bandwidth = 0.4;
 	sba_smoothing_draws = 100;
+	sba_persite = false;
     bootstrap_spec = nullptr;
     transfer_bootstrap = 0;
 

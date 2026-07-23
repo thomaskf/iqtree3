@@ -2785,7 +2785,7 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
     for (size_t k = 0; k < nptn*(size_t)ncat; k++) lhcat[k] = lhc[k];
 
     // before-smoothing per-site posteriors (replicate MLE weights)
-    {
+    if (params.sba_persite) {
         ostringstream ps; ps << setprecision(10);
         ostringstream key; key << (b+1) << '\t';
         writePerSitePosterior(ps, key.str(), aln, lhcat, boot_weights, ncat, nsite);
@@ -2809,8 +2809,10 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
             for (int c = 0; c < ncat; c++) sm << "\t" << boot_omegas[c];
             for (int c = 0; c < ncat; c++) sm << "\t" << wsm[c];
             sm << endl;
-            ostringstream key; key << local_draw << '\t' << (b+1) << '\t';
-            writePerSitePosterior(pssm, key.str(), aln, lhcat, wsm, ncat, nsite);
+            if (params.sba_persite) {
+                ostringstream key; key << local_draw << '\t' << (b+1) << '\t';
+                writePerSitePosterior(pssm, key.str(), aln, lhcat, wsm, ncat, nsite);
+            }
         }
     sm_rows = sm.str();
     persite_sm_rows = pssm.str();
@@ -2972,6 +2974,7 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     }
     sba_sm_out.close();
 
+    if (params.sba_persite) {   // per-site posterior files are opt-in
     // before-smoothing per-site per-class posteriors
     string sba_ps_file = string(params.out_prefix) + ".sba_persite.tsv.gz";
     ogzstream sba_ps_out(sba_ps_file.c_str());
@@ -2999,6 +3002,7 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
         }
     }
     sba_pssm_out.close();
+    }   // end if (params.sba_persite)
 
     // --- Tear down workers ---
     for (int t = 0; t < npool; t++) {
