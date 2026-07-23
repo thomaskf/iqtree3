@@ -51,6 +51,7 @@
 #include "model/modelbin.h"
 #include "model/modelcodon.h"
 #include "utils/stoprule.h"
+#include "utils/gzstream.h"
 
 #include "tree/mtreeset.h"
 #include "tree/mexttree.h"
@@ -2972,8 +2973,8 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     sba_sm_out.close();
 
     // before-smoothing per-site per-class posteriors
-    string sba_ps_file = string(params.out_prefix) + ".sba_persite.tsv";
-    ofstream sba_ps_out(sba_ps_file.c_str());
+    string sba_ps_file = string(params.out_prefix) + ".sba_persite.tsv.gz";
+    ogzstream sba_ps_out(sba_ps_file.c_str());
     sba_ps_out << "replicate\tsite";
     for (int c = 0; c < ncat; c++) sba_ps_out << "\tP_class_" << c;
     sba_ps_out << endl;
@@ -2981,8 +2982,8 @@ void runSmoothedBootstrapAggregation(Params &params, IQTree &iqtree,
     sba_ps_out.close();
 
     // after-smoothing per-site posteriors (draw id renumbered like smoothed params)
-    string sba_pssm_file = string(params.out_prefix) + ".sba_persite_smoothed.tsv";
-    ofstream sba_pssm_out(sba_pssm_file.c_str());
+    string sba_pssm_file = string(params.out_prefix) + ".sba_persite_smoothed.tsv.gz";
+    ogzstream sba_pssm_out(sba_pssm_file.c_str());
     sba_pssm_out << "draw\torig_replicate\tsite";
     for (int c = 0; c < ncat; c++) sba_pssm_out << "\tP_class_" << c;
     sba_pssm_out << endl;
