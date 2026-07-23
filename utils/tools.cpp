@@ -7219,7 +7219,7 @@ void Params::setDefault() {
     num_bootstrap_samples = 0;
     sba_replicates = 0;
 	sba_bandwidth = 0.4;
-	sba_smoothing_draws = 100;
+	sba_smoothing_draws = 1;
 	sba_persite = false;
     bootstrap_spec = nullptr;
     transfer_bootstrap = 0;
