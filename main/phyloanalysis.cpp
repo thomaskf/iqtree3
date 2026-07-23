@@ -2791,13 +2791,14 @@ static void runSBAReplicate(SBAWorker &w, int b, Params &params,
         persite_row = ps.str();
     }
 
-    // average Pr(omega>1) over D smoothed-weight draws (draws off the simplex are skipped)
+    // average Pr(omega>1) over D smoothed-weight draws; resample until exactly D land on the simplex
     vector<double> ptn_acc(nptn, 0.0);
     int naccept = 0;
     long local_draw = 0;
     ostringstream sm; sm << setprecision(10);
     ostringstream pssm; pssm << setprecision(10);   // after-smoothing per-site posteriors
-    for (int d = 0; d < D; d++)
+    long attempts = 0, max_attempts = (long)D * 100;   // guard against a pathological accept rate
+    while (naccept < D && attempts++ < max_attempts)
         if (drawSmoothedWeights(boot_weights, boot_omegas, h, ncat, is_m8, wsm, rstream)) {
             addPosteriorOmegaGt1(lhcat, boot_omegas, wsm, ncat, nptn, ptn_acc);
             naccept++;
