@@ -299,6 +299,9 @@ void ModelMarkov::getNameParamsFreq(ostream &retname) {
         return;
     if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
         (freq_type == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+        // honor -prec so the written frequencies reproduce the fitted likelihood on reload
+        if (Params::getInstance().numeric_precision > 0)
+            retname.precision(Params::getInstance().numeric_precision);
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];

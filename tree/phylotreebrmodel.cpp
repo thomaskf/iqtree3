@@ -205,6 +205,10 @@ void PhyloTreeBranchModel::getRootFrequency(double *state_freq) {
     @return number of branch models, default: 1
 */
 int PhyloTreeBranchModel::getNumBrModel() {
+    // br_models is built in initializeModel(), which runs AFTER ModelFinder's RAM
+    // estimate. Until then, derive the count from the tree.
+    if (br_models == NULL)
+        return numBranchModels();
     return br_models->size();
 }
 

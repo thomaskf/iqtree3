@@ -2759,6 +2759,12 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
             }
         }
             
+        if (isBranchModel()) {
+            // tree-scalar lh is anchor-dependent for non-stationary models;
+            // read the buffer at the root edge so it matches computeLikelihood()
+            current_it = (PhyloNeighbor*)root->neighbors[0];
+            current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(root);
+        }
         double new_tree_lh = computeLikelihoodFromBuffer();
         //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
 

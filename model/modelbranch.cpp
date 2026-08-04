@@ -159,11 +159,15 @@ string ModelBranch::getNameParams(bool show_fixed_params) {
         if (!(*it)->fixed_parameters && (*it)->freq_type == FREQ_USER_DEFINED
             && (*it)->phylo_tree->aln->seq_type == SEQ_PROTEIN) {
             retname += "+F{";
+            // honor -prec so the written frequencies reproduce the fitted likelihood on reload
+            ostringstream fs;
+            if (Params::getInstance().numeric_precision > 0)
+                fs.precision(Params::getInstance().numeric_precision);
             for (int i = 0; i < (*it)->num_states; i++) {
-                if (i) retname += ",";
-                retname += convertDoubleToString((*it)->state_freq[i]);
+                if (i) fs << ",";
+                fs << (*it)->state_freq[i];
             }
-            retname += "}";
+            retname += fs.str() + "}";
         }
     }
     retname += CLOSE_BRACKET;
