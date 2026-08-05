@@ -4653,7 +4653,7 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         //manually set these params for the restartParameters method; TODO: properly fix this -JD
         if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
             for(int i=1; i<=ndim; i++){
-                bound_check[i] = true;
+                bound_check[i] = Params::getInstance().optimize_restart;
                 upper_bound[i] = 100;
             }
         }
@@ -4673,7 +4673,7 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
                 int m = (*it)->getNDim();
                 (*it)->freq_type=freq;
                 for(int i=1; i<=m; i++){
-                    bound_check[i] = true;
+                    bound_check[i] = Params::getInstance().optimize_restart;
                     upper_bound[i] = 100;
                 }
             }

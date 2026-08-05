@@ -1706,6 +1706,15 @@ public:
     /** minimal state frequency for optimisation, default=0.0001 */
     double min_state_freq;
 
+    /** lower bound for exchangeability-rate estimation, default=0.0001 */
+    double min_rate_exchange;
+
+    /** upper bound for exchangeability-rate estimation, default=100 */
+    double max_rate_exchange;
+
+    /** restart optimization at a parameter boundary (protein mixture), default=true */
+    bool optimize_restart;
+
 
     /**
             the number of rate categories

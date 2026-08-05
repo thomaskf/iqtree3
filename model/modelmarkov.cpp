@@ -1122,7 +1122,7 @@ bool ModelMarkov::isUnstableParameters() {
 	int i;
     // NOTE: zero rates are not consider unstable anymore
     for (i = 0; i < nrates; i++) {
-        if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE * 0.99) {
+        if (rates[i] > Params::getInstance().max_rate_exchange * 0.99) {
             return true;
         }
     }
@@ -1143,8 +1143,8 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 
     for (i = 1; i <= ndim; i++) {
 	//cout << variables[i] << endl;
-	lower_bound[i] = MIN_RATE;
-	upper_bound[i] = MAX_RATE;
+	lower_bound[i] = Params::getInstance().min_rate_exchange;
+	upper_bound[i] = Params::getInstance().max_rate_exchange;
 	bound_check[i] = false;
     }
 

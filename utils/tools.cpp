@@ -3165,6 +3165,33 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--min-rate-exchange") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --min-rate-exchange NUM";
+                params.min_rate_exchange = convert_double(argv[cnt]);
+                if (params.min_rate_exchange <= 0)
+                    throw "--min-rate-exchange must be positive";
+                if (params.min_rate_exchange >= 1.0)
+                    throw "--min-rate-exchange must be < 1.0";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--max-rate-exchange") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --max-rate-exchange NUM";
+                params.max_rate_exchange = convert_double(argv[cnt]);
+                if (params.max_rate_exchange <= 1.0)
+                    throw "--max-rate-exchange must be > 1.0";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--no-opt-restart") == 0) {
+                params.optimize_restart = false;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--inc-zero-freq") == 0) {
                 params.keep_zero_freq = false;
                 continue;
@@ -7227,6 +7254,9 @@ void Params::setDefault() {
     freq_type = FREQ_UNKNOWN;
     keep_zero_freq = true;
     min_state_freq = MIN_FREQUENCY;
+    min_rate_exchange = 1e-4;
+    max_rate_exchange = 100;
+    optimize_restart = true;
     min_rate_cats = 2;
     num_rate_cats = 4;
     max_rate_cats = 10;
