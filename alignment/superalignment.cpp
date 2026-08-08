@@ -592,6 +592,16 @@ void SuperAlignment::readPartitionNexus(const Params &params) {
                     outError("No input data for partition ", (*it)->name);
                 }
             }
+            // a file-based charset may store its datatype as "file: TYPE" (no range,
+            // e.g. "file: 3DI"), leaving TYPE (e.g. "3DI") in position_spec instead of
+            // sequence_type; move it across so it is not mis-parsed as a site range
+            // ("3DI" -> "Expecting integer, but found DI")
+            if (!(*it)->aln_file.empty() && (*it)->sequence_type.empty()
+                && !(*it)->position_spec.empty()
+                && Alignment::getSeqType((*it)->position_spec.c_str()) != SEQ_UNKNOWN) {
+                (*it)->sequence_type = (*it)->position_spec;
+                (*it)->position_spec.clear();
+            }
             if ((*it)->model_name == "") {
                 (*it)->model_name = params.model_name;
             }

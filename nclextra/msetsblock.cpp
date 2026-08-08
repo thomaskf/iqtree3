@@ -214,7 +214,7 @@ void MSetsBlock::Read(NxsToken &token)
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
 				string charset_name;
-				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
+				token.SetLabileFlagBit(NxsToken::preserveUnderscores + NxsToken::hyphenNotPunctuation);
 				token.GetNextToken();
 				charset_name = token.GetToken();
 				CharSet *myset = findCharSet(charset_name);
@@ -229,6 +229,7 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->char_partition = partition_name;
 				token.GetNextToken();
                 if (token.Equals("{")) {
+                    token.SetLabileFlagBit(NxsToken::hyphenNotPunctuation);
                     token.GetNextToken();
                     myset->tree_len = convert_double(token.GetToken().c_str());
                     token.GetNextToken();
