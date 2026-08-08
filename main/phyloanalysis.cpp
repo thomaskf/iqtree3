@@ -498,7 +498,7 @@ void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
         }
         out << endl << endl;
         out.unsetf(ios_base::fixed);
-    } else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+    } else if ((aln->seq_type == SEQ_PROTEIN || aln->seq_type == SEQ_3DI || aln->seq_type == SEQ_TEA) && m->getNDim() > 20) {
         ASSERT(m->num_states == 20);
         double full_mat[400];
 
@@ -625,7 +625,7 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
         //if (tree.aln->num_states > 4)
         out << endl;
         out.unsetf(ios_base::fixed);
-    } else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+    } else if ((aln->seq_type == SEQ_PROTEIN || aln->seq_type == SEQ_3DI || aln->seq_type == SEQ_TEA) && m->getNDim() > 20) {
         ASSERT(m->num_states == 20);
         out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
         double full_mat[400];
