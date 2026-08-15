@@ -930,7 +930,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
     if (hmm_mode)
-        out << "HMM-MAST Model" << endl;
+        out << "=== HMM-MAST Model ===" << endl;
     out << "Log-likelihood of the tree: " << fixed << tree_lh;
     if (lh_variance > 0.0)
         out << " (s.e. " << sqrt(lh_variance) << ")";
