@@ -3323,15 +3323,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.HMM_no_avg_brlen = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-tmix_opt_method") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -tmix_opt_method <hmm/hmm2mast/mast2hmm/mast>";
-                params.treemix_optimize_methods = argv[cnt];
-                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 && strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0 && strcmp(argv[cnt], "hmast") != 0)
-                    throw "Wrong value for -tmix_opt_method";
-                continue;
-            }
 			if (strcmp(argv[cnt], "-brent") == 0) {
 				params.optimize_by_newton = false;
 				continue;
