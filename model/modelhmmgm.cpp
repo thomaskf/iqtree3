@@ -210,6 +210,20 @@ void ModelHmmGm::computeNormalizedTransits() {
 
 // compute the log values of transition matrix
 void ModelHmmGm::computeLogTransits() {
-    for (size_t i = 0; i < ncat * ncat; i++)
-        transitLog[i] = log(transit_normalize[i]);
+    // an unused transition can be driven to zero by the EM; log(0) would poison
+    // transitLog, so floor every entry and renormalize the row
+    size_t i, j;
+    for (i = 0; i < ncat; i++) {
+        double* row = transit_normalize + i * ncat;
+        double sum = 0.0;
+        for (j = 0; j < ncat; j++) {
+            if (!(row[j] >= MIN_TRAN_PROB))
+                row[j] = MIN_TRAN_PROB;
+            sum += row[j];
+        }
+        for (j = 0; j < ncat; j++) {
+            row[j] = row[j] / sum;
+            transitLog[i * ncat + j] = log(row[j]);
+        }
+    }
 }

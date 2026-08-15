@@ -426,9 +426,15 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
             cout << "after optimizing RHAS models, HMM likelihood = " << score << endl;
 
         // optimize transition matrix and prob array
+        double em_score = score;
         score = PhyloHmm::optimizeParameters(gradient_epsilon);
         if (verbose_mode >= VB_MED)
             cout << "after optimizing transition matrix and prob array, HMM likelihood = " << score << endl;
+        // EM cannot decrease the likelihood; a drop means a defect, not convergence
+        if (score <= em_score - HMM_EM_TOLERANCE)
+            cout << "WARNING: HMM EM step decreased the log-likelihood from " << em_score
+                 << " to " << score << endl;
+        ASSERT(score > em_score - HMM_EM_TOLERANCE);
 
         if (printInfo)
             cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
