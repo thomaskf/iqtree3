@@ -920,9 +920,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
-    if (params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree())
-        out << "Scores below are for the MAST model (sites independent);"
-            << " the HMM scores follow." << endl;
+    bool hmm_mode = params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree();
+    if (hmm_mode)
+        out << "The parameters were optimized under the HMM model, so the tree mixture"
+            << " log-likelihood below is evaluated at that optimum and is NOT a fitted"
+            << " MAST model. No AIC/BIC is reported for it." << endl;
     out << "Log-likelihood of the tree: " << fixed << tree_lh;
     if (lh_variance > 0.0)
         out << " (s.e. " << sqrt(lh_variance) << ")";
@@ -938,11 +940,13 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 //
 //        out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
 //    } else
-    out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
-    out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
-    out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+    if (!hmm_mode) {
+        out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
+        out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+        out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+    }
 
-    if (params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree()) {
+    if (hmm_mode) {
         IQTreeMixHmm* hmmtree = (IQTreeMixHmm*) &tree;
         int hmm_df = df + hmmtree->modelHmm->getNParameters();
         double hmm_AIC, hmm_AICc, hmm_BIC;
@@ -956,8 +960,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << "HMM Akaike information criterion (AIC) score: " << hmm_AIC << endl;
         out << "HMM Corrected Akaike information criterion (AICc) score: " << hmm_AICc << endl;
         out << "HMM Bayesian information criterion (BIC) score: " << hmm_BIC << endl;
-        out << "Compare HMM models using the HMM scores; the scores above are for MAST"
-            << " and will favour fewer trees." << endl;
+        out << "Use these HMM scores to compare models, including models with different"
+            << " numbers of trees." << endl;
     }
 
     if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev && !tree.isTreeMix()) {
