@@ -29,6 +29,9 @@ void ModelHmm::initialize_transitLog() {
         aligned_free(transitLog);
     transitLog = aligned_alloc<double>(transit_size);
     tranSameCat = INITIAL_PROB_SAME_CAT;
+    // the start must satisfy -hmm_min_stran, else the first EM step is forced down
+    if (tranSameCat < Params::getInstance().HMM_min_stran)
+        tranSameCat = Params::getInstance().HMM_min_stran;
     // compute the log values of transition matrix
     computeLogTransits();
 }

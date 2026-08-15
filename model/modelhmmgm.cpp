@@ -39,11 +39,15 @@ void ModelHmmGm::initialize_transitLog() {
 
     // the transition probability going to the same state is initialized to INITIAL_PROB_SAME_CAT
     // and the other probabilities are initialized as equally distributed
-    double init_other_tran = (1.0 - INITIAL_PROB_SAME_CAT) / ((double) ncat - 1.0);
+    double init_same_tran = INITIAL_PROB_SAME_CAT;
+    // the start must satisfy -hmm_min_stran, else the first EM step is forced down
+    if (init_same_tran < Params::getInstance().HMM_min_stran)
+        init_same_tran = Params::getInstance().HMM_min_stran;
+    double init_other_tran = (1.0 - init_same_tran) / ((double) ncat - 1.0);
     for (i = 0; i < ncat; i++) {
         for (j = 0; j < i; j++)
             transit[i * ncat + j] = init_other_tran;
-        transit[i * ncat + i] = INITIAL_PROB_SAME_CAT;
+        transit[i * ncat + i] = init_same_tran;
         for (j = i+1; j < ncat; j++)
             transit[i * ncat + j] = init_other_tran;
     }

@@ -3141,6 +3141,8 @@ void IQTreeMix::setBounds(double *lower_bound, double *upper_bound, bool* bound_
     
     if (optim_type == 1) {
         // optimization on tree weight
+        // NB. the variables are unnormalized and the parameterization is scale
+        // invariant, so this bounds positivity, not the proportion it names
         ndim = weight_group_member.size();
         for (i=0; i<ndim; i++) {
             lower_bound[i+1] = MIN_PROP;

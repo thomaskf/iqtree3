@@ -66,6 +66,7 @@ PhyloHmm::~PhyloHmm() {
     aligned_free(bwd_array);
     aligned_free(fwd_array);
     aligned_free(marginal_prob);
+    aligned_free(marginal_tran);
     
     delete(modelHmm);
 }
