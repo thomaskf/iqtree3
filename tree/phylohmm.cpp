@@ -417,13 +417,12 @@ double PhyloHmm::computeBackLikeArray() {
 // compute forward log-likelihood
 // and save all the intermediate results to the fwd_array array
 double PhyloHmm::computeFwdLikeArray() {
-    // pre_k is never used
-    // size_t pre_k = 0;
-    size_t k;
     double* pre_work;
     double* work;
     double* site_lh_arr;
     double* transit_arr;
+    double* acc = new double[ncat];
+    double* col = new double[ncat];
     double score;
     site_lh_arr = site_like_cat + (nsite-1) * ncat;
     work = fwd_array;
@@ -432,13 +431,19 @@ double PhyloHmm::computeFwdLikeArray() {
         pre_work = work;
         work += ncat;
         transit_arr = modelHmm->getTransitLog(static_cast<int>(i));
+        for (size_t l = 0; l < ncat; l++)
+            acc[l] = pre_work[l] + site_lh_arr[l];
+        // transitLog[l*ncat+j] : cat l at site i-1 -> cat j at site i
         for (size_t j = 0; j < ncat; j++) {
-            work[j] = logDotProd(transit_arr, pre_work, ncat) + site_lh_arr[j];
-            transit_arr += ncat;
+            for (size_t l = 0; l < ncat; l++)
+                col[l] = transit_arr[l * ncat + j];
+            work[j] = logDotProd(col, acc, ncat);
         }
         site_lh_arr -= ncat;
     }
     score = logDotProd(site_lh_arr, work, ncat);
+    delete[] acc;
+    delete[] col;
     return score;
 }
 

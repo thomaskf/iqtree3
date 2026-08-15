@@ -97,27 +97,34 @@ double ModelHmmGm::optimizeParametersByEM() {
     // compute the expected value of transition probability between the same categories
     phylo_hmm->computeMarginalTransitProb();
     marginalTran = phylo_hmm->marginal_tran;
-    // reset the values of transit array
+    // raw counts, row-normalized below: symmetrizing is not the M-step maximizer
     memset(transit, 0, sizeof(double) * sq_ncat);
     for (k=0; k<dim; k++) {
         for (i=0; i<ncat; i++) {
             for (j=0; j<ncat; j++) {
-                transit[i * ncat + j] += (marginalTran[i * ncat + j] + marginalTran[j * ncat + i]);
+                transit[i * ncat + j] += marginalTran[i * ncat + j];
             }
         }
         marginalTran += sq_ncat;
     }
     for (i=0; i<sq_ncat; i++) {
-        transit[i] = transit[i] / (double) 2 * dim;
-    }
-    // verify whether the transition between the same category is too small
-    for (i=0; i<sq_ncat; i+=(ncat+1)) {
-        if (transit[i] < MIN_TRAN_PROB)
-            transit[i] = MIN_TRAN_PROB;
-        if (transit[i] < Params::getInstance().HMM_min_stran)
-            transit[i] = Params::getInstance().HMM_min_stran;
+        transit[i] = transit[i] / (double) dim;
     }
     computeNormalizedTransits();
+    // the bound is on the conditional stay probability, hence after normalization
+    double lo = MIN_TRAN_PROB;
+    if (Params::getInstance().HMM_min_stran > lo)
+        lo = Params::getInstance().HMM_min_stran;
+    for (i=0; i<ncat; i++) {
+        double* row = transit_normalize + i * ncat;
+        double p = (row[i] < lo) ? lo : ((row[i] > 1.0 - MIN_TRAN_PROB) ? 1.0 - MIN_TRAN_PROB : row[i]);
+        if (p == row[i])
+            continue;
+        double rest = 1.0 - row[i];
+        for (j=0; j<ncat; j++)
+            row[j] = (rest > 0.0) ? row[j] * (1.0 - p) / rest : (1.0 - p) / (double) (ncat - 1);
+        row[i] = p;
+    }
     computeLogTransits();
     return phylo_hmm->computeBackLike();
 }
