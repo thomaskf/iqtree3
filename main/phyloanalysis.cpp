@@ -944,13 +944,20 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
     if (params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree()) {
         IQTreeMixHmm* hmmtree = (IQTreeMixHmm*) &tree;
+        int hmm_df = df + hmmtree->modelHmm->getNParameters();
+        double hmm_AIC, hmm_AICc, hmm_BIC;
+        computeInformationScores(hmmtree->backLogLike, hmm_df, ssize, hmm_AIC, hmm_AICc, hmm_BIC);
         out << endl;
         out << "HMM marginal log-likelihood (summed over all category paths): "
             << hmmtree->backLogLike << endl;
         out << "Log-likelihood of the maximum-probability path: "
             << hmmtree->pathLogLike << endl;
-        out << "The AIC/AICc/BIC above do not cover the HMM: they use the MAST"
-            << " log-likelihood and exclude the transition parameters." << endl;
+        out << "Number of free parameters of the HMM model: " << hmm_df << endl;
+        out << "HMM Akaike information criterion (AIC) score: " << hmm_AIC << endl;
+        out << "HMM Corrected Akaike information criterion (AICc) score: " << hmm_AICc << endl;
+        out << "HMM Bayesian information criterion (BIC) score: " << hmm_BIC << endl;
+        out << "Compare HMM models using the HMM scores; the scores above are for MAST"
+            << " and will favour fewer trees." << endl;
     }
 
     if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev && !tree.isTreeMix()) {
