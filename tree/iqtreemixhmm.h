@@ -13,7 +13,6 @@
 #include "tree/phylohmm.h"
 #include "model/modelhmm.h"
 #include "model/modelhmmgm.h"
-#include "model/modelhmmtm.h"
 
 class IQTreeMixHmm : public IQTreeMix, public PhyloHmm {
 public:
@@ -130,16 +129,6 @@ private:
     // branch lengths of all the trees
     vector<DoubleVector> allbranchlens;
     
-    // type of all sites
-    // 0 - parsimony informatic; 1 - invariant (including constant and e.g. GS--G-GGG (S = G/C));
-    // 2 - uninformatic but not invariant (e.g. GTTTTTT)
-    int* siteTypes;
-    
-    // get the type of all sites for type-dependent HMM model
-    // 0 - parsimony informatic; 1 - invariant (including constant and e.g. GS--G-GGG (S = G/C));
-    // 2 - uninformatic but not invariant (e.g. GTTTTTT)
-    void setSiteTypes();
-
     // compute the log-likelihoods for a single tree t
     void computeLogLikelihoodSingleTree(int t);
 

@@ -3289,7 +3289,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_params_use_hmm = true;
                 params.optimize_params_use_hmm_sm = true;
                 params.optimize_params_use_hmm_gm = false;
-                params.optimize_params_use_hmm_tm = false;
                 params.treemix_optimize_methods = "hmm";
                 continue;
             }
@@ -3297,7 +3296,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_params_use_hmm = true;
                 params.optimize_params_use_hmm_sm = true;
                 params.optimize_params_use_hmm_gm = false;
-                params.optimize_params_use_hmm_tm = false;
                 params.treemix_optimize_methods = "hmm";
                 continue;
             }
@@ -3305,15 +3303,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_params_use_hmm = true;
                 params.optimize_params_use_hmm_sm = false;
                 params.optimize_params_use_hmm_gm = true;
-                params.optimize_params_use_hmm_tm = false;
-                params.treemix_optimize_methods = "hmm";
-                continue;
-            }
-            if (strcmp(argv[cnt], "-hmmster{tm}") == 0) {
-                params.optimize_params_use_hmm = true;
-                params.optimize_params_use_hmm_sm = false;
-                params.optimize_params_use_hmm_gm = false;
-                params.optimize_params_use_hmm_tm = true;
                 params.treemix_optimize_methods = "hmm";
                 continue;
             }
@@ -7224,7 +7213,6 @@ void Params::setDefault() {
     optimize_params_use_hmm = false;
     optimize_params_use_hmm_sm = false;
     optimize_params_use_hmm_gm = false;
-    optimize_params_use_hmm_tm = false;
     HMM_no_avg_brlen = false;
     HMM_min_stran = 0.0;
     treemix_optimize_methods = "mast"; // default is MAST

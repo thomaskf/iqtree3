@@ -15,7 +15,6 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
-    siteTypes = nullptr;
 }
 
 IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln) : IQTreeMix(params, aln), PhyloHmm(getAlnNSite(), ntree) {
@@ -26,8 +25,6 @@ IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln) : IQTreeMix(params, a
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
-    siteTypes = nullptr;
-    setSiteTypes();
 }
 
 IQTreeMixHmm::~IQTreeMixHmm() {
@@ -57,15 +54,7 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
     // by default, it uses the HMM simple transition matrix
     // the transition probabilities between different categories are the same
 
-    if (params.optimize_params_use_hmm_tm) {
-        int ntype = 3; // (0) parsimony informatic, (1) invariant, and (2) uninformatic
-        string* types = new string[ntype];
-        types[0] = "parsimony informatic";
-        types[1] = "invariant";
-        types[2] = "uninformatic";
-        modelHmm = new ModelHmmTm(ncat, ntype, siteTypes, aln->getNSite(), types);
-        delete[] types;
-    } else if (params.optimize_params_use_hmm_gm) {
+    if (params.optimize_params_use_hmm_gm) {
         modelHmm = new ModelHmmGm(ncat);
     } else {
         modelHmm = new ModelHmm(ncat);
@@ -78,26 +67,6 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
 
     // set the associated PhyloHmm of modelHmm to this
     modelHmm->setPhyloHmm(this);
-}
-
-// get the type of all sites for type-dependent HMM model
-// 0 - parsimony informatic; 1 - invariant (including constant and e.g. GS--G-GGG (S = G/C));
-// 2 - uninformatic but not invariant (e.g. GTTTTTT)
-void IQTreeMixHmm::setSiteTypes() {
-    int ptn, i, ctype;
-    if (aln->getNSite() > 0) {
-        siteTypes = new int[aln->getNSite()];
-        for (i = 0; i < aln->getNSite(); i++) {
-            ptn = aln->getPatternID(i);
-            ctype = 2;
-            if (aln->at(ptn).isInformative()) {
-                ctype = 0;
-            } else if (aln->at(ptn).isConst() || aln->at(ptn).isInvariant()) {
-                ctype = 1;
-            }
-            siteTypes[i] = ctype;
-        }
-    }
 }
 
 // set the tree weights according to the marginal probabilities along the sites

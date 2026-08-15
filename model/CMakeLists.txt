@@ -32,7 +32,6 @@ modelpomomixture.cpp modelpomomixture.h
 modelfactorymixlen.cpp modelfactorymixlen.h
 modelhmm.cpp modelhmm.h
 modelhmmgm.cpp modelhmmgm.h
-modelhmmtm.cpp modelhmmtm.h
 modelcodonmixture.cpp modelcodonmixture.h
         ratebeta.cpp
 )
