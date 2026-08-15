@@ -920,6 +920,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
+    if (params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree())
+        out << "Scores below are for the MAST model (sites independent);"
+            << " the HMM scores follow." << endl;
     out << "Log-likelihood of the tree: " << fixed << tree_lh;
     if (lh_variance > 0.0)
         out << " (s.e. " << sqrt(lh_variance) << ")";
@@ -938,6 +941,17 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
     out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
     out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+
+    if (params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree()) {
+        IQTreeMixHmm* hmmtree = (IQTreeMixHmm*) &tree;
+        out << endl;
+        out << "HMM marginal log-likelihood (summed over all category paths): "
+            << hmmtree->backLogLike << endl;
+        out << "Log-likelihood of the maximum-probability path: "
+            << hmmtree->pathLogLike << endl;
+        out << "The AIC/AICc/BIC above do not cover the HMM: they use the MAST"
+            << " log-likelihood and exclude the transition parameters." << endl;
+    }
 
     if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev && !tree.isTreeMix()) {
         // compute mAIC/mBIC/mAICc if it is a partition model
