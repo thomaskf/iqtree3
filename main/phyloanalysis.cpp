@@ -917,14 +917,20 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         totalLen = tree.treeLength();
     }
 
+    bool hmm_mode = params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree();
+    IQTreeMixHmm* hmmtree = hmm_mode ? (IQTreeMixHmm*) &tree : nullptr;
+    if (hmm_mode) {
+        // the parameters were optimized under the HMM, so report the HMM model
+        tree_lh = hmmtree->backLogLike;
+        lh_variance = 0.0;
+        df += hmmtree->modelHmm->getNParameters();
+    }
+
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
-    bool hmm_mode = params.optimize_params_use_hmm && tree.isTreeMix() && !tree.isSuperTree();
     if (hmm_mode)
-        out << "The parameters were optimized under the HMM model, so the tree mixture"
-            << " log-likelihood below is evaluated at that optimum and is NOT a fitted"
-            << " MAST model. No AIC/BIC is reported for it." << endl;
+        out << "HMM-MAST Model" << endl;
     out << "Log-likelihood of the tree: " << fixed << tree_lh;
     if (lh_variance > 0.0)
         out << " (s.e. " << sqrt(lh_variance) << ")";
@@ -932,36 +938,13 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out    << "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
 
     out << "Number of free parameters (#branches + #model parameters): " << df << endl;
-//    if (ssize > df) {
-//        if (ssize > 40*df)
-//            out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
-//        else
-//            out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
-//
-//        out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
-//    } else
-    if (!hmm_mode) {
-        out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
-        out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
-        out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
-    }
+    out    << "Akaike information criterion (AIC) score: " << AIC_score << endl;
+    out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+    out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
 
     if (hmm_mode) {
-        IQTreeMixHmm* hmmtree = (IQTreeMixHmm*) &tree;
-        int hmm_df = df + hmmtree->modelHmm->getNParameters();
-        double hmm_AIC, hmm_AICc, hmm_BIC;
-        computeInformationScores(hmmtree->backLogLike, hmm_df, ssize, hmm_AIC, hmm_AICc, hmm_BIC);
-        out << endl;
-        out << "HMM marginal log-likelihood (summed over all category paths): "
-            << hmmtree->backLogLike << endl;
         out << "Log-likelihood of the maximum-probability path: "
             << hmmtree->pathLogLike << endl;
-        out << "Number of free parameters of the HMM model: " << hmm_df << endl;
-        out << "HMM Akaike information criterion (AIC) score: " << hmm_AIC << endl;
-        out << "HMM Corrected Akaike information criterion (AICc) score: " << hmm_AICc << endl;
-        out << "HMM Bayesian information criterion (BIC) score: " << hmm_BIC << endl;
-        out << "Use these HMM scores to compare models, including models with different"
-            << " numbers of trees." << endl;
     }
 
     if (tree.isSuperTree() && params.partition_type != TOPO_UNLINKED && !params.contain_nonrev && !tree.isTreeMix()) {
