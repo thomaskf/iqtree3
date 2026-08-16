@@ -311,6 +311,44 @@ void IQTreeMixHmm::startCheckpoint() {
     checkpoint->startStruct("IQTreeMixHmm" + convertIntToString(size()));
 }
 
+// the model parameters are saved through a private checkpoint, so that the
+// live checkpoint written to the .ckp.gz file is left untouched
+void IQTreeMixHmm::setModelCheckpoint(Checkpoint* ckp) {
+    setCheckpoint(ckp);
+    for (size_t i = 0; i < ntree; i++)
+        at(i)->getModelFactory()->setCheckpoint(ckp);
+}
+
+void IQTreeMixHmm::saveHmmParams(HmmParamSnapshot& snapshot) {
+    Checkpoint* live_ckp = getCheckpoint();
+    setModelCheckpoint(&snapshot.model_ckp);
+    saveModelCheckpoint();
+    setModelCheckpoint(live_ckp);
+
+    snapshot.brlens.resize(ntree);
+    for (size_t i = 0; i < ntree; i++)
+        at(i)->saveBranchLengths(snapshot.brlens[i]);
+
+    snapshot.prob_arr.assign(prob, prob + ncat);
+    modelHmm->saveParameters(snapshot.tran_par);
+}
+
+void IQTreeMixHmm::restoreHmmParams(HmmParamSnapshot& snapshot) {
+    Checkpoint* live_ckp = getCheckpoint();
+    setModelCheckpoint(&snapshot.model_ckp);
+    restoreModelCheckpoint();
+    setModelCheckpoint(live_ckp);
+
+    for (size_t i = 0; i < ntree; i++)
+        at(i)->restoreBranchLengths(snapshot.brlens[i]);
+
+    memcpy(prob, snapshot.prob_arr.data(), sizeof(double) * ncat);
+    for (int i = 0; i < ncat; i++)
+        prob_log[i] = log(prob[i]);
+    modelHmm->restoreParameters(snapshot.tran_par);
+    clearAllPartialLH();
+}
+
 // ------------------------------------------------------------------
 
 string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon) {
@@ -361,7 +399,8 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     int step;
     double prev_score, score;
     double gradient_epsilon = 0.0001;
-    
+    HmmParamSnapshot snapshot;
+
     // the edges with the same partition among the trees are initialized as the same length
     if (params->fixed_branch_length != BRLEN_FIX && !params->HMM_no_avg_brlen) {
         setAvgLenEachBranchGrp();
@@ -398,6 +437,8 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     prev_score = score;
 
     for (step = 0; step < optimize_steps; step++) {
+
+        saveHmmParams(snapshot);
 
         // optimize tree branches
         // if params->HMM_no_avg_brlen, then no optimization of branch lengths at the first iteration
@@ -439,9 +480,14 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
         if (printInfo)
             cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
 
-        if (score < prev_score + logl_epsilon)
-            // converged
+        if (score < prev_score + logl_epsilon) {
+            // converged, but a step that went downhill must not be kept
+            if (score < prev_score) {
+                restoreHmmParams(snapshot);
+                score = computeLikelihood();
+            }
             break;
+        }
 
         /*
         if (verbose_mode >= VB_MED) {
@@ -482,6 +528,7 @@ string IQTreeMixHmm::optimizeModelParamMAST(bool printInfo, double logl_epsilon)
     double* pattern_mix_lh;
     int max_steps_tree_weight = 3;
     bool tree_weight_converge;
+    HmmParamSnapshot snapshot;
 
     // allocate memory
     pattern_mix_lh = new double[ntree * nptn];
@@ -498,7 +545,9 @@ string IQTreeMixHmm::optimizeModelParamMAST(bool printInfo, double logl_epsilon)
     prev_score = score;
 
     for (step = 0; step < optimize_steps; step++) {
-        
+
+        saveHmmParams(snapshot);
+
         // optimize tree branches
         if (isEdgeLenRestrict) {
             // +TR model : branches with the same partition information across the trees are restricted the same
@@ -514,13 +563,18 @@ string IQTreeMixHmm::optimizeModelParamMAST(bool printInfo, double logl_epsilon)
         score = optimizeAllRHASModels(gradient_epsilon, score, pattern_mix_lh);
         
         // optimize tree weights
-        IQTreeMix::optimizeTreeWeightsByEM(pattern_mix_lh, logl_epsilon, max_steps_tree_weight, tree_weight_converge);
+        score = IQTreeMix::optimizeTreeWeightsByEM(pattern_mix_lh, logl_epsilon, max_steps_tree_weight, tree_weight_converge);
 
         cout << step+2 << ". Current MAST log-likelihood: " << score << endl;
 
-        if (score < prev_score + logl_epsilon)
-            // converged
+        if (score < prev_score + logl_epsilon) {
+            // converged, but a step that went downhill must not be kept
+            if (score < prev_score) {
+                restoreHmmParams(snapshot);
+                score = computeLikelihood();
+            }
             break;
+        }
 
         prev_score = score;
     }
@@ -550,7 +604,7 @@ int IQTreeMixHmm::testNumThreads() {
     return bestNThres;
 }
 
-int IQTreeMixHmm::getNParameters() {
+int IQTreeMixHmm::getNParameters(int obj_fun) {
     int df = 0;
     int k;
     size_t i;
@@ -594,7 +648,7 @@ int IQTreeMixHmm::getNParameters() {
             }
         }
     }
-    if (objFun == 0) {
+    if (obj_fun == 0) {
         // for transition matrix
         if (verbose_mode >= VB_MED)
             cout << " transition matrix : " << modelHmm->getNParameters() << endl;

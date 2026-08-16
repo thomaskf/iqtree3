@@ -128,7 +128,8 @@ double PhyloHmm::computeMaxPath() {
         k = (pre_k + 1) % 2;
         work = work_arr + k * ncat;
         site_lh_arr += ncat;
-        transit_arr = modelHmm->getTransitLog(static_cast<int>(i));
+        // T(s) governs the site pair (s-1,s); here the current site is nsite-i-1
+        transit_arr = modelHmm->getTransitLog(nsite-static_cast<int>(i));
         next_cat_arr = next_cat + (nsite - i - 1) * ncat;
         for (j = 0; j < ncat; j++) {
             work[j] = transit_arr[0] + pre_work[0];
@@ -170,7 +171,24 @@ double PhyloHmm::computeMaxPath() {
     }
     
     pathLogLike = max_log_like;
-    
+
+    if (verbose_mode >= VB_DEBUG) {
+        // rescore the Viterbi path from site_categories; must equal pathLogLike
+        size_t last = static_cast<size_t>(nsite - 1);
+        double rescore = prob_log[site_categories[0]] + site_like_cat[last * ncat + site_categories[0]];
+        for (i = 1; i < nsite; i++) {
+            transit_arr = modelHmm->getTransitLog(static_cast<int>(i));
+            rescore += transit_arr[site_categories[i-1] * ncat + site_categories[i]];
+            rescore += site_like_cat[(last - i) * ncat + site_categories[i]];
+        }
+        double diff = fabs(rescore - pathLogLike);
+        cout << "[HMM CHECK] Viterbi rescore = " << rescore << ", pathLogLike = " << pathLogLike
+             << ", diff = " << diff << endl;
+        if (diff > 1e-6 * (fabs(pathLogLike) + 1.0))
+            cout << "[HMM CHECK] FAILED: Viterbi path does not rescore to pathLogLike" << endl;
+        ASSERT(diff <= 1e-6 * (fabs(pathLogLike) + 1.0));
+    }
+
     return max_log_like;
 }
 
@@ -464,6 +482,8 @@ double PhyloHmm::computeFwdLikeArray() {
 // compute the marginal probabilities for each site
 void PhyloHmm::computeMarginalProb(ostream* out) {
     double score;
+    double min_score = 0.0;
+    double max_score = 0.0;
     double* f_array = fwd_array;
     double* b_array = bwd_array;
     double* mprob = marginal_prob;
@@ -494,6 +514,20 @@ void PhyloHmm::computeMarginalProb(ostream* out) {
         f_array += ncat;
         b_array += ncat;
         mprob += ncat;
+        if (i == 0 || score < min_score) min_score = score;
+        if (i == 0 || score > max_score) max_score = score;
+    }
+
+    if (verbose_mode >= VB_DEBUG) {
+        // logDotProd(fwd[t],bwd[t]) must be site-independent and equal the backward log-likelihood
+        double back_like = computeBackLike();
+        double spread = max_score - min_score;
+        double dev = max(fabs(max_score - back_like), fabs(min_score - back_like));
+        cout << "[HMM CHECK] fwd.bwd spread = " << spread << ", |fwd.bwd - backLike| = " << dev
+             << " (backLike = " << back_like << ")" << endl;
+        if (spread > 1e-6 || dev > 1e-6)
+            cout << "[HMM CHECK] FAILED: fwd.bwd is not constant / differs from computeBackLike()" << endl;
+        ASSERT(spread <= 1e-6 && dev <= 1e-6);
     }
 }
 

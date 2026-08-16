@@ -74,6 +74,16 @@ public:
      * @return log values of transition matrix
      */
     virtual double* getTransitLog(int site_i) { return transitLog; }
+
+    /**
+     Copy the model parameters into params
+     */
+    virtual void saveParameters(DoubleVector& params);
+
+    /**
+     Set the model parameters from params previously filled by saveParameters
+     */
+    virtual void restoreParameters(DoubleVector& params);
     
     /**
      Show parameters

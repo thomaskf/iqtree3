@@ -63,6 +63,10 @@ public:
 
     virtual int getNParameters();
 
+    virtual void saveParameters(DoubleVector& params);
+
+    virtual void restoreParameters(DoubleVector& params);
+
 protected:
     
     int ndim; // number of dimensions

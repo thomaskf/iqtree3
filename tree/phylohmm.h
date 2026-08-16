@@ -18,35 +18,31 @@
 // compute the log of dotproduct of the logorithm arrays
 inline double logDotProd(double* ln_x, double* ln_y, int n) {
     double max;
-    double max_i;
+    size_t max_i;
     size_t i;
-    double* w;
+    double v;
     double ans;
     ASSERT(n >= 0);
-    
-    w = new double[n];
-    for (i = 0; i < static_cast<size_t>(n); i++) {
-        w[i] = ln_x[i] + ln_y[i];
-    }
+
     // find the max
-    max = w[0];
+    max = ln_x[0] + ln_y[0];
     max_i = 0;
     for (i = 1; i < static_cast<size_t>(n); i++) {
-        if (max < w[i]) {
-            max = w[i];
+        v = ln_x[i] + ln_y[i];
+        if (max < v) {
+            max = v;
             max_i = i;
         }
     }
     // compute the dotproduct
     ans = 0.0;
     for (i = 0; i < max_i; i++) {
-        ans += exp(w[i] - max);
+        ans += exp(ln_x[i] + ln_y[i] - max);
     }
     ans += 1.0;
     for (i = max_i+1; i < static_cast<size_t>(n); i++) {
-        ans += exp(w[i] - max);
+        ans += exp(ln_x[i] + ln_y[i] - max);
     }
-    delete[] w;
     return log(ans) + max;
 }
 

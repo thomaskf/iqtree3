@@ -13,6 +13,10 @@ const double MAX_LEN = 1.0;
 const double LIKE_THRES = 0.1; // 10% more in team of likelihood value
 const double WEIGHT_EPSILON = 0.001;
 const int OPTIMIZE_STEPS = 10000;
+// the tree-weight EM step is monotone up to round-off (measured drop: none)
+const double EM_SCORE_TOLERANCE = 1e-3;
+// a round of numerical optimizers may be slightly non-monotone
+const double OPT_SCORE_TOLERANCE = 0.1;
 
 // Input formats for the tree-mixture model
 // 1. linked models and site rates: GTR+G4+T
@@ -1536,6 +1540,18 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double logl_ep
         score = computeLikelihood_combine();
 
         if (score < prev_score + logl_epsilon) {
+            if (score < prev_score) {
+                // the EM step decreased the likelihood; revert it
+                if (score < prev_score - EM_SCORE_TOLERANCE)
+                    cout << "NOTE: tree weight EM step decreased the likelihood. score: "
+                         << score << "  prev_score: " << prev_score << endl;
+                ASSERT(score > prev_score - EM_SCORE_TOLERANCE);
+                for (c = 0; c < ntree; c++) {
+                    weights[c] = tmp_weights[c];
+                    weight_logs[c] = log(weights[c]);
+                }
+                score = prev_score;
+            }
             // converged
             break;
         }
@@ -2626,10 +2642,15 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         cout << endl;
 
         if (score < prev_score + logl_epsilon) {
+            // the round decreased the likelihood; the state cannot be reverted here, so warn
+            if (score < prev_score - OPT_SCORE_TOLERANCE)
+                cout << "NOTE: optimization step decreased the likelihood. score: "
+                     << score << "  prev_score: " << prev_score << endl;
+            ASSERT(score > prev_score - OPT_SCORE_TOLERANCE);
             // converged
             break;
         }
-        
+
         if (nsubstep1 < nsubstep1_max)
             nsubstep1++;
         if (nsubstep2 < nsubstep2_max)

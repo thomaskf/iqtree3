@@ -14,6 +14,14 @@
 #include "model/modelhmm.h"
 #include "model/modelhmmgm.h"
 
+// snapshot of every parameter an optimization step may update
+struct HmmParamSnapshot {
+    Checkpoint model_ckp;          // substitution models, RHAS models and tree weights
+    vector<DoubleVector> brlens;   // branch lengths of every tree
+    DoubleVector prob_arr;         // HMM category probabilities
+    DoubleVector tran_par;         // HMM transition model parameters
+};
+
 class IQTreeMixHmm : public IQTreeMix, public PhyloHmm {
 public:
     
@@ -87,7 +95,10 @@ public:
      */
     virtual int testNumThreads() override;
     
-    virtual int getNParameters() override;
+    // number of parameters under a given objective function (0: HMM, 1: MAST)
+    int getNParameters(int obj_fun);
+
+    virtual int getNParameters() override { return getNParameters(objFun); }
     
     // print out all the results to a file
     void printResults(const char *filename, int cat_assign_method = 0, int* numSiteCat = nullptr);
@@ -178,6 +189,13 @@ private:
     
     // get marginal probabilities along each site for each tree
     void getMarginalProb(bool need_computeLike = true, int update_which_tree = -1);
+
+    // redirect the checkpoint used by saveModelCheckpoint / restoreModelCheckpoint
+    void setModelCheckpoint(Checkpoint* ckp);
+
+    // save / restore every parameter an optimization step may update
+    void saveHmmParams(HmmParamSnapshot& snapshot);
+    void restoreHmmParams(HmmParamSnapshot& snapshot);
 };
 
 #endif /* iqtreemixhmm_h */

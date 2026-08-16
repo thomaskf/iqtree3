@@ -155,6 +155,18 @@ int ModelHmmGm::getNParameters() {
     return ndim;
 }
 
+// transit_normalize is clamped independently of transit, so both are saved
+void ModelHmmGm::saveParameters(DoubleVector& params) {
+    params.assign(transit, transit + sq_ncat);
+    params.insert(params.end(), transit_normalize, transit_normalize + sq_ncat);
+}
+
+void ModelHmmGm::restoreParameters(DoubleVector& params) {
+    memcpy(transit, params.data(), sizeof(double) * sq_ncat);
+    memcpy(transit_normalize, params.data() + sq_ncat, sizeof(double) * sq_ncat);
+    computeLogTransits();
+}
+
 void ModelHmmGm::setVariables(double *variables) {
     double* var;
     double* tr;

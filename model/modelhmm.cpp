@@ -104,6 +104,15 @@ double ModelHmm::optimizeParametersByEM() {
     return -computeFunction(optx);
 }
 
+void ModelHmm::saveParameters(DoubleVector& params) {
+    params.assign(1, tranSameCat);
+}
+
+void ModelHmm::restoreParameters(DoubleVector& params) {
+    tranSameCat = params[0];
+    computeLogTransits();
+}
+
 /**
  Show parameters
  */

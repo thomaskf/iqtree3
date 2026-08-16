@@ -923,7 +923,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         // the parameters were optimized under the HMM, so report the HMM model
         tree_lh = hmmtree->backLogLike;
         lh_variance = 0.0;
-        df += hmmtree->modelHmm->getNParameters();
+        df = hmmtree->getNParameters(0);
     }
 
     double AIC_score, AICc_score, BIC_score;
