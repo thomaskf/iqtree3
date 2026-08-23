@@ -4577,7 +4577,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.marginal_lh_aic = true;
                     params.model_test_criterion = MTC_BIC;
                 } else {
-                    throw "Use -merit AIC|AICC|BIC|mAIC|mAIC+BIC";
+                    throw "Use -merit AIC|AICC|BIC|mAIC";
                 }
                 params.merit_specified = true;
 				continue;
@@ -5927,11 +5927,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
     << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
     << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
-    << "  --merit AIC|AICc|BIC|mAIC|mAIC+BIC" << endl
+    << "  --merit AIC|AICc|BIC|mAIC" << endl
     << "                       Akaike|Bayesian information criterion (default: BIC," << endl
     << "                       or mAIC when merging partitions). mAIC uses the" << endl
-    << "                       marginal AIC to merge partitions; mAIC+BIC merges by" << endl
-    << "                       mAIC but selects individual models by BIC" << endl
+    << "                       marginal AIC to merge partitions" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
