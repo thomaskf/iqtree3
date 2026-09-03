@@ -96,6 +96,10 @@ Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -p $WD/turtle.nex -g $WD/turtle.cons
 
 Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -m `"MIX+MF`" --prefix $OutDir/turtle.mixfinder -T 1 -seed $SEED"
 
+# outgroup absent from some partitions / from the quartet trees (issues #203, #89)
+Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -p $WD/turtle.nex -o phrynops -m GTR+G --prefix $OutDir/turtle.nex.outgroup -T 1 -seed $SEED"
+Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix $OutDir/turtle.lmap.outgroup -T 1 -seed $SEED"
+
 ## amino acid test cases
 Write-Host "Running amino acid test cases..."
 

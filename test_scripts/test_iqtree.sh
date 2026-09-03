@@ -86,6 +86,12 @@ run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -p ${WD}/turtle.nex -g ${WD}/turtle.c
 
 run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -m "MIX+MF" --prefix ${OUT_DIR}/turtle.mixfinder -T 1 -seed $SEED
 
+# outgroup absent from some partitions / from the quartet trees (issues #203, #89)
+
+run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -p ${WD}/turtle.nex -o phrynops -m GTR+G --prefix ${OUT_DIR}/turtle.nex.outgroup -T 1 -seed $SEED
+
+run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix ${OUT_DIR}/turtle.lmap.outgroup -T 1 -seed $SEED
+
 
 ## amino acid test cases
 echo "Running amino acid test cases..."

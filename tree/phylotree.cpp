@@ -480,24 +480,34 @@ void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
         return;
     }
 
-    if (strchr(my_root, ',') == nullptr) {
-        string root_name = my_root;
-        root = findNodeName(root_name);
+    // my_root is one taxon or a comma-separated list of taxa.
+    // An outgroup taxon may legitimately be absent from this tree: the tree of a
+    // partition in which the taxon has no data, or a quartet tree of likelihood
+    // mapping (issues #203, #89). Such taxa are skipped; if none is left, the
+    // tree is rooted at its first taxon, as when no outgroup was given.
+    StrVector taxa;
+    convert_string_vec(my_root, taxa);
+    unordered_set<string> taxa_set;
+    Node *new_root = nullptr;
+    for (auto it = taxa.begin(); it != taxa.end(); it++) {
+        Node *node = findNodeName(*it);
+        if (!node) {
+            continue;
+        }
+        if (!new_root) {
+            new_root = node;
+        }
+        taxa_set.insert(*it);
+    }
+    if (!new_root) {
+        root = findNodeName(aln->getSeqName(0));
         ASSERT(root);
         return;
     }
-
-    // my_root is a list of taxa
-    StrVector taxa;
-    convert_string_vec(my_root, taxa);
-    root = findNodeName(taxa[0]);
-    ASSERT(root);
-    if (!multi_taxa) {
+    root = new_root;
+    if (!multi_taxa || taxa_set.size() < 2) {
         return;
     }
-    unordered_set<string> taxa_set;
-    for (auto it = taxa.begin(); it != taxa.end(); it++)
-        taxa_set.insert(*it);
     pair<Node*,Neighbor*> res = {nullptr, nullptr};
     findNodeNames(taxa_set, res, root->neighbors[0]->node, root);
     if (res.first)
