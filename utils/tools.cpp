@@ -4549,22 +4549,27 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-AIC") == 0) {
 				params.model_test_criterion = MTC_AIC;
+				params.marginal_lh_aic = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-AICc") == 0 || strcmp(argv[cnt], "-AICC") == 0) {
 				params.model_test_criterion = MTC_AICC;
+				params.marginal_lh_aic = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-merit") == 0 || strcmp(argv[cnt], "--merit") == 0) {
                 cnt++;
 				if (cnt >= argc)
-					throw "Use -merit AIC|AICC|BIC";
+					throw "Use -merit AIC|AICC|BIC|mAIC";
                 if (strcmp(argv[cnt], "AIC") == 0) {
                     params.model_test_criterion = MTC_AIC;
+                    params.marginal_lh_aic = false;
                 } else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0) {
                     params.model_test_criterion = MTC_AICC;
+                    params.marginal_lh_aic = false;
                 } else if (strcmp(argv[cnt], "BIC") == 0) {
                     params.model_test_criterion = MTC_BIC;
+                    params.marginal_lh_aic = false;
                 } else if (strcmp(argv[cnt], "mAIC") == 0) {
                     params.marginal_lh_aic = true;
                     params.model_test_criterion = MTC_AIC;
@@ -4572,7 +4577,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.marginal_lh_aic = true;
                     params.model_test_criterion = MTC_BIC;
                 } else {
-                    throw "Use -merit AIC|AICC|BIC";
+                    throw "Use -merit AIC|AICC|BIC|mAIC";
                 }
 				continue;
 			}
@@ -5915,7 +5920,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
     << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
     << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
-    << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
+    << "  --merit AIC|AICc|BIC|mAIC" << endl
+    << "                       Akaike|Bayesian information criterion (default: BIC)" << endl
+    << "                       mAIC uses the marginal AIC to merge partitions in partition models" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
@@ -7156,7 +7163,8 @@ void Params::setDefault() {
     merge_models = "1";
     merge_rates = "1";
     partfinder_log_rate = true;
-    
+    marginal_lh_aic = false;
+
     sequence_type = nullptr;
     aln_output = nullptr;
     aln_site_list = nullptr;
