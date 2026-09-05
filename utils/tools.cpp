@@ -5631,8 +5631,24 @@ void parseArg(int argc, char *argv[], Params &params) {
     // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
     // computeTransMatix has not yet implemented for ModelSet
     if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
-        outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
+        outError("Sorry! `-ft` (--tree-freq) and `-fs` (--site-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
     
+    // Site-frequency models are read only on the non-partition code path. In
+    // runPhyloAnalysis() the call to Alignment::readSiteStateFreq() sits in the `else`
+    // branch of `if (params.partition_file)`, so combining a partition model with -fs or
+    // -ft silently DISCARDED the frequencies: the run completed, reported a likelihood,
+    // and printed no warning, while scoring under the plain model. Fail explicitly instead.
+    if (params.partition_file && params.site_freq_file)
+        outError("`-fs` (--site-freq) cannot be combined with a partition model (-p/-q/-Q/-S)."
+                 " Site frequencies are only applied to a single-partition alignment, and were"
+                 " previously ignored without warning. Run -fs without a partition file, or drop"
+                 " -fs and specify per-partition models in the partition file.");
+
+    if (params.partition_file && params.tree_freq_file)
+        outError("`-ft` (--tree-freq) cannot be combined with a partition model (-p/-q/-Q/-S)."
+                 " The site-frequency model is only estimated for a single-partition alignment,"
+                 " and was previously ignored without warning.");
+
     // Users have to specify a random seed to run AliSim
     if (params.alisim_active && !params.seed_specified)
         outError("To make the simulation reproducible, please specify a random seed via `-seed <NUM>`");
