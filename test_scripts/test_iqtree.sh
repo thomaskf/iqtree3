@@ -92,6 +92,12 @@ run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -p ${WD}/turtle.nex -o phrynops -m GT
 
 run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix ${OUT_DIR}/turtle.lmap.outgroup -T 1 -seed $SEED
 
+# user-defined codon frequencies must be honoured by GY-type models (issue #192)
+
+run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+FU{$(cat ${WD}/codon_freq.txt)}" --prefix ${OUT_DIR}/codon.gy.fu -T 1 -seed $SEED
+
+run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+F3X4" --prefix ${OUT_DIR}/codon.gy.f3x4 -T 1 -seed $SEED
+
 
 ## amino acid test cases
 echo "Running amino acid test cases..."

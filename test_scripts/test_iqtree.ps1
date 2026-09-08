@@ -100,6 +100,11 @@ Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -m `"MIX+MF`" --prefix $OutDir/turtl
 Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -p $WD/turtle.nex -o phrynops -m GTR+G --prefix $OutDir/turtle.nex.outgroup -T 1 -seed $SEED"
 Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix $OutDir/turtle.lmap.outgroup -T 1 -seed $SEED"
 
+# user-defined codon frequencies must be honoured by GY-type models (issue #192)
+$CodonFreq = (Get-Content $WD/codon_freq.txt -Raw).Trim()
+Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+FU{$CodonFreq}`" --prefix $OutDir/codon.gy.fu -T 1 -seed $SEED"
+Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+F3X4`" --prefix $OutDir/codon.gy.f3x4 -T 1 -seed $SEED"
+
 ## amino acid test cases
 Write-Host "Running amino acid test cases..."
 
