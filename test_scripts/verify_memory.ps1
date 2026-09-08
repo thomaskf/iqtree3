@@ -21,6 +21,22 @@ $thresholds = foreach ($line in $thresholdLines) {
     [PSCustomObject]@{ Command = $parts[0]; Threshold = [double]$parts[1] }
 }
 
+# Per-platform threshold column "thr-<platform>" when present, else diff-threshold.
+# Peak memory is not comparable across platforms, so one shared allowance is either
+# too tight on the noisy ones or meaningless on the quiet ones.
+if ($FallbackColumn -ne "") {
+    $hdr = (Get-Content $thresholdFile -TotalCount 1) -split "`t"
+    $thrIdx = $hdr.IndexOf("thr-$FallbackColumn")
+    if ($thrIdx -ge 0) {
+        Write-Host "Using per-platform thresholds: thr-$FallbackColumn"
+        for ($i = 0; $i -lt $thresholds.Count; $i++) {
+            $thresholds[$i].Threshold = [double]($thresholdLines[$i] -split "`t")[$thrIdx]
+        }
+    } else {
+        Write-Host "No thr-$FallbackColumn column; using the shared diff-threshold"
+    }
+}
+
 # Resolve fallback column index
 $fallbackValues = @()
 if ($FallbackColumn -ne "") {
