@@ -4102,6 +4102,15 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
                         memcpy(state_freq, aln->ptn_state_freq[ptn], num_states*sizeof(double));
                     }
                     ptn_state_freq.push_back(state_freq);
+                    if (!aln->site_rate_matrices.empty()) {
+                        /* Minh/Thomas: Better change 190 to num_states*(numstates-1)/2 so that if you want to
+                         extend the model in the future, no change is needed here
+                         Also: This is only for reversible models. For non-rev models
+                         you need to store the full matrix, i.e., num_states*num_states entries
+                         */
+                        const double *rate_matrix = aln->site_rate_matrices.data() + ptn * 190;
+                        site_rate_matrices.insert(site_rate_matrices.end(), rate_matrix, rate_matrix + 190);
+                    }
                 }
                 if (pattern_freq) {
                     ((*pattern_freq)[ptn])++;
@@ -4185,6 +4194,9 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     		begin_site += site_vec[part];
     		out_site += site_vec[part+1];
     	}
+    }
+    if (!aln->site_rate_matrices.empty()) {
+        ASSERT(aln->site_rate_matrices.size() == aln->getNPattern() * 190);
     }
     if (aln->isSSF()) {
         ASSERT(ptn_state_freq.size() == getNPattern());
