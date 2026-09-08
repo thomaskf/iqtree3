@@ -5224,6 +5224,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         // Initialize site-frequency model
         if (params.tree_freq_file) {
             if ((std::string)params.tree_freq_file == "AUTO") {
+                /* Minh/Thomas comments: the design of spawning process is not great
+                 because you need to load the alignment again causing overhead.
+                 It's better to run inside IQ-TREE. Suggest that we do not
+                 announce -ft AUTO option for now, and just ask users to explicitly
+                 infer a guide tree themselves.
+                 */
                 cout << "INFO: Automatic guide tree inference using LG+F+G4" << endl;
                 auto guide_tree_out = (std::string)params.out_prefix + ".guide_tree";
                 if (fileExists(guide_tree_out + ".treefile")) {
@@ -5269,7 +5275,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         if (params.site_freq_file) {
             alignment->readSiteStateFreq(params.site_freq_file);
         }
-        if (params.site_model_file.empty() == false) {
+        if (!params.site_model_file.empty()) {
             read_site_model_file(params.site_model_file, *alignment);
             std::cout << "INFO: Site model read from " << params.site_model_file << std::endl;
             alignment->model_name = "MUTSEL";
@@ -5294,6 +5300,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     tree->setCheckpoint(checkpoint);
     // Increase the maximum branch length if MutSel is used because the time unit is different.
     if (params.model_name.rfind("MUTSEL") == 0) {
+        // Minh/Thomas: Better have some option like --max-mutsel-brlen with the
+        // default of 200.0. So users can change. We don't like hard-coded
+        // constant in the code
+        // Also this has to be in the utils.cpp file, not here, which is hard to debug.
         params.max_branch_length = 200.0;
     }
     if (tree->isTreeMix()) {

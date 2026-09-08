@@ -683,6 +683,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 modeli->setStateFrequency(tree->aln->ptn_state_freq[i]);
                 modeli->setRateMatrix(tree->aln->site_rate_matrices.data() + i * 190);
                 
+                // Minh/Thomas: Important to note: site Q matrices are not normalised
+                // But make sure to normalise across all sites, i.e.
+                // (1/nsites) * sum_i mu_i = 1.0, where mu_i = -sum_j pi^i_j * Q^i_{jj}
                 modeli->normalize_matrix = false;
                 modeli->init(FREQ_USER_DEFINED);
                 modeli->fixParameters(true);

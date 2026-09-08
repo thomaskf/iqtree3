@@ -951,7 +951,8 @@ public:
 
     /** site to rate matrix. Stored in row-major order [num_sites, 190] used for MUTSEL */
     vector<double> site_rate_matrices;
-
+    // Minh/Thomas: TODO rename this to ptn_rate_matrices to avoid confusions
+    
     /**
      * @return true if data type is SEQ_CODON and state is a stop codon
      */
