@@ -99,7 +99,7 @@ jobs:
       - name: Run verify_memory.sh
         run: |
           chmod +x test_scripts/verify_memory.sh
-          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-clang-${{ matrix.clang-version }}
+          ./test_scripts/verify_memory.sh time_log_iqtree2.tsv time_log_iqtree3.tsv Linux-x86-64
 
   build-linux-aarch64:
     name: Linux aarch64
