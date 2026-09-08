@@ -13,6 +13,8 @@ build/iqtree3 -s test_scripts/test_data/turtle.fa -m MIX{GTR{1,1,1,1,1,1}+FO,GTR
 build/iqtree3 -s test_scripts/test_data/turtle.fa -p test_scripts/test_data/turtle.nex -g test_scripts/test_data/turtle.constr.tree --prefix test_scripts/test_data/turtle.nex.constr -T 1 -seed 73073	3	3.05	3.17	3.83	3.62	2.22	3.47
 build/iqtree3 -s test_scripts/test_data/turtle.fa -p test_scripts/test_data/turtle.nex -g test_scripts/test_data/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix test_scripts/test_data/turtle.nex.constr2 -T 1 -seed 73073	3	3.50	3.58	4.25	3.95	2.49	4.27
 build/iqtree3 -s test_scripts/test_data/turtle.fa -m MIX+MF --prefix test_scripts/test_data/turtle.mixfinder -T 1 -seed 73073	3	9.15	8.47	14.31	9.81	8.20	0.42
+build/iqtree3 -s test_scripts/test_data/turtle.fa -p test_scripts/test_data/turtle.nex -o phrynops -m GTR+G --prefix test_scripts/test_data/turtle.nex.outgroup -T 1 -seed 73073	120	5	5	5	5	5	5
+build/iqtree3 -s test_scripts/test_data/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix test_scripts/test_data/turtle.lmap.outgroup -T 1 -seed 73073	120	5	5	5	5	5	5
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -B 1000 -T 1 -seed 73073	12	62.06	65.05	100.61	35.56	40.99	35.76
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -p test_scripts/test_data/turtle_aa.nex -B 1000 -T 1 -seed 73073	12	71.33	72.66	116.11	44.03	46.82	41.86
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -p test_scripts/test_data/turtle_aa.nex -B 1000 -T 1 -m MFP+MERGE -rcluster 10 --prefix test_scripts/test_data/turtle_aa.merge -seed 73073	12	65.65	67.02	106.90	39.94	40.45	37.61
@@ -24,3 +26,4 @@ build/iqtree3 -t test_scripts/test_data/turtle_aa.fasta.treefile --gcf test_scri
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -m MIX{LG+F,WAG+F} --prefix test_scripts/test_data/turtle_aa.mix -seed 73073 -T 1	3	13.04	13.33	21.36	7.23	8.97	7.53
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -p test_scripts/test_data/turtle_aa.nex -g test_scripts/test_data/turtle.constr.tree --prefix test_scripts/test_data/turtle_aa.nex.constr -T 1 -seed 73073	12	61.22	61.69	99.07	37.95	39.54	35.39
 build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -p test_scripts/test_data/turtle_aa.nex -g test_scripts/test_data/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix test_scripts/test_data/turtle_aa.nex.constr2 -T 1 -seed 73073	12	82.86	85.39	135.76	49.92	53.91	48.37
+build/iqtree3 -s test_scripts/test_data/turtle_aa.fasta -m MUTSEL -ft AUTO --prefix test_scripts/test_data/turtle_aa.mutsel -T 1 -seed 73073	300	120	120	120	120	120	120
