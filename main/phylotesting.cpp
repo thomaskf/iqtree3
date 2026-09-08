@@ -3192,7 +3192,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         else
             cout << getSeqTypeName(in_tree->aln->seq_type);
         cout << " models (sample size: " << ssize << " epsilon: " << params.modelfinder_eps << ") ..." << endl;
-        if (params.model_test_and_tree == 0)
+        if (params.model_test_and_tree == 0 && verbose_mode >= VB_MED)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
 
