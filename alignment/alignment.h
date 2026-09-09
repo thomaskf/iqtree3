@@ -948,8 +948,11 @@ public:
     /* for site-specific models */
 
     /** the size of a rate matrix in ptn_rate_mat */
-    int num_rates;
-
+    // Minh: introducing a new variable can make it more bug-prone
+    // For the future, use getNumRateEntries() from the Model
+    //int num_rates;
+    virtual int getNumRates() const { return num_states*(num_states-1)/2; }
+    
     /** pattern ID to rate matrix map */
     vector<double*> ptn_rate_mat;
 
