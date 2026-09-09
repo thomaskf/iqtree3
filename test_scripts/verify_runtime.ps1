@@ -21,6 +21,22 @@ $thresholds = foreach ($line in $thresholdLines) {
     [PSCustomObject]@{ Command = $parts[0]; Threshold = [double]$parts[1] }
 }
 
+# Per-platform threshold column "thr-<platform>" when present, else diff-threshold.
+# Runtime varies far more between platforms than between runs, so one shared
+# allowance is too tight for the slowest runner and meaningless for the rest.
+if ($FallbackColumn -ne "") {
+    $hdr = (Get-Content $thresholdFile -TotalCount 1) -split "`t"
+    $thrIdx = $hdr.IndexOf("thr-$FallbackColumn")
+    if ($thrIdx -ge 0) {
+        Write-Host "Using per-platform thresholds: thr-$FallbackColumn"
+        for ($i = 0; $i -lt $thresholds.Count; $i++) {
+            $thresholds[$i].Threshold = [double]($thresholdLines[$i] -split "`t")[$thrIdx]
+        }
+    } else {
+        Write-Host "No thr-$FallbackColumn column; using the shared diff-threshold"
+    }
+}
+
 # Resolve fallback column index
 $fallbackValues = @()
 if ($FallbackColumn -ne "") {

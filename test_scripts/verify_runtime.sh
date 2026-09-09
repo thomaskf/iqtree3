@@ -19,8 +19,20 @@ tmp_fallback=$(mktemp)
 tmp_iqtree2=$(mktemp)
 tmp_iqtree3=$(mktemp)
 
-# Command and diff-threshold columns (columns 1 and 2)
-tail -n +2 "$threshold_file" | cut -f1,2 > "$tmp_thresholds"
+# Per-platform threshold column "thr-<platform>" when present, else diff-threshold.
+# Runtime varies far more between platforms than between runs, so one shared
+# allowance is too tight for the slowest runner and meaningless for the rest.
+thr_index=2
+if [ -n "$fallback_column" ]; then
+    idx=$(head -1 "$threshold_file" | tr '\t' '\n' | awk -v c="thr-$fallback_column" '$0 == c {print NR}')
+    if [ -n "$idx" ]; then
+        thr_index=$idx
+        echo "Using per-platform thresholds: thr-$fallback_column"
+    else
+        echo "No thr-$fallback_column column; using the shared diff-threshold"
+    fi
+fi
+tail -n +2 "$threshold_file" | cut -f1,"$thr_index" > "$tmp_thresholds"
 
 # Pre-defined fallback expected values for the given platform column
 if [ -n "$fallback_column" ]; then
