@@ -8,6 +8,8 @@ turtle.mix.link.iqtree	Log-likelihood of the tree	-5625.6391	1
 turtle.mixfinder.iqtree	Log-likelihood of the tree	-5332.2489	1
 turtle.nex.outgroup.iqtree	Log-likelihood of the tree	-5352.2653	1
 turtle.lmap.outgroup.iqtree	Log-likelihood of the tree	-5377.9500	1
+codon.gy.fu.iqtree	Log-likelihood of the tree	-674.5579	1
+codon.gy.f3x4.iqtree	Log-likelihood of the tree	-665.0301	1
 turtle.nex.constr.iqtree	Log-likelihood of the tree	-5360.0758	1
 turtle.nex.constr2.iqtree	Log-likelihood of the tree	-5360.0758	1
 turtle.nex.iqtree	Log-likelihood of the tree	-5360.0759	1
