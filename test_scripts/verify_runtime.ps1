@@ -29,7 +29,8 @@ if ($FallbackColumn -ne "") {
     $thrIdx = $hdr.IndexOf("thr-$FallbackColumn")
     if ($thrIdx -ge 0) {
         Write-Host "Using per-platform thresholds: thr-$FallbackColumn"
-        for ($i = 0; $i -lt [Math]::Min($thresholds.Count, $nLog); $i++) {
+        # NB: $nLog is not known yet here - bound the loop by the table itself.
+        for ($i = 0; $i -lt $thresholds.Count; $i++) {
             $thresholds[$i].Threshold = [double]($thresholdLines[$i] -split "`t")[$thrIdx]
         }
     } else {
