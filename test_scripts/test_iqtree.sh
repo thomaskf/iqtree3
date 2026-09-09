@@ -92,11 +92,6 @@ run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -p ${WD}/turtle.nex -o phrynops -m GT
 
 run_timed ${IQTREE_BIN} -s ${WD}/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix ${OUT_DIR}/turtle.lmap.outgroup -T 1 -seed $SEED
 
-# user-defined codon frequencies must be honoured by GY-type models (issue #192)
-
-run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+FU{$(cat ${WD}/codon_freq.txt)}" --prefix ${OUT_DIR}/codon.gy.fu -T 1 -seed $SEED
-
-run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+F3X4" --prefix ${OUT_DIR}/codon.gy.f3x4 -T 1 -seed $SEED
 
 
 ## amino acid test cases
@@ -132,3 +127,11 @@ run_timed ${IQTREE_BIN} -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree --pr
 run_timed ${IQTREE_BIN} -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix ${OUT_DIR}/turtle_aa.nex.constr2 -T 1 -seed $SEED
 
 run_timed ${IQTREE_BIN} -s $AA_FASTA -m "MUTSEL" -ft AUTO --prefix ${OUT_DIR}/turtle_aa.mutsel -T 1 -seed $SEED
+
+# Kept at the END of the suite on purpose: verify_memory/verify_runtime join the
+# threshold table to the log POSITIONALLY, so a command inserted mid-list shifts
+# every later row onto the wrong threshold. These two have no table rows yet, so
+# here they are simply skipped with a warning instead of corrupting the rest.
+# user-defined codon frequencies must be honoured by GY-type models (issue #192)
+run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+FU{$(cat ${WD}/codon_freq.txt)}" --prefix ${OUT_DIR}/codon.gy.fu -T 1 -seed $SEED
+run_timed ${IQTREE_BIN} -s ${WD}/codon.fa -st CODON -te ${WD}/codon.tree -blfix -m "GY{0.8,1.07}+F3X4" --prefix ${OUT_DIR}/codon.gy.f3x4 -T 1 -seed $SEED

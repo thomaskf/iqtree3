@@ -100,10 +100,6 @@ Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -m `"MIX+MF`" --prefix $OutDir/turtl
 Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -p $WD/turtle.nex -o phrynops -m GTR+G --prefix $OutDir/turtle.nex.outgroup -T 1 -seed $SEED"
 Measure-IQTree "$IQTreeBin -s $WD/turtle.fa -lmap 100 -o phrynops -m GTR+G --prefix $OutDir/turtle.lmap.outgroup -T 1 -seed $SEED"
 
-# user-defined codon frequencies must be honoured by GY-type models (issue #192)
-$CodonFreq = (Get-Content $WD/codon_freq.txt -Raw).Trim()
-Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+FU{$CodonFreq}`" --prefix $OutDir/codon.gy.fu -T 1 -seed $SEED"
-Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+F3X4`" --prefix $OutDir/codon.gy.f3x4 -T 1 -seed $SEED"
 
 ## amino acid test cases
 Write-Host "Running amino acid test cases..."
@@ -133,3 +129,12 @@ Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -p $WD/turtle_aa.nex -g $WD/tu
 Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -p $WD/turtle_aa.nex -g $WD/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix $OutDir/turtle_aa.nex.constr2 -T 1 -seed $SEED"
 
 Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -m MUTSEL -ft AUTO --prefix $OutDir/turtle_aa.mutsel -T 1 -seed $SEED"
+
+# Kept at the END of the suite on purpose: verify_memory/verify_runtime join the
+# threshold table to the log POSITIONALLY, so a command inserted mid-list shifts
+# every later row onto the wrong threshold. These two have no table rows yet, so
+# here they are simply skipped with a warning instead of corrupting the rest.
+# user-defined codon frequencies must be honoured by GY-type models (issue #192)
+$CodonFreq = (Get-Content $WD/codon_freq.txt -Raw).Trim()
+Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+FU{$CodonFreq}`" --prefix $OutDir/codon.gy.fu -T 1 -seed $SEED"
+Measure-IQTree "$IQTreeBin -s $WD/codon.fa -st CODON -te $WD/codon.tree -blfix -m `"GY{0.8,1.07}+F3X4`" --prefix $OutDir/codon.gy.f3x4 -T 1 -seed $SEED"

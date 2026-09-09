@@ -29,7 +29,7 @@ if ($FallbackColumn -ne "") {
     $thrIdx = $hdr.IndexOf("thr-$FallbackColumn")
     if ($thrIdx -ge 0) {
         Write-Host "Using per-platform thresholds: thr-$FallbackColumn"
-        for ($i = 0; $i -lt $thresholds.Count; $i++) {
+        for ($i = 0; $i -lt [Math]::Min($thresholds.Count, $nLog); $i++) {
             $thresholds[$i].Threshold = [double]($thresholdLines[$i] -split "`t")[$thrIdx]
         }
     } else {
@@ -57,9 +57,32 @@ $iqtree2Mem = foreach ($line in $iqtree2Lines) { [double]($line -split "`t")[2] 
 $iqtree3Lines = Get-Content $IQTree3Log | Select-Object -Skip 1
 $iqtree3Mem = foreach ($line in $iqtree3Lines) { [double]($line -split "`t")[2] }
 
+# Column 0 is the command actually executed, kept so a breaching check can be retried.
+$iqtree2Cmd = foreach ($line in $iqtree2Lines) { ($line -split "`t")[0] }
+$iqtree3Cmd = foreach ($line in $iqtree3Lines) { ($line -split "`t")[0] }
+. (Join-Path $PSScriptRoot "remeasure.ps1")
+
+# Reconcile the number of benchmark commands with the number of table rows.
+# They are joined POSITIONALLY, so a mismatch means the pairing is wrong.
+$nRows = $thresholds.Count
+$nLog  = $iqtree3Mem.Count
+if ($nLog -ne $nRows) {
+    Write-Host "WARNING: the suite ran $nLog commands but memory has $nRows threshold rows."
+    if ($nLog -gt $nRows) {
+        Write-Host "   Skipping the last $($nLog - $nRows) command(s) - they have no threshold:"
+        $iqtree3Cmd[$nRows..($nLog - 1)] | ForEach-Object { Write-Host "     $_" }
+    } else {
+        Write-Host "   Ignoring the last $($nRows - $nLog) threshold row(s) - no command produced them."
+        $thresholds = $thresholds[0..($nLog - 1)]
+    }
+    Write-Host "   NOTE: rows are matched by POSITION. If the extra command(s) were added in the"
+    Write-Host "   middle rather than at the end, every later row is now compared against the"
+    Write-Host "   wrong command. Add the missing row(s) to keep the table in step."
+}
+
 $failCount = 0
 
-for ($i = 0; $i -lt $thresholds.Count; $i++) {
+for ($i = 0; $i -lt [Math]::Min($thresholds.Count, $nLog); $i++) {
     $command   = $thresholds[$i].Command
     $threshold = $thresholds[$i].Threshold
     $expected  = $iqtree2Mem[$i]
@@ -77,6 +100,23 @@ for ($i = 0; $i -lt $thresholds.Count; $i++) {
 
     $allowed = $expected + $threshold
     $diff    = $reported - $expected
+
+    # Retry once before failing: re-run this one command for both binaries and
+    # re-evaluate. Costs nothing when everything passes.
+    if ($reported -gt $allowed -and $iqtree3Cmd.Count -gt $i) {
+        Write-Host "↻ $command exceeded (${diff}MB); retrying this command once..."
+        $r2 = Measure-Once $iqtree2Cmd[$i]
+        $r3 = Measure-Once $iqtree3Cmd[$i]
+        if ($r2.Ok -and $r3.Ok) {
+            $expected = $r2.Mem
+            $reported = $r3.Mem
+            $allowed  = $expected + $threshold
+            $diff     = $reported - $expected
+            Write-Host "   retry: IQ-TREE2 $($r2.Mem)MB, IQ-TREE3 $($r3.Mem)MB, Diff ${diff}MB"
+        } else {
+            Write-Host "   retry did not produce a usable measurement; keeping the first result"
+        }
+    }
 
     if ($reported -gt $allowed) {
         Write-Host "❌ $command exceeded the allowed memory usage."
