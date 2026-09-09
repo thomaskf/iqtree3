@@ -616,6 +616,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize model ****************************/
 
     if (!tree->aln->isSSF()) {
+        // standard model
+        ASSERT(!tree->aln->isSSM());
         if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
             string model_list;
             if (model_str.substr(0, 3) == "MIX") {
@@ -637,59 +639,56 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             model = createModel(model_str, models_block, freq_type, freq_params, tree);
         }
 //        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
-    } else {
-        // site-specific model
-        if (!tree->aln->isSSM()) {
-            // PMSF
-            if (model_str == "JC" || model_str == "POISSON")
-                outError("JC is not suitable for site-specific model");
-            model = new ModelSet(model_str.c_str(), tree);
-            ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-            models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-            double *state_freq = new double[model->num_states];
-            double *rates = new double[model->getNumRateEntries()];
-            for (size_t i = 0; i < tree->aln->ptn_state_freq.size(); ++i) {
-                ModelMarkov *modeli;
-                if (i == 0) {
-                    modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
-                    modeli->getStateFrequency(state_freq);
-                    modeli->getRateMatrix(rates);
-                } else {
-                    modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
-                    modeli->setStateFrequency(state_freq);
-                    modeli->setRateMatrix(rates);
-                }
-                if (tree->aln->ptn_state_freq[i]) {
-                    modeli->setStateFrequency(tree->aln->ptn_state_freq[i]);
-                }
-                modeli->init(FREQ_USER_DEFINED);
-                models->push_back(modeli);
+    } else if (!tree->aln->isSSM()) {
+        // site-specific frequency model (aka PMSF)
+        if (model_str == "JC" || model_str == "POISSON")
+            outError("JC is not suitable for site-specific model");
+        model = new ModelSet(model_str.c_str(), tree);
+        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+        models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
+        double *state_freq = new double[model->num_states];
+        double *rates = new double[model->getNumRateEntries()];
+        for (size_t i = 0; i < tree->aln->ptn_state_freq.size(); ++i) {
+            ModelMarkov *modeli;
+            if (i == 0) {
+                modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
+                modeli->getStateFrequency(state_freq);
+                modeli->getRateMatrix(rates);
+            } else {
+                modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
+                modeli->setStateFrequency(state_freq);
+                modeli->setRateMatrix(rates);
             }
-            delete [] rates;
-            delete [] state_freq;
-            models->joinEigenMemory();
-            models->decomposeRateMatrix();
-        } else {
-            // MUTSEL
-            model = new ModelSet(model_str.c_str(), tree);
-            ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-            models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-            models->fixParameters(true);
-            for (size_t i = 0; i < tree->aln->ptn_state_freq.size(); ++i) {
-                ModelMarkov *modeli = new ModelMarkov(tree, true, true); // dummy model for getting num_states and num_rate_entries
+            if (tree->aln->ptn_state_freq[i]) {
                 modeli->setStateFrequency(tree->aln->ptn_state_freq[i]);
-                modeli->setRateMatrix(tree->aln->ptn_rate_mat[i]);
-                // Minh/Thomas: Important to note: site Q matrices are not normalised
-                // But make sure to normalise across all sites, i.e.
-                // (1/nsites) * sum_i mu_i = 1.0, where mu_i = -sum_j pi^i_j * Q^i_{jj}
-                modeli->normalize_matrix = false;
-                modeli->init(FREQ_USER_DEFINED);
-                modeli->fixParameters(true);
-                models->push_back(modeli);
             }
-            models->joinEigenMemory();
-            models->decomposeRateMatrix();
+            modeli->init(FREQ_USER_DEFINED);
+            models->push_back(modeli);
         }
+        delete [] rates;
+        delete [] state_freq;
+        models->joinEigenMemory();
+        models->decomposeRateMatrix();
+    } else {
+        // Site-specific Q model (aka MUTSEL)
+        model = new ModelSet(model_str.c_str(), tree);
+        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+        models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
+        models->fixParameters(true);
+        for (size_t i = 0; i < tree->aln->ptn_state_freq.size(); ++i) {
+            ModelMarkov *modeli = new ModelMarkov(tree, true, true); // dummy model for getting num_states and num_rate_entries
+            modeli->setStateFrequency(tree->aln->ptn_state_freq[i]);
+            modeli->setRateMatrix(tree->aln->ptn_rate_mat[i]);
+            // Minh/Thomas: Important to note: site Q matrices are not normalised
+            // But make sure to normalise across all sites, i.e.
+            // (1/nsites) * sum_i mu_i = 1.0, where mu_i = -sum_j pi^i_j * Q^i_{jj}
+            modeli->normalize_matrix = false;
+            modeli->init(FREQ_USER_DEFINED);
+            modeli->fixParameters(true);
+            models->push_back(modeli);
+        }
+        models->joinEigenMemory();
+        models->decomposeRateMatrix();
     }
 
 //    if (model->isMixture())

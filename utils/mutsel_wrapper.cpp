@@ -226,7 +226,7 @@ void write_site_models_to_alignment(Alignment &alignment, const double *site_fre
     // currently we only support 20 states for mutsel model,
     // so this function should only be called for protein alignments
     ASSERT(alignment.num_states == 20);
-    alignment.num_rates = 190;
+    //alignment.num_rates = 190;
 
     size_t nsite = alignment.getNSite();
     if (len != static_cast<int>(nsite))
@@ -355,7 +355,7 @@ void write_binary_site_model_file(const std::string &filename, Alignment &alignm
 {
     size_t nsites = alignment.getNSite();
     size_t nstates = alignment.num_states;
-    size_t nrates = alignment.num_rates;
+    size_t nrates = alignment.num_states*(alignment.num_states-1)/2;
     ASSERT(nstates == 20);
     ASSERT(nrates == 190);
     try

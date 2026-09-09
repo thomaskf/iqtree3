@@ -75,7 +75,7 @@ Alignment::Alignment() {
     non_stop_codon = nullptr;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
-    num_rates = 0;
+    //num_rates = 0;
     // pars_lower_bound = nullptr; // now a local variable in orderPatternByNumChars()
 }
 
@@ -3636,7 +3636,7 @@ Alignment *Alignment::initAlignmentCopy() const {
     // Alignment members
     aln->seq_names = seq_names;
     aln->seq_type = seq_type;
-    aln->num_rates = num_rates;
+    //aln->num_rates = num_rates;
     aln->num_states = num_states;
     aln->STATE_UNKNOWN = STATE_UNKNOWN;
     if (aln->seq_type == SEQ_CODON) {
@@ -3682,6 +3682,7 @@ Alignment* Alignment::extractSubAlignment(const IntVector &seq_id,
             if (isSSM() && added) {
                 // a new pattern is added, copy its rate matrix
                 double *rate_mat = nullptr;
+                int num_rates = getNumRates();
                 if (ptn_rate_mat[ptn]) {
                     rate_mat = new double[num_rates];
                     memcpy(rate_mat, ptn_rate_mat[ptn], num_rates*sizeof(double));
@@ -3728,6 +3729,7 @@ Alignment *Alignment::extractPatterns(const IntVector &ptn_id) const {
         if (isSSM() && added) {
             // a new pattern is added, copy its rate matrix
             double *rate_mat = nullptr;
+            int num_rates = getNumRates();
             if (ptn_rate_mat[ptn]) {
                 rate_mat = new double[num_rates];
                 memcpy(rate_mat, ptn_rate_mat[ptn], num_rates*sizeof(double));
@@ -3762,6 +3764,7 @@ Alignment *Alignment::extractPatternFreqs(const IntVector &ptn_freq) const {
             if (isSSM() && added) {
                 // a new pattern is added, copy its rate matrix
                 double *rate_mat = nullptr;
+                int num_rates = getNumRates();
                 if (ptn_rate_mat[ptn]) {
                     rate_mat = new double[num_rates];
                     memcpy(rate_mat, ptn_rate_mat[ptn], num_rates*sizeof(double));
@@ -3796,6 +3799,7 @@ Alignment *Alignment::extractSites(const IntVector &site_id) const {
         if (isSSM() && added) {
             // a new pattern is added, copy its rate matrix
             double *rate_mat = nullptr;
+            int num_rates = getNumRates();
             if (ptn_rate_mat[ptn]) {
                 rate_mat = new double[num_rates];
                 memcpy(rate_mat, ptn_rate_mat[ptn], num_rates*sizeof(double));
@@ -4101,7 +4105,6 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     position_spec = aln->position_spec;
     aln_file = aln->aln_file;
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
-    num_rates = aln->num_rates;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
@@ -4148,6 +4151,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
                 if (aln->isSSM() && added) {
                     // a new pattern is added, copy its rate matrix
                     double *rate_mat = nullptr;
+                    int num_rates = aln->getNumRates();
                     if (aln->ptn_rate_mat[ptn]) {
                         rate_mat = new double[num_rates];
                         memcpy(rate_mat, aln->ptn_rate_mat[ptn], num_rates*sizeof(double));
