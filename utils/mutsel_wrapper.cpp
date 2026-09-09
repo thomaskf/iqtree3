@@ -355,7 +355,7 @@ void write_binary_site_model_file(const std::string &filename, Alignment &alignm
 {
     size_t nsites = alignment.getNSite();
     size_t nstates = alignment.num_states;
-    size_t nrates = alignment.num_states*(alignment.num_states-1)/2;
+    size_t nrates = alignment.getNumRates();
     ASSERT(nstates == 20);
     ASSERT(nrates == 190);
     try
