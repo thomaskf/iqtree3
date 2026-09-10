@@ -1,14 +1,8 @@
 #!/bin/bash
-# Re-run a single benchmark command and echo "<seconds> <peak MB>".
-#
-# Used by verify_memory.sh / verify_runtime.sh to retry a command that breached
-# its threshold. CI runner noise is one-sided - a loaded machine can only make a
-# command slower or fatter - so a breach that does not reproduce was noise, while
-# a genuine regression reproduces every time.
-#
-# The suite is stateful, so the command's OWN outputs are cleared first; IQ-TREE
-# otherwise refuses to rerun ("previous run successfully finished"). Outputs of
-# earlier commands are left alone because later commands still need them.
+# Re-run one benchmark command; echoes "<seconds> <peak MB>".
+# Used to retry a check that breached: runner noise only ever inflates, so a
+# breach that does not reproduce was noise. Clears the command's own outputs
+# first, since IQ-TREE refuses to rerun over a finished checkpoint.
 remeasure() {
     local CMD="$1"
     local PREFIX REAL MEM_MB MEM_KB PEAK_MEM tmp

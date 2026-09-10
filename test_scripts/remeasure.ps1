@@ -1,14 +1,6 @@
-# Re-run a single benchmark command and return @{ Time = <seconds>; Mem = <MB> }.
-#
-# Used by verify_memory.ps1 / verify_runtime.ps1 to retry a command that breached
-# its threshold. CI runner noise is one-sided - a loaded machine can only make a
-# command slower or fatter - so a breach that does not reproduce was noise, while
-# a genuine regression reproduces every time.
-#
-# Measurement mirrors Measure-IQTree in test_iqtree.ps1 (poll WorkingSet64) so the
-# retry is comparable with the original reading. The suite is stateful, so only
-# this command's OWN outputs are cleared; IQ-TREE otherwise refuses to rerun
-# ("previous run successfully finished").
+# Re-run one benchmark command; returns @{ Time; Mem; Ok }.
+# Used to retry a check that breached. Mirrors Measure-IQTree so the retry is
+# comparable, and clears the command's own outputs first.
 function Measure-Once {
     param ([string]$CommandLine)
 

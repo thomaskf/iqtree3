@@ -10,12 +10,16 @@ $WD     = "test_scripts/test_data"
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-"Command`tRealTime(s)`tPeakMemory(MB)" | Out-File -FilePath $LOGFILE -Encoding utf8
+"identifier`tCommand`tRealTime(s)`tPeakMemory(MB)" | Out-File -FilePath $LOGFILE -Encoding utf8
 
 function Measure-IQTree {
     param (
         [string]$CommandLine
     )
+
+    # Identifier = the .iqtree file produced; keys the row in expect_*.txt.
+    $id = "(no --prefix)"
+    if ($CommandLine -match '--prefix\s+\S*[/\\](\S+)') { $id = $Matches[1] + ".iqtree" }
 
     Write-Host "`n===== RUNNING: $CommandLine ====="
 
@@ -58,7 +62,7 @@ function Measure-IQTree {
     Get-Content $tempOut
 
     # Log timing and memory
-    "$CommandLine`t$elapsed`t$([math]::Round($peakMemory, 2))" | Out-File -FilePath $LOGFILE -Append -Encoding utf8
+    "$id`t$CommandLine`t$elapsed`t$([math]::Round($peakMemory, 2))" | Out-File -FilePath $LOGFILE -Append -Encoding utf8
 
     # Cleanup
     Remove-Item $tempOut

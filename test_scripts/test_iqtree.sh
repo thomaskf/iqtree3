@@ -13,10 +13,14 @@ OUT_DIR="${3:-${WD}}"
 mkdir -p "${OUT_DIR}"
 
 # Initialize TSV file with header
-echo -e "Command\tRealTime(s)\tPeakMemory(MB)" > "$LOGFILE"
+echo -e "identifier\tCommand\tRealTime(s)\tPeakMemory(MB)" > "$LOGFILE"
 
 run_timed() {
     local CMD="$*"
+    # Identifier = the .iqtree file produced; keys the row in expect_*.txt.
+    local ID
+    ID=$(echo "$CMD" | sed -n 's|.*--prefix [^ ]*/\([^ ]*\).*|\1|p')
+    if [ -n "$ID" ]; then ID="${ID}.iqtree"; else ID="(no --prefix)"; fi
     echo -e "\n================ RUNNING ================="
     echo "$CMD"
     echo "=========================================="
@@ -46,7 +50,7 @@ run_timed() {
     fi
 
     # Append to log
-    echo -e "$CMD\t$REAL\t$MEM_MB" >> "$LOGFILE"
+    echo -e "$ID\t$CMD\t$REAL\t$MEM_MB" >> "$LOGFILE"
 
     rm -f tmp_time.txt
 }
