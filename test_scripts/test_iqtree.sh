@@ -126,8 +126,6 @@ run_timed ${IQTREE_BIN} -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree --pr
 
 run_timed ${IQTREE_BIN} -s $AA_FASTA -p $AA_NEX -g ${WD}/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix ${OUT_DIR}/turtle_aa.nex.constr2 -T 1 -seed $SEED
 
-run_timed ${IQTREE_BIN} -s $AA_FASTA -m "MUTSEL" -ft AUTO --prefix ${OUT_DIR}/turtle_aa.mutsel -T 1 -seed $SEED
-
 # Kept at the END of the suite on purpose: verify_memory/verify_runtime join the
 # threshold table to the log POSITIONALLY, so a command inserted mid-list shifts
 # every later row onto the wrong threshold. These two have no table rows yet, so

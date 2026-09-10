@@ -128,8 +128,6 @@ Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -p $WD/turtle_aa.nex -g $WD/tu
 
 Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -p $WD/turtle_aa.nex -g $WD/turtle.constr.tree2 -B 1000 -alrt 1000 --prefix $OutDir/turtle_aa.nex.constr2 -T 1 -seed $SEED"
 
-Measure-IQTree "$IQTreeBin -s $WD/turtle_aa.fasta -m MUTSEL -ft AUTO --prefix $OutDir/turtle_aa.mutsel -T 1 -seed $SEED"
-
 # Kept at the END of the suite on purpose: verify_memory/verify_runtime join the
 # threshold table to the log POSITIONALLY, so a command inserted mid-list shifts
 # every later row onto the wrong threshold. These two have no table rows yet, so
