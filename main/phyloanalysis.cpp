@@ -68,8 +68,6 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "utils/mutsel_wrapper.h"
-#include "utils/self_process.h"
-#include <filesystem>
 
 using namespace Eigen;
 using Eigen::Map;
@@ -5229,31 +5227,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 
         // Initialize site-frequency model
         if (params.tree_freq_file) {
-            if ((std::string)params.tree_freq_file == "AUTO") {
-                /* Minh/Thomas comments: the design of spawning process is not great
-                 because you need to load the alignment again causing overhead.
-                 It's better to run inside IQ-TREE. Suggest that we do not
-                 announce -ft AUTO option for now, and just ask users to explicitly
-                 infer a guide tree themselves.
-                 */
-                cout << "INFO: Automatic guide tree inference using LG+F+G4" << endl;
-                auto guide_tree_out = (std::string)params.out_prefix + ".guide_tree";
-                if (fileExists(guide_tree_out + ".treefile")) {
-                    cout << "INFO: Guide tree already exists at " << guide_tree_out + ".treefile" << endl;
-                    params.tree_freq_file = strdup((guide_tree_out + ".treefile").c_str());
-                } else {
-                    cout << "INFO: Guide tree does not exist, inferring..." << endl;
-                    auto arguments = std::vector<std::string>{"-s", (std::string)params.aln_file, "-m", "LG+F+G4", "-nt", std::to_string(params.num_threads), "-pre", guide_tree_out};
-                    auto process = selfproc::spawn_self(arguments);
-                    auto exit_code = process.wait();
-                    if (exit_code != 0) {
-                        outError("Guide tree inference failed with exit code " + std::to_string(exit_code));
-                        exit(1);
-                    }
-                    cout << "INFO: Guide tree written to " << guide_tree_out + ".treefile" << endl;
-                    params.tree_freq_file = strdup((guide_tree_out + ".treefile").c_str());
-                }
-            }
             if (params.model_name.rfind("MUTSEL") == 0) {
                 if (checkpoint->getBool("finishedSiteModelFile")) {
                     read_site_model_file((string)params.out_prefix + ".sitemodel", *alignment);

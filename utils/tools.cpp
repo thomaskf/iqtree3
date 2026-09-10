@@ -3186,6 +3186,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+                if (iEquals(argv[cnt], "AUTO"))
+                    throw "-ft AUTO is not supported; please infer a guide tree first and pass it to -ft";
                 params.tree_freq_file = argv[cnt];
                 if (params.print_site_state_freq == WSF_NONE)
                     params.print_site_state_freq = WSF_POSTERIOR_MEAN;
