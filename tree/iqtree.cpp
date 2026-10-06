@@ -2414,6 +2414,12 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 }
 
 string IQTree::ensureModelParametersAreSet(double initEpsilon) {
+    // if using partition models, don't allow mixing reversible and non-reversible models
+    if (isSuperTree())
+    {
+        ((PhyloSuperTree*) this)->validatePartitionModel();
+    }
+    
     string initTree;
     getModelFactory()->restoreCheckpoint();
     if (getCheckpoint()->getBool("finishedModelInit")) {

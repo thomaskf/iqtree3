@@ -93,18 +93,21 @@ void PhyloTree::setLikelihoodKernelSSE() {
         switch (aln->num_states) {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 4, false, true>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, SAFE_LH, 4, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 4, false, true>;
             computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, SAFE_LH, 4, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 4, false, true>;
             break;
         case 20:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 20, false, true>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, SAFE_LH, 20, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 20, false, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, SAFE_LH, 20, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 20, false, true>;
             break;
         default:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchGenericSIMD    <Vec2d, SAFE_LH, false, true>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRGenericSIMD    <Vec2d, SAFE_LH, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervGenericSIMD      <Vec2d, SAFE_LH, false, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodGenericSIMD   <Vec2d, SAFE_LH, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec2d, false, true>;
@@ -117,12 +120,14 @@ void PhyloTree::setLikelihoodKernelSSE() {
         switch (aln->num_states) {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, NORM_LH, 4, false, true>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, NORM_LH, 4, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, NORM_LH, 4, false, true>;
             computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, NORM_LH, 4, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 4, false, true>;
             break;
         case 20:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, NORM_LH, 20, false, true>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, NORM_LH, 20, false, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, NORM_LH, 20, false, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, NORM_LH, 20, false, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, 20, false, true>;
@@ -140,11 +145,13 @@ void PhyloTree::setLikelihoodKernelSSE() {
             switch (aln->num_states) {
                 case 4:
                     computeLikelihoodBranchPointer  = &PhyloTree::computeNonrevLikelihoodBranchSIMD <Vec2d, SAFE_LH, 4>;
+                    computeLikelihoodBranchESRPointer  = &PhyloTree::computeNonrevLikelihoodBranchESRSIMD <Vec2d, SAFE_LH, 4>;
                     computeLikelihoodDervPointer    = &PhyloTree::computeNonrevLikelihoodDervSIMD   <Vec2d, SAFE_LH, 4>;
                     computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec2d, SAFE_LH, 4>;
                     break;
                 default:
                     computeLikelihoodBranchPointer  = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD <Vec2d, SAFE_LH>;
+                    computeLikelihoodBranchESRPointer  = &PhyloTree::computeNonrevLikelihoodBranchESRGenericSIMD <Vec2d, SAFE_LH>;
                     computeLikelihoodDervPointer    = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD   <Vec2d, SAFE_LH>;
                     computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec2d, SAFE_LH>;
                     break;
@@ -153,11 +160,13 @@ void PhyloTree::setLikelihoodKernelSSE() {
             switch (aln->num_states) {
                 case 4:
                     computeLikelihoodBranchPointer  = &PhyloTree::computeNonrevLikelihoodBranchSIMD <Vec2d, NORM_LH, 4>;
+                    computeLikelihoodBranchESRPointer  = &PhyloTree::computeNonrevLikelihoodBranchESRSIMD <Vec2d, NORM_LH, 4>;
                     computeLikelihoodDervPointer    = &PhyloTree::computeNonrevLikelihoodDervSIMD   <Vec2d, NORM_LH, 4>;
                     computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec2d, NORM_LH, 4>;
                     break;
                 default:
                     computeLikelihoodBranchPointer  = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD <Vec2d, NORM_LH>;
+                    computeLikelihoodBranchESRPointer  = &PhyloTree::computeNonrevLikelihoodBranchESRGenericSIMD <Vec2d, NORM_LH>;
                     computeLikelihoodDervPointer    = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD   <Vec2d, NORM_LH>;
                     computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec2d, NORM_LH>;
                     break;
@@ -171,6 +180,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
 	switch(aln->num_states) {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 4>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, SAFE_LH, 4>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 4>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec2d, SAFE_LH, 4>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, SAFE_LH, 4>;
@@ -178,6 +188,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
             break;
         case 20:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 20>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, SAFE_LH, 20>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 20>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec2d, SAFE_LH, 20>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, SAFE_LH, 20>;
@@ -185,6 +196,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
             break;
         default:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchGenericSIMD    <Vec2d, SAFE_LH>;
+            computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRGenericSIMD    <Vec2d, SAFE_LH>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervGenericSIMD      <Vec2d, SAFE_LH>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenGenericSIMD<Vec2d, SAFE_LH>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodGenericSIMD   <Vec2d, SAFE_LH>;
@@ -197,6 +209,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
 	switch(aln->num_states) {
 	case 4:
         computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, NORM_LH, 4>;
+        computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, NORM_LH, 4>;
         computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, NORM_LH, 4>;
         computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec2d, NORM_LH, 4>;
         computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, NORM_LH, 4>;
@@ -204,6 +217,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
 		break;
 	case 20:
         computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, NORM_LH, 20>;
+        computeLikelihoodBranchESRPointer     = &PhyloTree::computeLikelihoodBranchESRSIMD    <Vec2d, NORM_LH, 20>;
         computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, NORM_LH, 20>;
         computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec2d, NORM_LH, 20>;
         computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, NORM_LH, 20>;

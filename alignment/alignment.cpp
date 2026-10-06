@@ -170,6 +170,27 @@ void Alignment::checkAbsentStates(string msg) {
     }
 }
 
+bool Alignment::containSingleStateOnly(const int& state)
+{
+    // the alignment contains only one single state if:
+    // 1. it contains only one pattern
+    // 2. that pattern contains only one state
+    if (size() == 1
+        && at(0).num_chars == 1)
+    {
+        // if a specific state is specified (not -1), check if that state is the only one present in the alignment
+        if (state >= 0)
+        {
+            ASSERT(state < num_states);
+            return at(0).freqs[state] == at(0).size();
+        }
+        // otherwise, don't need to check that constraint
+        return true;
+    }
+    
+    return false;
+}
+
 void Alignment::checkSeqName() {
     ostringstream warn_str;
     StrVector::iterator it;
@@ -4243,6 +4264,52 @@ Alignment *Alignment::convertCodonToDNA() {
     verbose_mode = save_mode;
     res->countConstSite();
 //    res->buildSeqStates();
+    return res;
+}
+
+void Alignment::convertToBin(Alignment* res, const string& new_model_name)
+{
+    for (size_t i = 0; i < getNSeq(); ++i) {
+        res->seq_names.push_back(getSeqName(i));
+    }
+    res->name = name;
+    res->model_name = new_model_name; //res->model_name = model_name;
+    res->sequence_type = "BIN"; //res->sequence_type = sequence_type;
+    res->position_spec = position_spec;
+    res->aln_file = aln_file;
+    res->seq_type = SEQ_BINARY;
+    res->num_states = 2;
+    
+    res->computeUnknownState();
+    
+    res->site_pattern.resize(getNSite(), -1);
+    res->clear();
+    res->pattern_index.clear();
+    
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    size_t nsite = getNSite();
+    size_t nseq = getNSeq();
+    Pattern pat;
+    pat.resize(nseq);
+
+    for (size_t site = 0; site < nsite; ++site)
+    {
+        for (size_t seq = 0; seq < nseq; ++seq)
+        {
+            StateType state = at(getPatternID(site))[seq];
+            pat[seq] = state == STATE_UNKNOWN ? 0 : 1;
+        }
+        res->addPattern(pat, site);
+    }
+    verbose_mode = save_mode;
+    res->countConstSite();
+}
+
+Alignment* Alignment::convertToBin(const string& new_model_name)
+{
+    Alignment *res = new Alignment;
+    convertToBin(res, new_model_name);
     return res;
 }
 

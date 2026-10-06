@@ -3731,12 +3731,32 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_prob = WSL_MIXTURE_RATECAT;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-esr") == 0 || strcmp(argv[cnt], "--extant") == 0) {
+                params.print_extant_seqs = true;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-gap-esr") == 0 || strcmp(argv[cnt], "--gap-extant") == 0) {
+                params.gapped_seq_reconstruction = true;
+                params.print_extant_seqs = true;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-asr") == 0 || strcmp(argv[cnt], "--ancestral") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;
                 params.ignore_identical_seqs = false;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-gap-asr") == 0 || strcmp(argv[cnt], "--gap-ancestral") == 0) {
+                params.gapped_seq_reconstruction = true;
+                params.print_ancestral_sequence = AST_MARGINAL;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-asr-min") == 0 || strcmp(argv[cnt], "--asr-min") == 0) {
                 cnt++;
@@ -7309,6 +7329,9 @@ void Params::setDefault() {
     print_site_rate = 0;
     print_trees_site_posterior = 0;
     print_ancestral_sequence = AST_NONE;
+    gapped_seq_reconstruction = false;
+    print_extant_seqs = false;
+    allow_nonrev_bin = false;
     min_ancestral_prob = 0.0;
     print_tree_lh = false;
     lambda = 1;

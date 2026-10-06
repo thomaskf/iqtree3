@@ -214,6 +214,7 @@ const char* aa_usual_model = "LG";
 const char* aa_usual_nonrev_model = "NQ.pfam";
 const char* codon_usual_model = "GY+F3X4";
 const char* bin_usual_model = "GTR2";
+const char* bin_usual_nonrev_model = "UNREST";
 const char* morph_usual_model = "MK";
 const char* pomo_usual_model = "GTR+P";
 
@@ -250,7 +251,13 @@ string getUsualModelSubst(SeqType seq_type) {
             else
                 return aa_usual_model;
         case SEQ_CODON: return codon_usual_model;
-        case SEQ_BINARY: return bin_usual_model;
+        case SEQ_BINARY:
+            // NHANLT: I used a new variable "allow_nonrev_bin" instead of reusing the existing variable "contain_nonrev"
+            // because nonreversible model was only tested for gapped-ESR/ASR and not yet be tested for any other features.
+            if (Params::getInstance().allow_nonrev_bin)
+                return bin_usual_nonrev_model;
+            else
+                return bin_usual_model;
         case SEQ_MORPH: return morph_usual_model;
         case SEQ_POMO: return pomo_usual_model;
         default: ASSERT(0 && "Unprocessed seq_type"); return "";

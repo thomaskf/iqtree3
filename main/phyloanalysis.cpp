@@ -1301,8 +1301,30 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "  Marginal probability:          " << params.out_prefix << ".mprob" << endl;
 
     if (params.print_ancestral_sequence) {
-        cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
+        // if using topology unlinked, output written in separate files
+        if (params.partition_type == TOPO_UNLINKED)
+        {
+            cout << "  Ancestral state:               " << params.out_prefix << "_part*" << ".state" << endl;
+        }
+        // otherwise, output in a single file
+        else
+        {
+            cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
+        }
 //        cout << "  Ancestral sequences:           " << params.out_prefix << ".aseq" << endl;
+    }
+    
+    if (params.print_extant_seqs) {
+        // if using topology unlinked, output written in separate files
+        if (params.partition_type == TOPO_UNLINKED)
+        {
+            cout << "  Extant state:                  " << params.out_prefix << "_part*" << ".extant.state" << endl;
+        }
+        // otherwise, output in a single file
+        else
+        {
+            cout << "  Extant state:                  " << params.out_prefix << ".extant.state" << endl;
+        }
     }
 
     if (params.write_intermediate_trees)
@@ -2693,8 +2715,65 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
     }
     
-    if (params.print_ancestral_sequence) {
-        printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
+    // reconstruct gapped sequences, if needed
+    IQTree* gsr_tree = nullptr;
+    if (iqtree.params->gapped_seq_reconstruction)
+        gsr_tree = reconstructGappedSeqs(*iqtree.params, &iqtree);
+    
+    // print ancestral/extant sequences if reconstructed
+    if (params.print_ancestral_sequence || params.print_extant_seqs)
+    {
+        // if using Topology unlinked -> print each partition independently
+        if (iqtree.isSuperTree() && params.partition_type == TOPO_UNLINKED)
+        {
+            PhyloSuperTree* stree = (PhyloSuperTree*) &iqtree;
+            const string output_prefix = params.out_prefix;
+            ASSERT(!gsr_tree || gsr_tree->isSuperTree());
+            for (size_t part_id = 0; part_id < stree->size(); ++part_id)
+            {
+                // init the output prefix
+                string partition_prefix = output_prefix + "_part" + convertIntToString(part_id + 1);
+                
+                // extract the gsr_tree
+                PhyloTree* partition_gsr_tree = gsr_tree;
+                if (gsr_tree->isSuperTree())
+                {
+                    partition_gsr_tree = ((PhyloSuperTree*)gsr_tree)->at(part_id);
+                }
+                
+                // print ancestral sequences reconstructed for this partition
+                if (params.print_ancestral_sequence)
+                {
+                    printAncestralSequences(partition_prefix.c_str(), stree->at(part_id), partition_gsr_tree, params.print_ancestral_sequence);
+                }
+                
+                // print extant sequences reconstructed for this partition
+                if (params.print_extant_seqs) {
+                    printExtantSequences((partition_prefix + ".extant").c_str(), stree->at(part_id), partition_gsr_tree);
+                }
+            }
+        }
+        // otherwise, print output normally
+        else
+        {
+            // print ancestral sequences reconstructed for this partition
+            if (params.print_ancestral_sequence) {
+                printAncestralSequences(params.out_prefix, &iqtree, gsr_tree, params.print_ancestral_sequence);
+            }
+            
+            // print extant sequences reconstructed for this partition
+            if (params.print_extant_seqs) {
+                printExtantSequences(((string)params.out_prefix + ".extant").c_str(), &iqtree, gsr_tree);
+            }
+        }
+    }
+    
+    // clean up the dummy tree and alignment for reconstructing gapped sequences
+    if (gsr_tree)
+    {
+        Alignment* gsr_alignment = gsr_tree->aln;
+        delete gsr_tree;
+        delete gsr_alignment;
     }
     
     if (params.print_site_state_freq != WSF_NONE && !params.site_freq_file && !params.tree_freq_file) {
@@ -5300,6 +5379,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         cout << "Alignment sites statistics printed to " << site_info_file << endl;
     }
 
+    runPhyloAnalysisAfterReadingAln(params, checkpoint, tree, alignment, model_info);
+}
+
+void runPhyloAnalysisAfterReadingAln(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&alignment, ModelCheckpoint *model_info)
+{
     /*************** initialize tree ********************/
     tree = newIQTree(params, alignment);
 
@@ -5456,6 +5540,198 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 
     checkpoint->putBool("finished", true);
     checkpoint->dump(true);
+}
+
+IQTree* reconstructGappedSeqs(Params params, IQTree* original_tree)
+{
+    ASSERT(original_tree && original_tree->aln);
+    
+    if (verbose_mode >= VB_MIN)
+        cout << endl << "----- Start reconstructing gapped sequences -----" << endl;
+    
+    // dummy variables
+    Alignment* original_aln = original_tree->aln;
+    IQTree *tree;
+    
+    // convert the original aln into binary aln
+    // we must empty the model name of alignment to force IQ-TREE running ModelFinder
+    Alignment* alignment = original_aln->convertToBin("");
+    
+    // special case: the alignment contains only non-gap characters
+    const int NON_GAPPED_STATE = 1;
+    bool all_non_gapped_aln = alignment->containSingleStateOnly(NON_GAPPED_STATE);
+    // partition alignment
+    if (alignment->isSuperAlignment())
+    {
+        all_non_gapped_aln = false;
+        int count_non_gapped_parts = 0;
+        
+        // check if all partition alignments contain no gap
+        SuperAlignment* super_aln = (SuperAlignment*) alignment;
+        
+        // check alignment members one by one
+        for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
+            if((*it)->containSingleStateOnly(NON_GAPPED_STATE))
+            {
+                ++count_non_gapped_parts;
+            }
+        }
+        
+        // check if all partitions are non-gapped
+        if (count_non_gapped_parts == super_aln->partitions.size())
+            all_non_gapped_aln = true;
+        // otherwise, if there is at least one non-gapped partition => others are gapped
+        // return an error
+        /*else if (count_non_gapped_parts > 0)
+        {
+            outError("Sorry! Currently we don't support `-gap-esr` and `-gap-asr` if some partitions are gapped while some others are non-gapped. They could be all either gapped or non-gapped.");
+        }*/
+            
+    }
+    // if the alignment contains only non-gap characters
+    // don't need to run ASR/ESR on the binary data
+    // simply return a null tree
+    if (all_non_gapped_aln)
+    {
+        delete alignment;
+        
+        if (verbose_mode >= VB_MIN)
+            cout << "----- Finish reconstructing gapped sequences -----" << endl;
+        
+        return nullptr;
+    }
+    
+    // debug
+    if (verbose_mode >= VB_DEBUG)
+    {
+        // partition alignment
+        if (alignment->isSuperAlignment())
+        {
+            SuperAlignment* super_aln = (SuperAlignment*) alignment;
+            
+            // convert alignment members one by one
+            size_t part = 1;
+            for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++, ++part) {
+                
+                // output each partition into a single alignment
+                std::ofstream outFile((string)params.out_prefix + "_part" + convertIntToString(part) + ".bin.phy");
+                (*it)->printPhylip(outFile);
+                outFile.close();
+            }
+            
+            // output the original partition alignments
+            SuperAlignment* ori_super_aln = (SuperAlignment*) original_aln;
+            
+            // convert alignment members one by one
+            part = 1;
+            for (vector<Alignment*>::iterator it = ori_super_aln->partitions.begin(); it != ori_super_aln->partitions.end(); it++, ++part) {
+                
+                // output each partition into a single alignment
+                std::ofstream outFile((string)params.out_prefix + "_part" + convertIntToString(part) + ".ori.phy");
+                (*it)->printPhylip(outFile);
+                outFile.close();
+            }
+        }
+        // single alignment
+        else
+        {
+            std::ofstream outFile((string)params.out_prefix + ".bin.phy");
+            alignment->printPhylip(outFile);
+            outFile.close();
+        }
+    }
+    
+    // reset several program variables
+    // Run ModelFinder to select the rate heterogeneity model
+    params.model_name = "";
+    // specify a set of substitution models for ModelFinder
+    // detect the model type from the original tree
+    bool is_reversible_model = original_tree->getModel()->isReversible();
+    if (original_tree->isSuperTree())
+    {
+        PhyloSuperTree* supertree = (PhyloSuperTree*) original_tree;
+        ASSERT(supertree->front() && supertree->front()->getModel());
+        
+        // we already check and make sure all partitions must use either non-reversible or reversible models
+        // see commit "don't allow mixing reversible and non-reversible models in partitions - dbb0f69e"
+        // so here we only need to check the model type of the first partition
+        is_reversible_model = supertree->front()->getModel()->isReversible();
+    }
+    
+    // reversible models: JC2 or GTR2
+    const bool bk_allow_nonrev_bin = Params::getInstance().allow_nonrev_bin;
+    if (is_reversible_model)
+        params.model_set = "GTR2,JC2";
+    // non-reversible model: must be UNREST
+    else
+    {
+        params.model_set = "UNREST";
+        // temporarily set allow_nonrev_bin of the common/global Params to true
+        Params::getInstance().allow_nonrev_bin = true;
+    }
+    // consider all rate models
+    params.ratehet_set = "E,I,G,I+G,R";
+    
+    // disable sequence reconstruction flags to avoid recursively evoking this function
+    params.print_ancestral_sequence = AST_NONE;
+    params.print_extant_seqs = false;
+    params.gapped_seq_reconstruction = false;
+    
+    // specify a fix tree topology
+    // print the tree out so that the binary-data run can use it as a fixed tree
+    original_tree->printResultTree();
+    // use the output treefile of the original run
+    string tmp_in_treefile = (string)params.out_prefix + ".treefile";
+    params.user_file = new char[tmp_in_treefile.length() + 1];
+    strcpy(params.user_file, tmp_in_treefile.c_str());
+    params.min_iterations = 0;
+    params.stop_condition = SC_FIXED_ITERATION;
+    
+    // update prefix for output files of binary data
+    string tmp_out_prefix = (string)params.out_prefix + ".bin";
+    params.out_prefix = new char[tmp_out_prefix.length() + 1];
+    strcpy(params.out_prefix, tmp_out_prefix.c_str());
+    
+    // allow IQ-TREE to re-estimate branch lengths for binary data
+    if (params.fixed_branch_length == BRLEN_FIX)
+    {
+        outWarning("When reconstructing gapped ancestral/extant sequences, IQ-TREE will re-estimate the branch lengths of the input tree for the binary data.");
+    }
+    params.fixed_branch_length = BRLEN_OPTIMIZE;
+    // params.optimize_alg_gammai = "EM"; // don't reset because it may cause problem when using partition model
+    // params.opt_gammai = true; // don't reset because it may cause problem when using partition model
+    // params.min_iterations = -1; // cannot be reset to fix the topology
+    // params.stop_condition = SC_UNSUCCESS_ITERATION; // cannot be reset to fix the topology
+    
+    // init a dummy checkpoint
+    string filename = (string)params.out_prefix +".ckp.gz";
+    bool append_log = false;
+    Checkpoint *checkpoint = initAndCheckCheckpoint(filename, params, append_log);
+    if (append_log) {
+        cout << endl << "******************************************************"
+             << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
+    }
+     
+    runPhyloAnalysisAfterReadingAln(params, checkpoint, tree, alignment);
+    
+    // restore allow_nonrev_bin of the common/global Params
+    Params::getInstance().allow_nonrev_bin = bk_allow_nonrev_bin;
+    
+    // Don't set finished = true for the checkpoint of the binary-data run
+    // To avoid the case when the interuption occurs between the end of the binary-data run and the original-data run
+    // If letting the checkpoint of the binary-data run to be finished, users cannot get the output of -gap-esr/asr unless they use -redo
+    checkpoint->eraseKeyPrefix("finished");
+    checkpoint->dump(true);
+    // delete checkpoint
+    try {
+        delete checkpoint;
+    } catch(int err_num){}
+    
+    if (verbose_mode >= VB_MIN)
+        cout << "----- Finish reconstructing gapped sequences -----" << endl;
+    
+    // return tree for outputting gap and non-gap
+    return tree;
 }
 
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
@@ -6370,4 +6646,46 @@ void runRootstrap(Params &params) {
         tree.computeRootstrapUnrooted(trees, params.root, false);
     cout << getRealTime() - start_time << " sec" << endl;
     
+}
+
+Checkpoint* initAndCheckCheckpoint(const string& filename, const Params& params, bool& append_log)
+{
+    Checkpoint *checkpoint = new Checkpoint;
+    checkpoint->setFileName(filename);
+    
+    append_log = false;
+    
+    if (!params.ignore_checkpoint && fileExists(filename)) {
+        checkpoint->load();
+        if (checkpoint->hasKey("finished")) {
+            if (checkpoint->getBool("finished")) {
+                if (params.force_unfinished) {
+                    if (MPIHelper::getInstance().isMaster())
+                        cout << "NOTE: Continue analysis although a previous run already finished" << endl;
+                } else {
+                    delete checkpoint;
+                    if (MPIHelper::getInstance().isMaster())
+                        outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
+                            "Use `-redo` option if you really want to redo the analysis and overwrite all output files.\n" +
+                            "Use `--redo-tree` option if you want to restore ModelFinder and only redo tree search.\n" +
+                            "Use `--undo` option if you want to continue previous run when changing/adding options."
+                        );
+                    else
+                        exit(EXIT_SUCCESS);
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                append_log = true;
+            }
+        } else {
+            if (MPIHelper::getInstance().isMaster())
+                outWarning("Ignore invalid checkpoint file " + filename);
+            checkpoint->clear();
+        }
+    }
+    
+    if (MPIHelper::getInstance().isWorker())
+        checkpoint->setFileName("");
+    
+    return checkpoint;
 }

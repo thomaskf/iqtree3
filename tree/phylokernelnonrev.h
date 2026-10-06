@@ -1052,13 +1052,35 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         *df = *ddf = 0.0;
     }
 }
-
+  
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchESRSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, true, save_log_value);
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, true, save_log_value);
+#endif
+}
+    
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, false, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, false, save_log_value);
+#endif
+}
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+double PhyloTree::implComputingNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value) {
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value) {
 #endif
 
 //    assert(rooted);
@@ -1101,11 +1123,28 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
     double *trans_mat = buffer_partial_lh;
-    double *buffer_partial_lh_ptr = buffer_partial_lh + (block*nstates);
+    double *buffer_partial_lh_ptr = buffer_partial_lh + get_safe_upper_limit(block*nstates);
     double *state_freq_fundi = nullptr;
     if (do_fundi) {
         state_freq_fundi = aligned_alloc<double>(block);
     }
+    
+    // if computing ESR
+    double* transposed_trans_mat;
+    double* pattern_lh_cat_state_esr;
+    size_t block_size_esr = block;
+    if (computing_esr)
+    {
+        // initialize a transposed transition matrix
+        transposed_trans_mat = aligned_alloc<double>(ncat_mix*nstatesqr);
+        
+        // we also need to allocate memory to store the ESR
+        block_size_esr *= get_safe_upper_limit(aln->size())+max(get_safe_upper_limit(aln->num_states),
+            get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+        
+        pattern_lh_cat_state_esr = aligned_alloc<double>(block_size_esr);
+    }
+    double* transposed_trans_mat_ptr = transposed_trans_mat;
     
 	for (size_t c = 0; c < ncat_mix; c++) {
         size_t mycat = c%ncat;
@@ -1114,9 +1153,22 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 		double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
         double *this_trans_mat = &trans_mat[c*nstatesqr];
         model->computeTransMatrix(len, this_trans_mat, m);
-        for (size_t i = 0; i < nstatesqr; i++) {
-			this_trans_mat[i] *= prop;
+        
+        // if computing ESR, extract the transposed transition matrix
+        // before the transition matrix is combined with the state freqs
+        if (computing_esr)
+        {
+            for (size_t i = 0; i < nstates; i++) {
+                size_t this_trans_mat_index = i;
+                for (size_t x = 0; x < nstates; x++, ++transposed_trans_mat_ptr, this_trans_mat_index += nstates)
+                    transposed_trans_mat_ptr[0] = this_trans_mat[this_trans_mat_index];
+            }
         }
+        
+        for (size_t i = 0; i < nstatesqr; i++) {
+            this_trans_mat[i] *= prop;
+        }
+        
         if (!rooted) {
             // if unrooted tree, multiply with frequency
             double state_freq[nstates];
@@ -1140,6 +1192,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     double all_tree_lh(0.0);
     double all_prob_const(0.0);
 
+    ASSERT((!computing_esr)
+           || (computing_esr && dad->isLeaf()));
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
@@ -1177,7 +1231,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const) private(transposed_trans_mat_ptr)
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
