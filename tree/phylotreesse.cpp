@@ -1498,6 +1498,17 @@ void PhyloTree::computeMarginalState(PhyloNeighbor *dad_branch, PhyloNode *dad,
     double *lh_state = _pattern_lh_cat_state;
     memset(ptn_ancestral_prob, 0, sizeof(double)*nptn*nstates);
 
+    // --root-prior, except on the gap/non-gap tree of -gap-asr which keeps model pi
+    vector<double> user_prior;
+    if (params->asr_root_prior && !(aln->seq_type == SEQ_BINARY && nstates == 2)) {
+        string tok;
+        stringstream ss(params->asr_root_prior);
+        while (getline(ss, tok, ','))
+            user_prior.push_back(convert_double(tok.c_str()));
+        if (user_prior.size() != nstates)
+            outError("--root-prior needs " + convertIntToString(nstates) + " comma-separated values");
+    }
+
     // convert vector_size into continuous pattern
     for (size_t ptn = 0; ptn < nptn; ptn += vector_size) {
         double *state_prob = ptn_ancestral_prob + (ptn*nstates);
@@ -1525,6 +1536,30 @@ void PhyloTree::computeMarginalState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         sum = 1.0/sum;
         for (size_t i = 0; i < nstates; i++) {
             state_prob[i] *= sum;
+        }
+
+        // replace the model pi prior by 1/N or by the user prior (all internal nodes)
+        if (params->uniform_root_prior || !user_prior.empty()) {
+            double sum_uni = 0.0;
+            int state_best_uni = 0;
+            for (size_t i = 0; i < nstates; i++) {
+                if (state_freq[i] > 0)
+                    state_prob[i] /= state_freq[i];
+                else
+                    state_prob[i] = 0;
+                if (!user_prior.empty())
+                    state_prob[i] *= user_prior[i];
+                sum_uni += state_prob[i];
+                if (state_prob[i] > state_prob[state_best_uni])
+                    state_best_uni = i;
+            }
+            if (sum_uni > 0) {
+                double inv = 1.0 / sum_uni;
+                for (size_t i = 0; i < nstates; i++) {
+                    state_prob[i] *= inv;
+                }
+            }
+            state_best = state_best_uni;
         }
 
         // best state must exceed its equilibrium frequency!

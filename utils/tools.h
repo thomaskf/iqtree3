@@ -2060,6 +2060,12 @@ public:
     /** TRUE to allow nonrev (UNREST) models for binary data */
     bool allow_nonrev_bin;
 
+    /** TRUE to use a uniform 1/N prior instead of model pi in ASR posteriors */
+    bool uniform_root_prior;
+
+    /** comma-separated prior replacing model pi in ASR posteriors; NULL = model pi */
+    char *asr_root_prior;
+
     /**
         0: print nothing
         1: print site state frequency vectors
