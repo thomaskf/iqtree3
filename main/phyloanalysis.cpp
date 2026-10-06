@@ -5369,6 +5369,16 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         }
     }
 
+    // --binarize: analyse gap vs non-gap instead of the characters
+    if (params.binarize_aln) {
+        Alignment *bin_aln = alignment->isSuperAlignment() ?
+            ((SuperAlignment*) alignment)->convertToBin(params.model_name) :
+            alignment->convertToBin(params.model_name);
+        if (!align_is_given)
+            delete alignment;
+        alignment = bin_aln;
+    }
+
     if (params.symtest) {
         doSymTest(alignment, params);
     }

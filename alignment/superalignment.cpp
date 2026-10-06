@@ -2042,12 +2042,16 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
 SuperAlignment* SuperAlignment::convertToBin(const string& new_model_name)
 {
     SuperAlignment* new_aln = new SuperAlignment;
-    // convert the base alignment
-    Alignment::convertToBin(new_aln, new_model_name);
+    // the base alignment holds the gene presence/absence patterns, which init() rebuilds
+    new_aln->name = name;
+    new_aln->model_name = new_model_name;
+    new_aln->position_spec = position_spec;
+    new_aln->aln_file = aln_file;
+    new_aln->sequence_type = sequence_type;
     
-    // convert alignment members one by one
+    // convert alignment members one by one, each keeping its own model name
     for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-        new_aln->partitions.push_back((*it)->convertToBin(new_model_name));
+        new_aln->partitions.push_back((*it)->convertToBin((*it)->model_name));
     }
     
     // clone SuperAlignment-specific variables

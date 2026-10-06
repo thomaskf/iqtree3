@@ -5502,6 +5502,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.root_freq_init_str = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "--binarize") == 0 || strcmp(argv[cnt], "-binarize") == 0) {
+                params.binarize_aln = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "--root-tie") == 0 || strcmp(argv[cnt], "-root-tie") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -7490,6 +7494,7 @@ void Params::setDefault() {
     link_alpha = false;
     link_model = false;
     root_freq_init_str = "";
+    binarize_aln = false;
     root_tie_model_id = -1;
     model_joint = "";
     ignore_checkpoint = false;

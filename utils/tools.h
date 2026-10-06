@@ -2931,6 +2931,9 @@ public:
      */
     string root_freq_init_str;
 
+    /** binarize the alignments into gap (state 0) vs non-gap */
+    bool binarize_aln;
+
     /**
      For branch models: tie root frequency to component k's frequency (-1 = independent).
      Set via --root-tie K.

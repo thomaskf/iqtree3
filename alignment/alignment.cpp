@@ -4274,7 +4274,7 @@ void Alignment::convertToBin(Alignment* res, const string& new_model_name)
     }
     res->name = name;
     res->model_name = new_model_name; //res->model_name = model_name;
-    res->sequence_type = "BIN"; //res->sequence_type = sequence_type;
+    res->sequence_type = sequence_type; // so a partition file written out is still readable
     res->position_spec = position_spec;
     res->aln_file = aln_file;
     res->seq_type = SEQ_BINARY;

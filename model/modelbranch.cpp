@@ -256,21 +256,22 @@ void ModelBranch::writeInfo(ostream &out) {
     double* sfreq = new double[num_states];
     getRootFrequency(sfreq);
     out << "Root frequencies:";
+    streamsize prec = out.precision();
+    if (Params::getInstance().numeric_precision > 0)
+        out.precision(Params::getInstance().numeric_precision);
     if (num_states == 4) {
         out << "  A: " << sfreq[0];
         out << "  C: " << sfreq[1];
         out << "  G: " << sfreq[2];
         out << "  T: " << sfreq[3];
         out << endl;
-    } else if (num_states == 2) {
-        out << "  0: " << sfreq[0];
-        out << "  1: " << sfreq[1];
-        out << endl;
     } else {
+        // plain list, can be fed back via --rootfreq-init
         for (i = 0; i < num_states; i++)
             out << " " << sfreq[i];
         out << endl;
     }
+    out.precision(prec);
     out << endl;
     delete[] sfreq;
 }
