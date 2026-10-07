@@ -21,6 +21,7 @@
 #define MODELBIN_H
 
 #include "modelmarkov.h"
+#include "nclextra/modelsblock.h"
 
 /**
 Model for Binary data
@@ -36,7 +37,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
+    ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock *models_block = NULL);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -44,6 +45,9 @@ public:
 		@param freq state frequency type
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+
+    /** user-defined models from -mdef */
+    ModelsBlock *models_block;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

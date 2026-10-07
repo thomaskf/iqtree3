@@ -94,6 +94,8 @@ void PhyloTree::init() {
     _pattern_lh = nullptr;
     _pattern_lh_cat = nullptr;
     _pattern_lh_cat_state = nullptr;
+    computeLikelihoodBranchESRPointer = nullptr;
+    is_gsr_tree = false;
     _pattern_scaling = nullptr;
     _site_lh = nullptr;
     //root_state = STATE_UNKNOWN;

@@ -1498,15 +1498,17 @@ void PhyloTree::computeMarginalState(PhyloNeighbor *dad_branch, PhyloNode *dad,
     double *lh_state = _pattern_lh_cat_state;
     memset(ptn_ancestral_prob, 0, sizeof(double)*nptn*nstates);
 
-    // --root-prior, except on the gap/non-gap tree of -gap-asr which keeps model pi
+    // the gap tree has its own prior, and a copy of Params
+    Params &P = is_gsr_tree ? Params::getInstance() : *params;
+    const char *prior_str = is_gsr_tree ? P.gap_root_prior : P.asr_root_prior;
     vector<double> user_prior;
-    if (params->asr_root_prior && !(aln->seq_type == SEQ_BINARY && nstates == 2)) {
+    if (prior_str) {
         string tok;
-        stringstream ss(params->asr_root_prior);
+        stringstream ss(prior_str);
         while (getline(ss, tok, ','))
             user_prior.push_back(convert_double(tok.c_str()));
         if (user_prior.size() != nstates)
-            outError("--root-prior needs " + convertIntToString(nstates) + " comma-separated values");
+            outError("root prior needs " + convertIntToString(nstates) + " comma-separated values");
     }
 
     // convert vector_size into continuous pattern
@@ -1539,7 +1541,7 @@ void PhyloTree::computeMarginalState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         }
 
         // replace the model pi prior by 1/N or by the user prior (all internal nodes)
-        if (params->uniform_root_prior || !user_prior.empty()) {
+        if (P.uniform_root_prior || !user_prior.empty()) {
             double sum_uni = 0.0;
             int state_best_uni = 0;
             for (size_t i = 0; i < nstates; i++) {

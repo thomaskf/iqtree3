@@ -1164,7 +1164,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 	} else if (ModelMarkov::validModelName(model_str)) {
 	        model = ModelMarkov::getModelByName(model_str, tree, model_params, freq_type, freq_params);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
-		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree);
+		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, models_block);
 	} else if (tree->aln->seq_type == SEQ_DNA) {
         if (seqerr.empty())
             model = new ModelDNA(model_str.c_str(), model_params, freq_type, freq_params, tree);

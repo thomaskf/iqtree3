@@ -2054,9 +2054,7 @@ SuperAlignment* SuperAlignment::convertToBin(const string& new_model_name)
         new_aln->partitions.push_back((*it)->convertToBin((*it)->model_name));
     }
     
-    // clone SuperAlignment-specific variables
-    new_aln->max_num_states = 2;
-    new_aln->taxa_index = taxa_index;
+    // init() rebuilds seq_names, taxa_index and max_num_states
     new_aln->init();
     
     return new_aln;

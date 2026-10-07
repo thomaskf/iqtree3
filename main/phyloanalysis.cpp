@@ -5370,6 +5370,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     // --binarize: analyse gap vs non-gap instead of the characters
+    if (params.binarize_aln && params.gapped_seq_reconstruction)
+        outError("--binarize cannot be combined with -gap-asr/-gap-esr");
     if (params.binarize_aln) {
         Alignment *bin_aln = alignment->isSuperAlignment() ?
             ((SuperAlignment*) alignment)->convertToBin(params.model_name) :
@@ -5566,6 +5568,11 @@ IQTree* reconstructGappedSeqs(Params params, IQTree* original_tree)
     // convert the original aln into binary aln
     // we must empty the model name of alignment to force IQ-TREE running ModelFinder
     Alignment* alignment = original_aln->convertToBin("");
+    // force ModelFinder per partition
+    if (alignment->isSuperAlignment())
+        for (vector<Alignment*>::iterator it = ((SuperAlignment*)alignment)->partitions.begin();
+             it != ((SuperAlignment*)alignment)->partitions.end(); it++)
+            (*it)->model_name = "";
     
     // special case: the alignment contains only non-gap characters
     const int NON_GAPPED_STATE = 1;
@@ -5740,6 +5747,11 @@ IQTree* reconstructGappedSeqs(Params params, IQTree* original_tree)
     if (verbose_mode >= VB_MIN)
         cout << "----- Finish reconstructing gapped sequences -----" << endl;
     
+    tree->is_gsr_tree = true;
+    if (tree->isSuperTree())
+        for (PhyloSuperTree::iterator it = ((PhyloSuperTree*)tree)->begin(); it != ((PhyloSuperTree*)tree)->end(); it++)
+            (*it)->is_gsr_tree = true;
+
     // return tree for outputting gap and non-gap
     return tree;
 }

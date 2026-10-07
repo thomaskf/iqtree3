@@ -4,6 +4,7 @@
 ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, true, false) {
     logl_epsilon = 0.01;
     optimizing_root_freq = false;
+    root_freq_init = false;
 
     tied_root_clade_id = Params::getInstance().root_tie_model_id;
 
@@ -225,7 +226,10 @@ void ModelBranch::setRootFrequency(string root_freq) {
 
 void ModelBranch::setRootFrequencyInit(string root_freq) {
     setRootFrequency(root_freq);
-    if (tied_root_clade_id < 0) freq_type = FREQ_ESTIMATE;
+    if (tied_root_clade_id < 0) {
+        freq_type = FREQ_ESTIMATE;
+        root_freq_init = true;
+    }
 }
 
 void ModelBranch::writeInfo(ostream &out) {
@@ -396,6 +400,7 @@ bool ModelBranch::getVariables(double *variables) {
             for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
                 changed |= (ModelMarkov::state_freq[i] != var[i]);
             memcpy(ModelMarkov::state_freq, var, (ModelMarkov::num_states-1)*sizeof(double));
+            setLastRootFreq();
             return changed;
         }
         return false;
@@ -414,9 +419,24 @@ bool ModelBranch::getVariables(double *variables) {
         for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
             changed |= (ModelMarkov::state_freq[i] != var[i]);
         memcpy(ModelMarkov::state_freq, var, (ModelMarkov::num_states-1)*sizeof(double));
+        setLastRootFreq();
         dim += (ModelMarkov::num_states-1);
     }
     return changed;
+}
+
+void ModelBranch::setLastRootFreq() {
+    double sum = 0.0;
+    for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
+        sum += ModelMarkov::state_freq[i];
+    double min_freq = Params::getInstance().min_state_freq;
+    if (sum >= 1.0 - min_freq) {
+        double scale = (1.0 - min_freq) / sum;
+        for (size_t i = 0; i < ModelMarkov::num_states-1; i++)
+            ModelMarkov::state_freq[i] *= scale;
+        sum = 1.0 - min_freq;
+    }
+    ModelMarkov::state_freq[ModelMarkov::num_states-1] = 1.0 - sum;
 }
 
 void ModelBranch::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
@@ -508,7 +528,8 @@ bool ModelBranch::fixParameters(bool fix) {
 
 // set the state freq to all models with estimated frequency type
 void ModelBranch::adaptStateFrequency(double *state_freq) {
-    if (freq_type == FREQ_ESTIMATE) {
+    // keep the starting point given by --rootfreq-init
+    if (freq_type == FREQ_ESTIMATE && !root_freq_init) {
         ModelSubst::setStateFrequency(state_freq);
     }
     for (iterator it = begin(); it != end(); it++) {

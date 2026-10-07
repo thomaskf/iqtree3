@@ -1057,6 +1057,9 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodBranchESRType)(PhyloNeighbor*, PhyloNode*, bool);
     ComputeLikelihoodBranchESRType computeLikelihoodBranchESRPointer;
 
+    /** TRUE for the gap/non-gap tree built by -gap-asr/-gap-esr */
+    bool is_gsr_tree;
+
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     double computeNonrevLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
     template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>

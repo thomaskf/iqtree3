@@ -1273,6 +1273,11 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
                     } else {
                         dadState = unknown;
                     }
+
+                    // if computing ESR, set the state as unknown
+                    if (computing_esr)
+                        dadState = unknown;
+
                     const double *lh_tip = partial_lh_node + block * dadState;
                     double *this_vec_tip = vec_tip+i;
                     for (size_t c = 0; c < block; c++) {
@@ -1281,6 +1286,7 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
                     }
                 }
 
+                transposed_trans_mat_ptr = transposed_trans_mat;
                 if (_pattern_lh_cat_state) {
                     // naively compute pattern_lh per category per state
                     VectorClass *lh_state = (VectorClass*)(_pattern_lh_cat_state + (ptn*block));
@@ -1293,6 +1299,24 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
                         lh_state += nstates;
                         if (!SAFE_NUMERIC)
                             lh_ptn += lh_cat[c];
+                    }
+                    // if needed, compute ESR from the ASR * the transition matrix (for the original blength)
+                    if (computing_esr)
+                    {
+                        VectorClass* ancestral_seq_state = (VectorClass*)(_pattern_lh_cat_state + ptn*block);
+                        VectorClass* extant_seq_state = (VectorClass*)(pattern_lh_cat_state_esr + ptn*block);
+                        for (size_t c = 0; c < ncat_mix; c++) {
+                            for (size_t i = 0; i < nstates; i++) {
+#ifdef KERNEL_FIX_STATES
+                                dotProductVec<VectorClass, double, nstates, FMA>(transposed_trans_mat_ptr, ancestral_seq_state, extant_seq_state[i]);
+#else
+                                dotProductVec<VectorClass, double, FMA>(transposed_trans_mat_ptr, ancestral_seq_state, extant_seq_state[i], nstates);
+#endif
+                                transposed_trans_mat_ptr += nstates;
+                            }
+                            extant_seq_state += nstates;
+                            ancestral_seq_state += nstates;
+                        }
                     }
                 } else {
                     for (size_t c = 0; c < ncat_mix; c++) {
@@ -1574,6 +1598,13 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
         aligned_free(state_freq_fundi);
     }
     
+    // if computing ESR, overwrite the ASR by the ESR
+    if (computing_esr)
+    {
+        memcpy(_pattern_lh_cat_state, pattern_lh_cat_state_esr, block_size_esr * sizeof(double));
+        aligned_free(transposed_trans_mat);
+        aligned_free(pattern_lh_cat_state_esr);
+    }
     return tree_lh;
 }
 

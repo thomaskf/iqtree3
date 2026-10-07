@@ -91,6 +91,9 @@ public:
 
     // scale the state frequencies
     void scaleStateFreq(bool sum_one);
+
+    /** set the last root frequency to 1 - sum of the others */
+    void setLastRootFreq();
     
     // fix or unfix the parameters
     virtual bool fixParameters(bool fix);
@@ -101,6 +104,9 @@ public:
 private:
     
     bool optimizing_root_freq;
+
+    /** TRUE if --rootfreq-init supplied the root frequency */
+    bool root_freq_init;
 };
 
 #endif

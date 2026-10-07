@@ -2066,6 +2066,9 @@ public:
     /** comma-separated prior replacing model pi in ASR posteriors; NULL = model pi */
     char *asr_root_prior;
 
+    /** same, for the gap/non-gap tree of -gap-asr */
+    char *gap_root_prior;
+
     /**
         0: print nothing
         1: print site state frequency vectors

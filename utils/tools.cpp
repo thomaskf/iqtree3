@@ -3788,6 +3788,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "--gap-root-prior") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use --gap-root-prior <p_gap,p_nongap>";
+				params.gap_root_prior = argv[cnt];
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wsr") == 0 || strcmp(argv[cnt], "--rate") == 0) {
 				params.print_site_rate |= 1;
 				continue;
@@ -6075,6 +6083,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --asr-min NUM        Min probability of ancestral state (default: equil freq)" << endl
     << "  --uniform-root-prior Use uniform prior (1/N) at root instead of model pi" << endl
     << "  --root-prior F1,..   Use the given prior at the root instead of model pi" << endl
+    << "  --gap-root-prior P,Q Root prior for the gap/non-gap tree of -gap-asr" << endl
 
     << endl << "TEST OF SYMMETRY:" << endl
     << "  --symtest               Perform three tests of symmetry" << endl
@@ -7353,6 +7362,7 @@ void Params::setDefault() {
     allow_nonrev_bin = false;
     uniform_root_prior = false;
     asr_root_prior = NULL;
+    gap_root_prior = NULL;
     min_ancestral_prob = 0.0;
     print_tree_lh = false;
     lambda = 1;

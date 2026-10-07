@@ -19,9 +19,10 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
+ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock *models_block)
 : ModelMarkov(tree)
 {
+    this->models_block = models_block;
 	init(model_name, model_params, freq, freq_params);
 }
 
@@ -36,7 +37,20 @@ void ModelBIN::init(const char *model_name, string model_params, StateFreqType f
 	} else if (name == "GTR2") {
 		def_freq = FREQ_ESTIMATE;
 	} else {
-		readParameters(model_name);
+        string name_upper = model_name;
+        for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
+            (*it) = toupper(*it);
+        NxsModel *nxs_model = models_block ? models_block->findModel(name_upper) : NULL;
+        if (nxs_model) {
+            readParametersString(nxs_model->description);
+            // the definition supplies the rates and frequencies
+            model_params = "";
+            num_params = 0;
+            if (freq_params == "")
+                freq = FREQ_USER_DEFINED;
+        } else {
+            readParameters(model_name);
+        }
 	}
     if (freq_params != "") {
         readStateFreq(freq_params);
