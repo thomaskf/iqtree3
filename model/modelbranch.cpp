@@ -5,6 +5,7 @@ ModelBranch::ModelBranch(PhyloTree *tree) : ModelMarkov(tree, true, false) {
     logl_epsilon = 0.01;
     optimizing_root_freq = false;
     root_freq_init = false;
+    reported_init_root_freq = false;
 
     tied_root_clade_id = Params::getInstance().root_tie_model_id;
 
@@ -61,11 +62,30 @@ void ModelBranch::decomposeRateMatrix() {
     ModelMarkov::decomposeRateMatrix();
 }
 
+void ModelBranch::reportInitRootFreq() {
+    if (reported_init_root_freq)
+        return;
+    reported_init_root_freq = true;
+    double *freq = new double[num_states];
+    getRootFrequency(freq);
+    cout << "Initial root frequencies:";
+    streamsize prec = cout.precision();
+    if (Params::getInstance().numeric_precision > 0)
+        cout.precision(Params::getInstance().numeric_precision);
+    for (int i = 0; i < num_states; i++)
+        cout << " " << freq[i];
+    cout << endl;
+    cout.precision(prec);
+    delete[] freq;
+}
+
 double ModelBranch::optimizeParameters(double gradient_epsilon) {
     
     int ndim = getNDim();
     if (ndim == 0)
         return 0.0;
+    
+    reportInitRootFreq();
     
     if (Params::getInstance().optimize_alg_brmodel == "BFGS") {
         

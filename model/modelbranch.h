@@ -107,6 +107,12 @@ private:
 
     /** TRUE if --rootfreq-init supplied the root frequency */
     bool root_freq_init;
+
+    /** TRUE if the initial root frequency has been reported */
+    bool reported_init_root_freq;
+
+    /** report the root frequency at the start of the optimization */
+    void reportInitRootFreq();
 };
 
 #endif
