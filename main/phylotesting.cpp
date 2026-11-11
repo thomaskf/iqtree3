@@ -783,7 +783,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
         }
     } else if (posRateHeterotachy(rate_names[0]) != string::npos) {
         iqtree = new PhyloTreeMixlen(aln, 0);
-    } else if (params.model_name.find("BR{") != string::npos || n_br > 1) {
+    } else if (params.model_name.find("BR{") != string::npos ||
+               params.model_set.find("BR{") != string::npos || n_br > 1) {
         iqtree = new PhyloTreeBranchModel(aln);
     } else {
         iqtree = new IQTree(aln);
