@@ -2759,6 +2759,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             // print ancestral sequences reconstructed for this partition
             if (params.print_ancestral_sequence) {
                 printAncestralSequences(params.out_prefix, &iqtree, gsr_tree, params.print_ancestral_sequence);
+                // the ASR pass names the internal nodes; rewrite the tree so the
+                // names in the .state file can be located in the .treefile
+                if (iqtree.isBranchModel())
+                    iqtree.printResultTree();
             }
             
             // print extant sequences reconstructed for this partition

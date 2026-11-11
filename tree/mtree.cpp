@@ -623,7 +623,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         out << ")";
         if (brtype & WT_INT_NODE)
             out << node->id;
-        else if (!node->name.empty() && (brtype & WT_BR_ATTR) == 0)
+        else if (!node->name.empty())
             out << node->name;
         if (dad != NULL || length_nei) {
             printBranchLength(out, brtype, !node->name.empty(), length_nei);
