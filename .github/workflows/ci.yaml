@@ -347,8 +347,17 @@ jobs:
       - name: Download and Extract Boost 1.84.0
         shell: pwsh
         run: |
-          curl -L -o boost.tar.gz https://github.com/MarkusJx/prebuilt-boost/releases/download/1.84.0/boost-1.84.0-windows-2022-mingw-static-x86.tar.gz
+          $url = "https://github.com/MarkusJx/prebuilt-boost/releases/download/1.84.0/boost-1.84.0-windows-2022-mingw-static-x86.tar.gz"
+          $expected = 697002587
+          foreach ($attempt in 1..3) {
+            if ((Test-Path boost.tar.gz) -and (Get-Item boost.tar.gz).Length -eq $expected) { break }
+            Write-Host "Boost download attempt $attempt"
+            curl -L --retry 5 --retry-delay 5 --retry-all-errors -C - -o boost.tar.gz $url
+          }
+          $size = if (Test-Path boost.tar.gz) { (Get-Item boost.tar.gz).Length } else { 0 }
+          if ($size -ne $expected) { throw "boost.tar.gz is $size bytes, expected $expected" }
           tar -xzf boost.tar.gz
+          if ($LASTEXITCODE -ne 0) { throw "tar failed with exit code $LASTEXITCODE" }
           mv boost C:/local/boost
 
       - name: Install Eigen3
