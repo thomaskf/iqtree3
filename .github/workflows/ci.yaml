@@ -357,8 +357,13 @@ jobs:
           $size = if (Test-Path boost.tar.gz) { (Get-Item boost.tar.gz).Length } else { 0 }
           if ($size -ne $expected) { throw "boost.tar.gz is $size bytes, expected $expected" }
           tar -xzf boost.tar.gz
-          if ($LASTEXITCODE -ne 0) { throw "tar failed with exit code $LASTEXITCODE" }
+          # bsdtar exits 1 on two unnamed entries in this archive, so check the payload
+          if (-not (Test-Path boost/include/boost)) { throw "boost headers missing after extraction" }
+          $libs = @(Get-ChildItem boost/lib -Filter *.a -ErrorAction SilentlyContinue).Count
+          Write-Host "boost: $libs static libs extracted"
+          if ($libs -lt 1) { throw "boost libs missing after extraction" }
           mv boost C:/local/boost
+          exit 0
 
       - name: Install Eigen3
         shell: cmd
