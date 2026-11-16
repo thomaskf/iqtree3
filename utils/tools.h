@@ -2939,9 +2939,12 @@ public:
 
     /**
      For branch models: tie root frequency to component k's frequency (-1 = independent).
-     Set via --root-tie K.
+     Set via --rootfreq-stationary, or --root-tie K.
      */
     int root_tie_model_id;
+
+    /** root frequency is the stationary frequency of the only substitution matrix */
+    bool rootfreq_stationary;
 
     /**
     * Whether to output a MrBayes Block File

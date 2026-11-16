@@ -5523,6 +5523,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                     outError("--root-tie expects a non-negative integer");
                 continue;
             }
+            if (strcmp(argv[cnt], "--rootfreq-stationary") == 0 || strcmp(argv[cnt], "-rootfreq-stationary") == 0) {
+                params.rootfreq_stationary = true;
+                params.root_tie_model_id = 0;
+                continue;
+            }
             if (strcmp(argv[cnt], "-mrbayes") == 0) {
                 params.mr_bayes_output = true;
                 continue;
@@ -7506,6 +7511,7 @@ void Params::setDefault() {
     root_freq_init_str = "";
     binarize_aln = false;
     root_tie_model_id = -1;
+    rootfreq_stationary = false;
     model_joint = "";
     ignore_checkpoint = false;
     checkpoint_dump_interval = 60;

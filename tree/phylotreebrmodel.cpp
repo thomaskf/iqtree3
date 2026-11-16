@@ -58,6 +58,11 @@ void PhyloTreeBranchModel::initializeModel(Params &params, string model_name, Mo
 
     int nBranchModels = numBranchModels();
     ASSERT(nBranchModels > 0);
+
+    if (params.rootfreq_stationary && nBranchModels > 1)
+        outError("--rootfreq-stationary requires a single substitution matrix in the branch model");
+    if (params.root_tie_model_id >= nBranchModels)
+        outError("--root-tie expects a component index below " + convertIntToString(nBranchModels));
 //    cout << endl;
 //    cout << "Number of branch models: " << nBranchModels << endl;
 
