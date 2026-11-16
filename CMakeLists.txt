@@ -551,7 +551,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 
     if(APPLE)
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-            if(MACOS_MAJOR_VERSION GREATER_EQUAL 26)
+            if(MACOS_MAJOR_VERSION GREATER_EQUAL 15)
                 message("Using libmac26_m1 for macOS ${MACOS_VERSION}")
                 link_directories(${PROJECT_SOURCE_DIR}/libmac26_m1)
                 LIST(APPEND STATIC_LIBS "${PROJECT_SOURCE_DIR}/libmac26_m1/libomp.a" "${PROJECT_SOURCE_DIR}/libmac_m1/libz.a")
