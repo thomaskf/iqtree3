@@ -51,7 +51,7 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 if(CLANG AND WIN32)
-  target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+  target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libomp.dll)
 endif()
 
 # Applied the same OpenMP linking strategy used for iqtree3.
