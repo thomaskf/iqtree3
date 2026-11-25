@@ -266,7 +266,11 @@ public:
 	 */
 	double optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl);
 
-	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
+    /**
+     *  Sort mixlen classes in ascending order of tree lengths
+     *  @return Tree string with sorted branch lengths
+     */
+    string sortClassesByTreeLength();
 
 	/**
 	 * TRUE to optimize all parameters simultaneously, default: FALSE
@@ -297,8 +301,25 @@ public:
 
     /**
      compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
+     @param remove_empty_seq whether remove empty sequences when partition model estimation
      */
-    virtual double computeMarginalLh() {return 0.0;}
+    virtual double computeMarginalLh(bool remove_empty_seq) {return 0.0;}
+
+    /**
+     return the marginal log-likelihood for mAIC, computing (and caching) it on the first call.
+     @param remove_empty_seq whether remove empty sequences when partition model estimation
+     */
+    double getMarginalLh(bool remove_empty_seq) {
+        if (!computed_marginal_lh) {
+            marginal_lh = computeMarginalLh(remove_empty_seq);
+            computed_marginal_lh = true;
+        }
+        return marginal_lh;
+    }
+
+    /** cached marginal log-likelihood, valid only when computed_marginal_lh is true */
+    double marginal_lh = 0.0;
+    bool computed_marginal_lh = false;
 
 protected:
 

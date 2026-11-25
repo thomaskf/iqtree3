@@ -51,6 +51,7 @@
 #include "gzstream.h"
 #include "MPIHelper.h"
 #include "alignment/alignment.h"
+#include <limits>
 
 VerboseMode verbose_mode;
 extern void printCopyright(ostream &out);
@@ -2926,6 +2927,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.contain_nonrev = true;
                 continue;
             }
+            if (strcmp(argv[cnt], "--no-mAIC") == 0 || strcmp(argv[cnt], "-no-mAIC") == 0) {
+                params.skip_marginal_lh = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--models") == 0 || strcmp(argv[cnt], "-mexchange") == 0 || strcmp(argv[cnt], "--mexchange") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
@@ -3016,6 +3021,26 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "-parallel-over-sites") == 0 || strcmp(argv[cnt], "--parallel-over-sites") == 0) {
                 params.parallel_over_sites = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-parallel-per-partition") == 0 || strcmp(argv[cnt], "--parallel-per-partition") == 0) {
+                params.parallel_per_partition = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-parallel-round-robin") == 0 || strcmp(argv[cnt], "--parallel-round-robin") == 0) {
+                params.parallel_round_robin = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mf-thread-factor") == 0 || strcmp(argv[cnt], "-mf-thread-factor") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mf-thread-factor <factor>";
+                params.mf_thread_factor = convert_int(argv[cnt]);
+                if (params.mf_thread_factor <= 0)
+                    throw "--mf-thread-factor must be positive";
                 continue;
             }
 
@@ -3177,6 +3202,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
 				if (cnt >= argc)
 					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+                if (iEquals(argv[cnt], "AUTO"))
+                    throw "-ft AUTO is not supported; please infer a guide tree first and pass it to -ft";
                 params.tree_freq_file = argv[cnt];
                 if (params.print_site_state_freq == WSF_NONE)
                     params.print_site_state_freq = WSF_POSTERIOR_MEAN;
@@ -4581,23 +4608,36 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-AIC") == 0) {
 				params.model_test_criterion = MTC_AIC;
+				params.marginal_lh_aic = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-AICc") == 0 || strcmp(argv[cnt], "-AICC") == 0) {
 				params.model_test_criterion = MTC_AICC;
+				params.marginal_lh_aic = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-merit") == 0 || strcmp(argv[cnt], "--merit") == 0) {
                 cnt++;
 				if (cnt >= argc)
-					throw "Use -merit AIC|AICC|BIC";
-                if (strcmp(argv[cnt], "AIC") == 0)
+					throw "Use -merit AIC|AICC|BIC|mAIC";
+                if (strcmp(argv[cnt], "AIC") == 0) {
                     params.model_test_criterion = MTC_AIC;
-                else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
+                    params.marginal_lh_aic = false;
+                } else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0) {
                     params.model_test_criterion = MTC_AICC;
-                else if (strcmp(argv[cnt], "BIC") == 0)
+                    params.marginal_lh_aic = false;
+                } else if (strcmp(argv[cnt], "BIC") == 0) {
                     params.model_test_criterion = MTC_BIC;
-                else throw "Use -merit AIC|AICC|BIC";
+                    params.marginal_lh_aic = false;
+                } else if (strcmp(argv[cnt], "mAIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_AIC;
+                } else if (strcmp(argv[cnt], "mAIC+BIC") == 0) {
+                    params.marginal_lh_aic = true;
+                    params.model_test_criterion = MTC_BIC;
+                } else {
+                    throw "Use -merit AIC|AICC|BIC|mAIC";
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ms") == 0) {
@@ -4647,6 +4687,29 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--site-model-file") == 0 || strcmp(argv[cnt], "-site-model-file") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --site-model-file <site_model_file>";
+                params.site_model_file = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mutsel-prior-freq-file") == 0 || strcmp(argv[cnt], "-mutsel-prior-freq-file") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mutsel-prior-freq-file <mutsel_prior_freq_file>";
+                params.mutsel_prior_freq_file = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mutsel-prior-rate-file") == 0 || strcmp(argv[cnt], "-mutsel-prior-rate-file") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mutsel-prior-rate-file <mutsel_prior_rate_file>";
+                params.mutsel_prior_rate_file = argv[cnt];
+                continue;
+            }
 //			if (strcmp(argv[cnt], "-rootstate") == 0) {
 //                cnt++;
 //                if (cnt >= argc)
@@ -5004,16 +5067,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-mixlen") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -mixlen <number of mixture branch lengths for heterotachy model>";
-				params.num_mixlen = convert_int(argv[cnt]);
-				if (params.num_mixlen < 1)
-					throw("-mixlen must be >= 1");
-				continue;
-			}
-            
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
 				continue;
@@ -5690,8 +5743,24 @@ void parseArg(int argc, char *argv[], Params &params) {
     // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
     // computeTransMatix has not yet implemented for ModelSet
     if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
-        outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
+        outError("Sorry! `-ft` (--tree-freq) and `-fs` (--site-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
     
+    // Site-frequency models are read only on the non-partition code path. In
+    // runPhyloAnalysis() the call to Alignment::readSiteStateFreq() sits in the `else`
+    // branch of `if (params.partition_file)`, so combining a partition model with -fs or
+    // -ft silently DISCARDED the frequencies: the run completed, reported a likelihood,
+    // and printed no warning, while scoring under the plain model. Fail explicitly instead.
+    if (params.partition_file && params.site_freq_file)
+        outError("`-fs` (--site-freq) cannot be combined with a partition model (-p/-q/-Q/-S)."
+                 " Site frequencies are only applied to a single-partition alignment, and were"
+                 " previously ignored without warning. Run -fs without a partition file, or drop"
+                 " -fs and specify per-partition models in the partition file.");
+
+    if (params.partition_file && params.tree_freq_file)
+        outError("`-ft` (--tree-freq) cannot be combined with a partition model (-p/-q/-Q/-S)."
+                 " The site-frequency model is only estimated for a single-partition alignment,"
+                 " and was previously ignored without warning.");
+
     // Users have to specify a random seed to run AliSim
     if (params.alisim_active && !params.seed_specified)
         outError("To make the simulation reproducible, please specify a random seed via `-seed <NUM>`");
@@ -5929,7 +5998,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << endl << "ULTRAFAST BOOTSTRAP/JACKKNIFE:" << endl
     << "  -B, --ufboot NUM     Replicates for ultrafast bootstrap (>=1000)" << endl
     << "  -J, --ufjack NUM     Replicates for ultrafast jackknife (>=1000)" << endl
-    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --jack-prop NUM      Site removal proportion for jackknife (default: 0.5)" << endl
     << "  --sampling STRING    GENE|GENESITE resampling for partitions (default: SITE)" << endl
     << "  --boot-trees         Write bootstrap trees to .ufboot file (default: none)" << endl
     << "  --wbtl               Like --boot-trees but also writing branch lengths" << endl
@@ -5942,7 +6011,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << endl << "NON-PARAMETRIC BOOTSTRAP/JACKKNIFE:" << endl
     << "  -b, --boot NUM       Replicates for bootstrap + ML tree + consensus tree" << endl
     << "  -j, --jack NUM       Replicates for jackknife + ML tree + consensus tree" << endl
-    << "  --jack-prop NUM      Subsampling proportion for jackknife (default: 0.5)" << endl
+    << "  --jack-prop NUM      Site removal proportion for jackknife (default: 0.5)" << endl
     << "  --bcon NUM           Replicates for bootstrap + consensus tree" << endl
     << "  --bonly NUM          Replicates for bootstrap only" << endl
 #ifdef USE_BOOSTER
@@ -5979,7 +6048,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
     << "  --cmin NUM           Min categories for FreeRate model [+R] (default: 2)" << endl
     << "  --cmax NUM           Max categories for FreeRate model [+R] (default: 10)" << endl
-    << "  --merit AIC|AICc|BIC  Akaike|Bayesian information criterion (default: BIC)" << endl
+    << "  --merit AIC|AICc|BIC|mAIC" << endl
+    << "                       Akaike|Bayesian information criterion (default: BIC)" << endl
+    << "                       mAIC uses the marginal AIC to merge partitions in partition models" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
     << "  --mtree              Perform full tree search for every model" << endl
     << "  --madd STR,...       List of mixture models to consider" << endl
@@ -6272,6 +6343,11 @@ InputType detectInputFile(const char *input_file) {
         do {
             in >> ch;
         } while (ch <= 32 && !in.eof() && count++ < 20);
+        // skip ';' comment lines before the first FASTA record (original Pearson FASTA format)
+        while (ch == ';' && !in.eof()) {
+            in.ignore(numeric_limits<streamsize>::max(), '\n');
+            in >> ch;
+        }
         in >> ch2;
         in.close();
         switch (ch) {
@@ -7223,7 +7299,8 @@ void Params::setDefault() {
     merge_models = "1";
     merge_rates = "1";
     partfinder_log_rate = true;
-    
+    marginal_lh_aic = false;
+
     sequence_type = nullptr;
     aln_output = nullptr;
     aln_site_list = nullptr;
@@ -7262,6 +7339,7 @@ void Params::setDefault() {
     num_runs = 1;
     model_name = "";
     contain_nonrev = false;
+    skip_marginal_lh = false;
     model_name_init = nullptr;
     model_opt_steps = 10;
     model_set = "ALL";
@@ -7280,6 +7358,9 @@ void Params::setDefault() {
     optimize_rate_matrix = false;
     store_trans_matrix = false;
     parallel_over_sites = false;
+    parallel_per_partition = false;
+    parallel_round_robin = false;
+    mf_thread_factor = 4000;
     order_by_threads = false;
     //freq_type = FREQ_EMPIRICAL;
     freq_type = FREQ_UNKNOWN;
@@ -7332,7 +7413,7 @@ void Params::setDefault() {
     iqp_assess_quartet = IQP_DISTANCE;
     iqp = false;
     write_intermediate_trees = 0;
-//    avoid_duplicated_trees = false;
+    //    avoid_duplicated_trees = false;
     writeDistImdTrees = false;
     rf_dist_mode = 0;
     rf_same_pair = false;
@@ -7447,7 +7528,7 @@ void Params::setDefault() {
     reinsert_par = false;
     bestStart = true;
     snni = true; // turn on sNNI default now
-//    autostop = true; // turn on auto stopping rule by default now
+    //    autostop = true; // turn on auto stopping rule by default now
     unsuccess_iteration = 100;
     speednni = true; // turn on reduced hill-climbing NNI by default now
     numInitTrees = 100;
@@ -7458,7 +7539,7 @@ void Params::setDefault() {
     tabu = false;
     adaptPertubation = false;
     numSupportTrees = 20;
-//    sprDist = 20;
+    //    sprDist = 20;
     sprDist = 6;
     sankoff_cost_file = nullptr;
     numNNITrees = 20;
@@ -7469,9 +7550,10 @@ void Params::setDefault() {
     tree_freq_file = nullptr;
     num_threads = 1;
     num_threads_max = 10000;
+    num_threads_orig = 0;
     openmp_by_model = false;
     model_test_criterion = MTC_BIC;
-//    model_test_stop_rule = MTC_ALL;
+    //    model_test_stop_rule = MTC_ALL;
     model_test_sample_size = 0;
     root_state = nullptr;
     print_bootaln = false;
@@ -7505,7 +7587,6 @@ void Params::setDefault() {
     lmap_num_quartets = -1;
     lmap_cluster_file = nullptr;
     print_lmap_quartet_lh = false;
-    num_mixlen = 1;
     link_alpha = false;
     link_model = false;
     root_freq_init_str = "";
@@ -7644,7 +7725,7 @@ void Params::setDefault() {
     mutation_file = "";
     site_starting_index = 0;
     mr_bayes_output = false; //merged from 19b1fdc
-    
+
     // ----------- SPRTA ----------
     compute_SPRTA = false;
     SPRTA_zero_branches = false;
