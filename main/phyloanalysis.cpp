@@ -5731,6 +5731,7 @@ IQTree* reconstructGappedSeqs(Params params, IQTree* original_tree)
     strcpy(params.user_file, tmp_in_treefile.c_str());
     params.min_iterations = 0;
     params.stop_condition = SC_FIXED_ITERATION;
+    params.start_tree = STT_USER_TREE;
     
     // update prefix for output files of binary data
     string tmp_out_prefix = (string)params.out_prefix + ".bin";
