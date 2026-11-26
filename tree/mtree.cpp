@@ -136,6 +136,8 @@ void MTree::assignIDs(vector<string>& taxaNames) {
     if (err) outError("Tree taxa and input taxa names do not match (see above)");
 }
 
+thread_local std::set<Neighbor*> MTree::mono_boundary_neis;
+
 void MTree::copyTree(MTree *tree) {
     if (root) freeNode();
     stringstream ss;

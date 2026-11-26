@@ -871,7 +871,9 @@ public:
      */
     Node *root;
 
-    std::set<Neighbor*> mono_boundary_neis;
+    // per-thread: printTree() fills this, and several threads may print the
+    // same tree concurrently via copyTree() inside an OpenMP region.
+    static thread_local std::set<Neighbor*> mono_boundary_neis;
     void markMonoCladeBoundaries(Node *node, Node *dad);
 
     /**
